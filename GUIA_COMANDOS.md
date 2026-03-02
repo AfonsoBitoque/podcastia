@@ -58,4 +58,4 @@ Como o projeto usa uma base de dados H2 em memória, podes aceder à consola de 
 
 ## ⚠️ Notas Importantes
 - Se o comando `./mvnw` der erro de permissão, executa: `chmod +x mvnw`.
-- Certifica-te de que estás na diretoria `/home/predm/Git/University/LES/podcastia/servidor` antes de correr qualquer comando `./mvnw`.
+- Certifica-te de que estás na diretoria `podcastia/servidor` antes de correr qualquer comando `./mvnw`.
