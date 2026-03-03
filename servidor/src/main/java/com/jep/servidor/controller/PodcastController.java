@@ -24,12 +24,11 @@ public class PodcastController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Podcast> getById(@PathVariable Long id) {
+    public ResponseEntity<Podcast> getById(@PathVariable("id") Long id) {
         Optional<Podcast> podcast = podcastRepository.findById(id);
         return podcast.map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
-
 
     @PostMapping
     public ResponseEntity<Podcast> create(@RequestBody Podcast podcast) {
@@ -38,7 +37,7 @@ public class PodcastController {
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<Podcast>> getByUser(@PathVariable Long userId) {
+    public ResponseEntity<List<Podcast>> getByUser(@PathVariable("userId") Long userId) {
         Podcast probe = new Podcast();
         probe.setUser(new com.jep.servidor.model.User());
         probe.getUser().setId(userId);
@@ -47,7 +46,7 @@ public class PodcastController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable("id") Long id) {
         if (!podcastRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Podcastia - O Teu Perfil</title>
+</head>
+
+<body>
+    <h1>O Teu Perfil</h1>
+
+    <div th:if="${error}" style="color: red; border: 1px solid red; padding: 10px; margin-bottom: 10px;">
+        <p th:text="${error}"></p>
+    </div>
+    <div th:if="${success}" style="color: green; border: 1px solid green; padding: 10px; margin-bottom: 10px;">
+        <p th:text="${success}"></p>
+    </div>
+
+    <div th:if="${user != null}">
+        <p><strong>Username:</strong> <span th:text="${user.username}"></span></p>
+        <p><strong>Tag:</strong> <span th:text="${user.tag}"></span></p>
+        <p><strong>Email:</strong> <span th:text="${user.email}"></span></p>
+
+        <hr>
+
+        <h2>Personalizar Perfil</h2>
+        <form action="/profile/update" method="POST">
+            <div>
+                <label>Foto de Perfil (URL do caminho):</label><br>
+                <input type="text" name="profilePicturePath" th:value="${user.profilePicturePath}"
+                    placeholder="Ex: /img/avatar.png">
+                <br>
+                <img th:if="${user.profilePicturePath}" th:src="${user.profilePicturePath}" alt="Foto de Perfil"
+                    style="width: 100px; height: 100px;">
+            </div>
+            <br>
+            <div>
+                <label>Biografia:</label><br>
+                <textarea name="bio" rows="4" cols="50" th:text="${user.bio}"
+                    placeholder="Escreve algo sobre ti..."></textarea>
+            </div>
+            <br>
+            <button type="submit">Guardar Alterações</button>
+        </form>
+
+        <hr>
+
+        <h2>Definições de Privacidade</h2>
+        <form action="/profile/privacy" method="POST">
+            <div>
+                <label>Alterar Nome de Utilizador:</label><br>
+                <input type="text" name="username" th:value="${user.username}" required>
+            </div>
+            <br>
+            <button type="submit">Atualizar Username</button>
+        </form>
+
+        <br>
+
+        <h3>Alterar Palavra-pass</h3>
+        <form action="/profile/change-password" method="POST">
+            <div>
+                <label>Password Atual:</label><br>
+                <input type="password" name="currentPassword" required>
+            </div>
+            <br>
+            <div>
+                <label>Nova Password:</label><br>
+                <input type="password" name="newPassword" required>
+            </div>
+            <br>
+            <div>
+                <label>Confirmar Nova Password:</label><br>
+                <input type="password" name="confirmPassword" required>
+            </div>
+            <br>
+            <button type="submit">Alterar Palavra-pass</button>
+        </form>
+
+        <hr>
+
+        <form action="/logout" method="GET">
+            <button type="submit" style="color: red;">Sair da Conta (Sign Out)</button>
+        </form>
+    </div>
+
+    <div th:if="${user == null}">
+        <p>Erro ao carregar perfil. Por favor, <a href="/login">faz login novamente</a>.</p>
+    </div>
+
+</body>
+
+</html>
