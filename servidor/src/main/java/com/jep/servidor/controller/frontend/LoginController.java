@@ -2,6 +2,7 @@ package com.jep.servidor.controller.frontend;
 
 import com.jep.servidor.model.User;
 import com.jep.servidor.repository.UserRepository;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -18,7 +19,10 @@ public class LoginController {
     private UserRepository userRepository;
 
     @GetMapping("/login")
-    public String showLoginForm() {
+    public String showLoginForm(HttpSession session) {
+        if (session.getAttribute("userId") != null) {
+            return "redirect:/profile";
+        }
         return "login";
     }
 
@@ -27,6 +31,7 @@ public class LoginController {
             @RequestParam String identifier,
             @RequestParam(required = false) String tag,
             @RequestParam String password,
+            HttpSession session,
             Model model) {
 
         Optional<User> userOpt;
@@ -39,13 +44,17 @@ public class LoginController {
         }
 
         if (userOpt.isPresent() && userOpt.get().getPassword().equals(password)) {
-            model.addAttribute("success",
-                    "Login efetuado com sucesso! Bem-vindo(a), " + userOpt.get().getUsername() + ".");
-            // No futuro, aqui poderíamos adicionar o utilizador à sessão (HttpSession)
-            return "login";
+            session.setAttribute("userId", userOpt.get().getId());
+            return "redirect:/profile";
         } else {
             model.addAttribute("error", "Utilizador ou password incorretos.");
             return "login";
         }
+    }
+
+    @GetMapping("/logout")
+    public String logout(HttpSession session) {
+        session.invalidate();
+        return "redirect:/login";
     }
 }

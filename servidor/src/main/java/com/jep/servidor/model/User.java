@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 @Entity
 @Table(name = "users", uniqueConstraints = {
         @UniqueConstraint(columnNames = "email"),
-        @UniqueConstraint(columnNames = {"username", "tag"})
+        @UniqueConstraint(columnNames = { "username", "tag" })
 })
 public class User {
 
@@ -74,6 +74,27 @@ public class User {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    @Column(length = 500)
+    private String bio;
+
+    private String profilePicturePath;
+
+    public String getBio() {
+        return bio;
+    }
+
+    public void setBio(String bio) {
+        this.bio = bio;
+    }
+
+    public String getProfilePicturePath() {
+        return profilePicturePath;
+    }
+
+    public void setProfilePicturePath(String profilePicturePath) {
+        this.profilePicturePath = profilePicturePath;
     }
 
     public String getEmail() {
