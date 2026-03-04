@@ -18,14 +18,15 @@ public class UserRelationController {
     }
 
     @GetMapping("/user/{userId}")
-    public List<UserRelation> getAllRelations(@PathVariable Long userId) {
+    public List<UserRelation> getAllRelations(@PathVariable("userId") Long userId) {
         com.jep.servidor.model.User user = new com.jep.servidor.model.User();
         user.setId(userId);
         return relationRepository.findByUser(user);
     }
 
     @GetMapping("/user/{userId}/{type}")
-    public List<UserRelation> getRelationsByType(@PathVariable Long userId, @PathVariable UserRelation.RelationType type) {
+    public List<UserRelation> getRelationsByType(@PathVariable("userId") Long userId,
+            @PathVariable("type") UserRelation.RelationType type) {
         com.jep.servidor.model.User user = new com.jep.servidor.model.User();
         user.setId(userId);
         return relationRepository.findByUserAndType(user, type);
@@ -38,7 +39,7 @@ public class UserRelationController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable("id") Long id) {
         if (!relationRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
