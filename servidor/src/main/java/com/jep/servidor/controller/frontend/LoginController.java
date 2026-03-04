@@ -27,10 +27,10 @@ public class LoginController {
     }
 
     @PostMapping("/login")
-    public String loginUser(@RequestParam String loginType,
-            @RequestParam String identifier,
-            @RequestParam(required = false) String tag,
-            @RequestParam String password,
+    public String loginUser(@RequestParam("loginType") String loginType,
+            @RequestParam("identifier") String identifier,
+            @RequestParam(value = "tag", required = false) String tag,
+            @RequestParam("password") String password,
             HttpSession session,
             Model model) {
 
@@ -44,7 +44,20 @@ public class LoginController {
         }
 
         if (userOpt.isPresent() && userOpt.get().getPassword().equals(password)) {
-            session.setAttribute("userId", userOpt.get().getId());
+            User user = userOpt.get();
+            if (user.getStatus() != User.UserStatus.ACTIVE) {
+                model.addAttribute("error", "A sua conta está " +
+                        (user.getStatus() == User.UserStatus.BANNED ? "BANIDA" : "SUSPENSA") +
+                        ". Contacte o suporte técnico.");
+                return "login";
+            }
+            session.setAttribute("userId", user.getId());
+            session.setAttribute("userType", user.getUserType().toString());
+
+            // Atualizar data de último acesso
+            user.setLastActiveAt(java.time.LocalDateTime.now());
+            userRepository.save(user);
+
             return "redirect:/profile";
         } else {
             model.addAttribute("error", "Utilizador ou password incorretos.");

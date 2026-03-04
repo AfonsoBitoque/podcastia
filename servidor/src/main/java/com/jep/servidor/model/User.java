@@ -13,9 +13,28 @@ public class User {
         USERNORMAL, USERADMIN
     }
 
+    public enum UserStatus {
+        ACTIVE, SUSPENDED, BANNED
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(nullable = false, updatable = false)
+    private java.time.LocalDateTime createdAt;
+
+    private java.time.LocalDateTime lastActiveAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserStatus status = UserStatus.ACTIVE;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = java.time.LocalDateTime.now();
+        lastActiveAt = createdAt;
+    }
 
     @Column(nullable = false)
     private String username;
@@ -95,6 +114,26 @@ public class User {
 
     public void setProfilePicturePath(String profilePicturePath) {
         this.profilePicturePath = profilePicturePath;
+    }
+
+    public java.time.LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public java.time.LocalDateTime getLastActiveAt() {
+        return lastActiveAt;
+    }
+
+    public void setLastActiveAt(java.time.LocalDateTime lastActiveAt) {
+        this.lastActiveAt = lastActiveAt;
+    }
+
+    public UserStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(UserStatus status) {
+        this.status = status;
     }
 
     public String getEmail() {

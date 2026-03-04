@@ -9,6 +9,18 @@
 <body>
     <h1>O Teu Perfil</h1>
 
+    <div th:if="${user != null and user.userType == T(com.jep.servidor.model.User.UserType).USERADMIN}"
+        style="background: #f0f0f0; padding: 10px; margin-bottom: 20px;">
+        <strong>Modo Admin:</strong> <a href="/admin/dashboard">Ir para Painel de Gestão</a>
+    </div>
+
+    <div th:if="${error}" style="color: red; border: 1px solid red; padding: 10px; margin-bottom: 10px;">
+        <p th:text="${error}"></p>
+    </div>
+    <div th:if="${success}" style="color: green; border: 1px solid green; padding: 10px; margin-bottom: 10px;">
+        <p th:text="${success}"></p>
+    </div>
+
     <div th:if="${user != null}">
         <p><strong>Username:</strong> <span th:text="${user.username}"></span></p>
         <p><strong>Tag:</strong> <span th:text="${user.tag}"></span></p>
@@ -45,12 +57,29 @@
                 <input type="text" name="username" th:value="${user.username}" required>
             </div>
             <br>
+            <button type="submit">Atualizar Username</button>
+        </form>
+
+        <br>
+
+        <h3>Alterar Palavra-pass</h3>
+        <form action="/profile/change-password" method="POST">
             <div>
-                <label>Nova Password (deixa vazio para não alterar):</label><br>
-                <input type="password" name="newPassword">
+                <label>Password Atual:</label><br>
+                <input type="password" name="currentPassword" required>
             </div>
             <br>
-            <button type="submit">Atualizar Privacidade</button>
+            <div>
+                <label>Nova Password:</label><br>
+                <input type="password" name="newPassword" required>
+            </div>
+            <br>
+            <div>
+                <label>Confirmar Nova Password:</label><br>
+                <input type="password" name="confirmPassword" required>
+            </div>
+            <br>
+            <button type="submit">Alterar Palavra-pass</button>
         </form>
 
         <hr>

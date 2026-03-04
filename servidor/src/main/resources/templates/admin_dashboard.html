@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Painel de Administração - Podcastia</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f4f4f4;
+        }
+
+        .status-ACTIVE {
+            color: green;
+        }
+
+        .status-SUSPENDED {
+            color: orange;
+        }
+
+        .status-BANNED {
+            color: red;
+        }
+
+        .search-container {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Painel de Gestão de Utilizadores</h1>
+    <a href="/profile">Voltar ao meu Perfil</a> | <a href="/logout">Sair</a>
+
+    <div class="search-container">
+        <form action="/admin/dashboard" method="GET">
+            <input type="text" name="search" placeholder="Pesquisar por Nome ou Email..." th:value="${param.search}">
+            <button type="submit">Pesquisar</button>
+            <a href="/admin/dashboard" th:if="${param.search}">Limpar</a>
+        </form>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nome / Tag</th>
+                <th>Email</th>
+                <th>Registo</th>
+                <th>Última Atividade</th>
+                <th>Amigos</th>
+                <th>Estado</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="user : ${users}">
+                <td th:text="${user.id}"></td>
+                <td th:text="${user.username + ' #' + user.tag}"></td>
+                <td th:text="${user.email}"></td>
+                <td th:text="${#temporals.format(user.createdAt, 'dd/MM/yyyy HH:mm')}"></td>
+                <td th:text="${#temporals.format(user.lastActiveAt, 'dd/MM/yyyy HH:mm')}"></td>
+                <td th:text="${userRepository.countFriendships(user.id)}"></td>
+                <td th:class="${'status-' + user.status}" th:text="${user.status}"></td>
+                <td>
+                    <form th:action="@{'/admin/user/' + ${user.id} + '/status'}" method="POST" style="display:inline;">
+                        <input type="hidden" name="status" value="ACTIVE">
+                        <button type="submit"
+                            th:if="${user.status != T(com.jep.servidor.model.User.UserStatus).ACTIVE}">Ativar</button>
+                    </form>
+                    <form th:action="@{'/admin/user/' + ${user.id} + '/status'}" method="POST" style="display:inline;">
+                        <input type="hidden" name="status" value="SUSPENDED">
+                        <button type="submit"
+                            th:if="${user.status == T(com.jep.servidor.model.User.UserStatus).ACTIVE}">Suspender</button>
+                    </form>
+                    <form th:action="@{'/admin/user/' + ${user.id} + '/status'}" method="POST" style="display:inline;">
+                        <input type="hidden" name="status" value="BANNED">
+                        <button type="submit"
+                            th:if="${user.status != T(com.jep.servidor.model.User.UserStatus).BANNED}">Banir</button>
+                    </form>
+                    <form th:action="@{'/admin/user/' + ${user.id} + '/reset-password'}" method="POST"
+                        style="display:inline;" onsubmit="return confirm('Resetar password para 1234?');">
+                        <button type="submit">Reset PW</button>
+                    </form>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <hr>
+    <h2>Todos os Podcasts</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Título</th>
+                <th>Dono</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="p : ${podcasts}">
+                <td th:text="${p.id}"></td>
+                <td th:text="${p.title}"></td>
+                <td th:text="${p.user != null ? p.user.username : 'N/A'}"></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <hr>
+    <h2>Relações entre Utilizadores</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Utilizador</th>
+                <th>Amigo/Alvo</th>
+                <th>Tipo</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="r : ${relations}">
+                <td th:text="${r.id}"></td>
+                <td th:text="${r.user != null ? r.user.username : 'N/A'}"></td>
+                <td th:text="${r.friend != null ? r.friend.username : 'N/A'}"></td>
+                <td th:text="${r.type}"></td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+
+</html>

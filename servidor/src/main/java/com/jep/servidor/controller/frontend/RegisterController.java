@@ -18,11 +18,11 @@ public class RegisterController {
     }
 
     @PostMapping("/register")
-    public String registerUser(@RequestParam String username,
-                               @RequestParam String tag,
-                               @RequestParam String email,
-                               @RequestParam String password,
-                               Model model) {
+    public String registerUser(@RequestParam("username") String username,
+            @RequestParam("tag") String tag,
+            @RequestParam("email") String email,
+            @RequestParam("password") String password,
+            Model model) {
         if (username.isEmpty() || tag.isEmpty() || email.isEmpty() || password.isEmpty() || tag.length() != 4) {
             model.addAttribute("error", "Preencha todos os campos corretamente.");
             return "register";
@@ -48,15 +48,16 @@ public class RegisterController {
 
     @GetMapping("/register/check-tag")
     @ResponseBody
-    public String checkTag(@RequestParam String username, @RequestParam String tag) {
-        if (tag.length() != 4) return "Tag inválida";
+    public String checkTag(@RequestParam("username") String username, @RequestParam("tag") String tag) {
+        if (tag.length() != 4)
+            return "Tag inválida";
         boolean exists = userRepository.existsByUsernameAndTag(username, tag);
         return exists ? "Tag ocupada" : "Tag disponível";
     }
 
     @GetMapping("/register/generate-tag")
     @ResponseBody
-    public String generateTag(@RequestParam String username) {
+    public String generateTag(@RequestParam("username") String username) {
         for (int i = 0; i <= 9999; i++) {
             String tag = String.format("%04d", i);
             if (!userRepository.existsByUsernameAndTag(username, tag)) {

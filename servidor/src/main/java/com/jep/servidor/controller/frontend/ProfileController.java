@@ -25,13 +25,31 @@ public class ProfileController {
             return "redirect:/login";
         }
 
-        userRepository.findById(userId).ifPresent(user -> model.addAttribute("user", user));
+        Optional<User> userOpt = userRepository.findById(userId);
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            if (user.getStatus() != User.UserStatus.ACTIVE) {
+                session.invalidate();
+                return "redirect:/login";
+            }
+            model.addAttribute("user", user);
+        } else {
+            session.invalidate();
+            return "redirect:/login";
+        }
+
+        // Passar mensagens temporárias da sessão para o model e limpar
+        model.addAttribute("error", session.getAttribute("error"));
+        model.addAttribute("success", session.getAttribute("success"));
+        session.removeAttribute("error");
+        session.removeAttribute("success");
+
         return "profile";
     }
 
     @PostMapping("/profile/update")
-    public String updateProfile(@RequestParam String bio,
-            @RequestParam(required = false) String profilePicturePath,
+    public String updateProfile(@RequestParam("bio") String bio,
+            @RequestParam(value = "profilePicturePath", required = false) String profilePicturePath,
             HttpSession session,
             Model model) {
         Long userId = (Long) session.getAttribute("userId");
@@ -51,8 +69,7 @@ public class ProfileController {
     }
 
     @PostMapping("/profile/privacy")
-    public String updatePrivacy(@RequestParam String username,
-            @RequestParam(required = false) String newPassword,
+    public String updatePrivacy(@RequestParam("username") String username,
             HttpSession session,
             Model model) {
         Long userId = (Long) session.getAttribute("userId");
@@ -63,10 +80,42 @@ public class ProfileController {
         if (userOpt.isPresent()) {
             User user = userOpt.get();
             user.setUsername(username);
-            if (newPassword != null && !newPassword.isEmpty()) {
-                user.setPassword(newPassword);
-            }
             userRepository.save(user);
+        }
+        return "redirect:/profile";
+    }
+
+    @PostMapping("/profile/change-password")
+    public String changePassword(@RequestParam("currentPassword") String currentPassword,
+            @RequestParam("newPassword") String newPassword,
+            @RequestParam("confirmPassword") String confirmPassword,
+            HttpSession session,
+            Model model) {
+        Long userId = (Long) session.getAttribute("userId");
+        if (userId == null)
+            return "redirect:/login";
+
+        Optional<User> userOpt = userRepository.findById(userId);
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+
+            // Validações básicas
+            if (!user.getPassword().equals(currentPassword)) {
+                session.setAttribute("error", "A password atual está incorreta.");
+                return "redirect:/profile";
+            }
+            if (!newPassword.equals(confirmPassword)) {
+                session.setAttribute("error", "As novas passwords não coincidem.");
+                return "redirect:/profile";
+            }
+            if (newPassword.isEmpty()) {
+                session.setAttribute("error", "A nova password não pode estar vazia.");
+                return "redirect:/profile";
+            }
+
+            user.setPassword(newPassword);
+            userRepository.save(user);
+            session.setAttribute("success", "Password alterada com sucesso!");
         }
         return "redirect:/profile";
     }
