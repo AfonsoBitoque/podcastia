@@ -1,18 +1,37 @@
 package com.jep.servidor.model;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import java.time.LocalDateTime;
 
+/**
+ * Entidade que representa um utilizador no sistema.
+ */
 @Entity
 @Table(name = "users", uniqueConstraints = {
-        @UniqueConstraint(columnNames = "email"),
-        @UniqueConstraint(columnNames = { "username", "tag" })
+    @UniqueConstraint(columnNames = "email"),
+    @UniqueConstraint(columnNames = {"username", "tag"})
 })
 public class User {
 
+    /**
+     * Tipos de utilizador disponíveis.
+     */
     public enum UserType {
         USERNORMAL, USERADMIN
     }
 
+    /**
+     * Estados possíveis para um utilizador.
+     */
     public enum UserStatus {
         ACTIVE, SUSPENDED, BANNED
     }
@@ -22,19 +41,13 @@ public class User {
     private Long id;
 
     @Column(nullable = false, updatable = false)
-    private java.time.LocalDateTime createdAt;
+    private LocalDateTime createdAt;
 
-    private java.time.LocalDateTime lastActiveAt;
+    private LocalDateTime lastActiveAt;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserStatus status = UserStatus.ACTIVE;
-
-    @PrePersist
-    protected void onCreate() {
-        createdAt = java.time.LocalDateTime.now();
-        lastActiveAt = createdAt;
-    }
 
     @Column(nullable = false)
     private String username;
@@ -52,11 +65,32 @@ public class User {
     @Column(nullable = false)
     private UserType userType = UserType.USERNORMAL;
 
+    @Column(length = 500)
+    private String bio;
+
+    private String profilePicturePath;
+
+    /**
+     * Construtor padrão.
+     */
     public User() {
+    }
+
+    /**
+     * Método executado antes de persistir a entidade para definir datas de criação.
+     */
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        lastActiveAt = createdAt;
     }
 
     public Long getId() {
         return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public UserType getUserType() {
@@ -65,10 +99,6 @@ public class User {
 
     public void setUserType(UserType userType) {
         this.userType = userType;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
     }
 
     public String getUsername() {
@@ -95,10 +125,13 @@ public class User {
         this.password = password;
     }
 
-    @Column(length = 500)
-    private String bio;
+    public String getEmail() {
+        return email;
+    }
 
-    private String profilePicturePath;
+    public void setEmail(String email) {
+        this.email = email;
+    }
 
     public String getBio() {
         return bio;
@@ -116,15 +149,15 @@ public class User {
         this.profilePicturePath = profilePicturePath;
     }
 
-    public java.time.LocalDateTime getCreatedAt() {
+    public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
-    public java.time.LocalDateTime getLastActiveAt() {
+    public LocalDateTime getLastActiveAt() {
         return lastActiveAt;
     }
 
-    public void setLastActiveAt(java.time.LocalDateTime lastActiveAt) {
+    public void setLastActiveAt(LocalDateTime lastActiveAt) {
         this.lastActiveAt = lastActiveAt;
     }
 
@@ -134,13 +167,5 @@ public class User {
 
     public void setStatus(UserStatus status) {
         this.status = status;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
     }
 }
