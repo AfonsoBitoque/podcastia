@@ -44,6 +44,12 @@ Para remover a pasta `target/` e ficheiros temporários:
 ./mvnw clean
 ```
 
+### 6. Verificação de Qualidade e Segurança
+Para executar verificações de estilo de código e vulnerabilidades de dependências:
+```bash
+./mvnw verify
+```
+
 ---
 
 ## 🛠️ Base de Dados (H2 Console)
