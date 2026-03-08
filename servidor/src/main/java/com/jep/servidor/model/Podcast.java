@@ -1,8 +1,21 @@
 package com.jep.servidor.model;
 
-import jakarta.persistence.*;
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import java.util.List;
 
+/**
+ * Entidade que representa um podcast no sistema.
+ */
 @Entity
 @Table(name = "podcasts",
     indexes = {
@@ -20,7 +33,6 @@ public class Podcast {
     @Column(nullable = false)
     private int duracao;
 
-
     // Caminho do ficheiro mp3 guardado no servidor
     @Column(nullable = false)
     private String conteudoPath;
@@ -34,23 +46,57 @@ public class Podcast {
     @Column(name = "tag")
     private List<String> tags;
 
-    public Podcast() {}
+    /**
+     * Construtor padrão.
+     */
+    public Podcast() {
+    }
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public String getTitulo() { return titulo; }
-    public void setTitulo(String titulo) { this.titulo = titulo; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public int getDuracao() { return duracao; }
-    public void setDuracao(int duracao) { this.duracao = duracao; }
+    public String getTitulo() {
+        return titulo;
+    }
 
-    public String getConteudoPath() { return conteudoPath; }
-    public void setConteudoPath(String conteudoPath) { this.conteudoPath = conteudoPath; }
+    public void setTitulo(String titulo) {
+        this.titulo = titulo;
+    }
 
-    public List<String> getTags() { return tags; }
-    public void setTags(List<String> tags) { this.tags = tags; }
+    public int getDuracao() {
+        return duracao;
+    }
 
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
+    public void setDuracao(int duracao) {
+        this.duracao = duracao;
+    }
+
+    public String getConteudoPath() {
+        return conteudoPath;
+    }
+
+    public void setConteudoPath(String conteudoPath) {
+        this.conteudoPath = conteudoPath;
+    }
+
+    public List<String> getTags() {
+        return tags;
+    }
+
+    public void setTags(List<String> tags) {
+        this.tags = tags;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
 }
