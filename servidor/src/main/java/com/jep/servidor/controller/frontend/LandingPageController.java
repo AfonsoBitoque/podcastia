@@ -9,13 +9,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class LandingPageController {
 
-    /**
-     * Exibe a página inicial.
-     *
-     * @return Nome da view da página inicial.
-     */
-    @GetMapping("/")
-    public String landing() {
-        return "landing";
-    }
+  /**
+   * Exibe a página inicial.
+   *
+   * @return Nome da view da página inicial.
+   */
+  @GetMapping("/")
+  public String landing() {
+    return "landing";
+  }
 }

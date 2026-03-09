@@ -7,63 +7,63 @@
 </head>
 
 <body>
-    <h1>Login - Podcastia</h1>
+<h1>Login - Podcastia</h1>
 
-    <div th:if="${error}" style="color: red;">
-        <p th:text="${error}"></p>
+<div th:if="${error}" style="color: red;">
+    <p th:text="${error}"></p>
+</div>
+<div th:if="${success}" style="color: green;">
+    <p th:text="${success}"></p>
+</div>
+
+<!-- Interface simples sem CSS, focada na funcionalidade solicitado -->
+<form action="/login" method="POST">
+    <label>Tipo de Login:</label><br>
+    <input type="radio" id="emailOption" name="loginType" value="email" checked onclick="toggleFields()">
+    <label for="emailOption">Email</label>
+    <input type="radio" id="userOption" name="loginType" value="username" onclick="toggleFields()">
+    <label for="userOption">Username + Tag</label>
+    <br><br>
+
+    <div id="identifierContainer">
+        <label id="identifierLabel" for="identifier">Email:</label>
+        <input type="text" id="identifier" name="identifier" required>
     </div>
-    <div th:if="${success}" style="color: green;">
-        <p th:text="${success}"></p>
+
+    <div id="tagContainer" style="display: none;">
+        <label for="tag">Tag (4 dígitos):</label>
+        <input type="text" id="tag" name="tag" maxlength="4">
     </div>
-
-    <!-- Interface simples sem CSS, focada na funcionalidade solicitado -->
-    <form action="/login" method="POST">
-        <label>Tipo de Login:</label><br>
-        <input type="radio" id="emailOption" name="loginType" value="email" checked onclick="toggleFields()">
-        <label for="emailOption">Email</label>
-        <input type="radio" id="userOption" name="loginType" value="username" onclick="toggleFields()">
-        <label for="userOption">Username + Tag</label>
-        <br><br>
-
-        <div id="identifierContainer">
-            <label id="identifierLabel" for="identifier">Email:</label>
-            <input type="text" id="identifier" name="identifier" required>
-        </div>
-
-        <div id="tagContainer" style="display: none;">
-            <label for="tag">Tag (4 dígitos):</label>
-            <input type="text" id="tag" name="tag" maxlength="4">
-        </div>
-
-        <br>
-        <label for="password">Password:</label>
-        <input type="password" id="password" name="password" required>
-        <br><br>
-
-        <button type="submit">Entrar</button>
-    </form>
 
     <br>
-    <a href="/register">Ainda não tens conta? Regista-te aqui.</a>
+    <label for="password">Password:</label>
+    <input type="password" id="password" name="password" required>
+    <br><br>
 
-    <script th:inline="javascript">
-        function toggleFields() {
-            const isEmail = document.getElementById('emailOption').checked;
-            const tagContainer = document.getElementById('tagContainer');
-            const identifierLabel = document.getElementById('identifierLabel');
-            const tagInput = document.getElementById('tag');
+    <button type="submit">Entrar</button>
+</form>
 
-            if (isEmail) {
-                tagContainer.style.display = 'none';
-                identifierLabel.innerText = 'Email:';
-                tagInput.required = false;
-            } else {
-                tagContainer.style.display = 'block';
-                identifierLabel.innerText = 'Username:';
-                tagInput.required = true;
-            }
+<br>
+<a href="/register">Ainda não tens conta? Regista-te aqui.</a>
+
+<script th:inline="javascript">
+    function toggleFields() {
+        const isEmail = document.getElementById('emailOption').checked;
+        const tagContainer = document.getElementById('tagContainer');
+        const identifierLabel = document.getElementById('identifierLabel');
+        const tagInput = document.getElementById('tag');
+
+        if (isEmail) {
+            tagContainer.style.display = 'none';
+            identifierLabel.innerText = 'Email:';
+            tagInput.required = false;
+        } else {
+            tagContainer.style.display = 'block';
+            identifierLabel.innerText = 'Username:';
+            tagInput.required = true;
         }
-    </script>
+    }
+</script>
 </body>
 
 </html>

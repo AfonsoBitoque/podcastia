@@ -9,13 +9,13 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class ServidorApplication {
 
-    /**
-     * Método principal para iniciar a aplicação.
-     *
-     * @param args Argumentos da linha de comando.
-     */
-    public static void main(String[] args) {
-        SpringApplication.run(ServidorApplication.class, args);
-    }
+  /**
+   * Método principal para iniciar a aplicação.
+   *
+   * @param args Argumentos da linha de comando.
+   */
+  public static void main(String[] args) {
+    SpringApplication.run(ServidorApplication.class, args);
+  }
 
 }

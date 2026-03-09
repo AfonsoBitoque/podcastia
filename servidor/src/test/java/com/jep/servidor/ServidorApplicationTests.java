@@ -6,9 +6,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest
 class ServidorApplicationTests {
 
-    @Test
-    void contextLoads() {
-        // Teste de carga do contexto da aplicação
-    }
+  @Test
+  void contextLoads() {
+    // Teste de carga do contexto da aplicação
+  }
 
 }
