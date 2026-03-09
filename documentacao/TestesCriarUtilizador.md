@@ -44,4 +44,19 @@ Foi implementada uma suite de testes de integração completa para cobrir os seg
 | **Campos Vazios** | `400 Bad Request` | Bloqueia submissões sem campos obrigatórios. |
 
 ---
-> **Nota de Implementação:** As validações de conflito (409) garantem que a experiência do utilizador seja consistente com as regras de negócio de unicidade do sistema.
+
+### 🚀 Como Executar os Testes
+Para validar a implementação, execute o seguinte comando na raiz do projeto `servidor`:
+
+```bash
+./mvnw test -Dtest=UserRegistrationTest
+```
+
+Para correr toda a suite de testes e verificações de qualidade:
+
+```bash
+./mvnw verify
+```
+
+> **Nota de Implementação:** As validações de conflito (409) garantem que a experiência do utilizador seja consistente
+com as regras de negócio de unicidade do sistema.
