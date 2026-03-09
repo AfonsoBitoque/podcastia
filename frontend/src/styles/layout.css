@@ -54,6 +54,11 @@
   color: #4e3028;
 }
 
+.site-nav a.active {
+  background: rgba(224, 90, 42, 0.2);
+  color: #4e3028;
+}
+
 .site-footer {
   background: #2f1f1b;
   color: #f6ece2;

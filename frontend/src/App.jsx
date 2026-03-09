@@ -1,6 +1,8 @@
+import { Navigate, Route, Routes } from 'react-router-dom'
 import Header from './components/layout/Header'
 import Footer from './components/layout/Footer'
 import RegisterPage from './pages/RegisterPage'
+import LoginPage from './pages/LoginPage'
 import './styles/layout.css'
 
 function App() {
@@ -8,7 +10,11 @@ function App() {
     <div className="app-shell">
       <Header />
       <div className="app-main">
-        <RegisterPage />
+        <Routes>
+          <Route path="/" element={<Navigate to="/register" replace />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/login" element={<LoginPage />} />
+        </Routes>
       </div>
       <Footer />
     </div>

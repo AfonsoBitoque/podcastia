@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import '../styles/register-page.css'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
 function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -345,7 +346,7 @@ function RegisterPage() {
           {serverMessage && <p className="feedback error">{serverMessage}</p>}
 
           <p className="signin-link">
-            Ja tens conta? <a href="#">Entrar</a>
+              Ja tens conta? <Link to="/login">Entrar</Link>
           </p>
         </section>
       </div>

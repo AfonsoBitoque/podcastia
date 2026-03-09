@@ -1,15 +1,17 @@
+import { Link, NavLink } from 'react-router-dom'
+
 function Header() {
   return (
     <header className="site-header">
       <div className="site-header__inner">
-        <a href="#" className="site-brand" aria-label="Podcastia home">
+        <Link to="/register" className="site-brand" aria-label="Podcastia home">
           Podcastia
-        </a>
+        </Link>
 
         <nav className="site-nav" aria-label="Main navigation">
           <a href="#">Explorar</a>
-          <a href="#">Registar</a>
-          <a href="#">Entrar</a>
+          <NavLink to="/register">Registar</NavLink>
+          <NavLink to="/login">Entrar</NavLink>
         </nav>
       </div>
     </header>
