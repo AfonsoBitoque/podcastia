@@ -28,77 +28,77 @@ import jakarta.persistence.UniqueConstraint;
     }
 )
 public class UserRelation {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+  @ManyToOne(optional = false)
+  @JoinColumn(name = "user_id", nullable = false)
+  private User user;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "friend_id", nullable = false)
-    private User friend;
+  @ManyToOne(optional = false)
+  @JoinColumn(name = "friend_id", nullable = false)
+  private User friend;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private RelationType type;
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private RelationType type;
 
-    /**
-     * Tipos de relação possíveis.
-     */
-    public enum RelationType {
-        AMIGO, BLOQUEADO, PEDIDO
-    }
+  /**
+   * Tipos de relação possíveis.
+   */
+  public enum RelationType {
+    AMIGO, BLOQUEADO, PEDIDO
+  }
 
-    /**
-     * Construtor padrão.
-     */
-    public UserRelation() {
-    }
+  /**
+   * Construtor padrão.
+   */
+  public UserRelation() {
+  }
 
-    /**
-     * Construtor com parâmetros.
-     *
-     * @param user Utilizador principal.
-     * @param friend Utilizador relacionado.
-     * @param type Tipo de relação.
-     */
-    public UserRelation(User user, User friend, RelationType type) {
-        this.user = user;
-        this.friend = friend;
-        this.type = type;
-    }
+  /**
+   * Construtor com parâmetros.
+   *
+   * @param user   Utilizador principal.
+   * @param friend Utilizador relacionado.
+   * @param type   Tipo de relação.
+   */
+  public UserRelation(User user, User friend, RelationType type) {
+    this.user = user;
+    this.friend = friend;
+    this.type = type;
+  }
 
-    public Long getId() {
-        return id;
-    }
+  public Long getId() {
+    return id;
+  }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+  public void setId(Long id) {
+    this.id = id;
+  }
 
-    public User getUser() {
-        return user;
-    }
+  public User getUser() {
+    return user;
+  }
 
-    public void setUser(User user) {
-        this.user = user;
-    }
+  public void setUser(User user) {
+    this.user = user;
+  }
 
-    public User getFriend() {
-        return friend;
-    }
+  public User getFriend() {
+    return friend;
+  }
 
-    public void setFriend(User friend) {
-        this.friend = friend;
-    }
+  public void setFriend(User friend) {
+    this.friend = friend;
+  }
 
-    public RelationType getType() {
-        return type;
-    }
+  public RelationType getType() {
+    return type;
+  }
 
-    public void setType(RelationType type) {
-        this.type = type;
-    }
+  public void setType(RelationType type) {
+    this.type = type;
+  }
 }
