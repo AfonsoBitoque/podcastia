@@ -1,14 +1,13 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import '../styles/login-page.css'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
 
 function LoginPage() {
+  const navigate = useNavigate()
   const [formData, setFormData] = useState({
-    loginType: 'email',
-    identifier: '',
-    tag: '',
+    email: '',
     password: '',
   })
   const [status, setStatus] = useState('idle')
@@ -16,13 +15,6 @@ function LoginPage() {
 
   const handleInputChange = (event) => {
     const { name, value } = event.target
-
-    if (name === 'tag') {
-      const normalizedTag = value.replace(/\D/g, '').slice(0, 4)
-      setFormData((prev) => ({ ...prev, tag: normalizedTag }))
-      return
-    }
-
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
@@ -30,14 +22,8 @@ function LoginPage() {
     event.preventDefault()
     setMessage('')
 
-    if (!formData.identifier.trim() || !formData.password) {
+    if (!formData.email.trim() || !formData.password) {
       setMessage('Preenche os campos obrigatorios para entrar.')
-      setStatus('error')
-      return
-    }
-
-    if (formData.loginType === 'username' && !/^\d{4}$/.test(formData.tag)) {
-      setMessage('Ao entrar por username, a tag deve ter 4 digitos.')
       setStatus('error')
       return
     }
@@ -46,14 +32,10 @@ function LoginPage() {
       setStatus('submitting')
 
       const params = new URLSearchParams({
-        loginType: formData.loginType,
-        identifier: formData.identifier.trim(),
+        loginType: 'email',
+        identifier: formData.email.trim(),
         password: formData.password,
       })
-
-      if (formData.loginType === 'username') {
-        params.set('tag', formData.tag)
-      }
 
       const response = await fetch(`${API_BASE_URL}/login`, {
         method: 'POST',
@@ -66,7 +48,12 @@ function LoginPage() {
       })
 
       if (response.redirected && response.url.includes('/profile')) {
-        window.location.href = `${API_BASE_URL}/profile`
+        navigate('/home')
+        return
+      }
+
+      if (response.ok) {
+        navigate('/home')
         return
       }
 
@@ -99,39 +86,15 @@ function LoginPage() {
           <p className="login-subtitle">Acede ao teu perfil e continua a tua jornada.</p>
 
           <form className="login-form" onSubmit={handleSubmit} noValidate>
-            <label htmlFor="loginType">Tipo de login</label>
-            <select id="loginType" name="loginType" value={formData.loginType} onChange={handleInputChange}>
-              <option value="email">Email</option>
-              <option value="username">Username + Tag</option>
-            </select>
-
-            <label htmlFor="identifier">
-              {formData.loginType === 'email' ? 'Email' : 'Nome de utilizador'}
-            </label>
+            <label htmlFor="email">Email</label>
             <input
-              id="identifier"
-              name="identifier"
-              type={formData.loginType === 'email' ? 'email' : 'text'}
-              value={formData.identifier}
+              id="email"
+              name="email"
+              type="email"
+              value={formData.email}
               onChange={handleInputChange}
-              placeholder={formData.loginType === 'email' ? 'nome@email.com' : 'Ex: maria_l'}
+              placeholder="nome@email.com"
             />
-
-            {formData.loginType === 'username' && (
-              <>
-                <label htmlFor="tag">Tag (4 digitos)</label>
-                <input
-                  id="tag"
-                  name="tag"
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={4}
-                  value={formData.tag}
-                  onChange={handleInputChange}
-                  placeholder="Ex: 1234"
-                />
-              </>
-            )}
 
             <label htmlFor="password">Password</label>
             <input
