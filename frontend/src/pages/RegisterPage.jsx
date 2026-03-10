@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import '../styles/register-page.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
 function RegisterPage() {
+  const navigate = useNavigate()
   const [formData, setFormData] = useState({
     username: '',
     tag: '',
@@ -178,15 +179,7 @@ function RegisterPage() {
         return
       }
 
-      setStatus('success')
-      setErrors({})
-      setFormData({
-        username: '',
-        tag: '',
-        email: '',
-        password: '',
-        confirmPassword: '',
-      })
+      navigate('/login', { replace: true })
     } catch {
       setServerMessage('Nao foi possivel ligar ao servidor. Confirma se o backend esta a correr.')
       setStatus('error')
@@ -337,9 +330,6 @@ function RegisterPage() {
 
           <p className="social-proof">Junta-te a mais de 5.000 podcasters ja registados.</p>
 
-          {status === 'success' && (
-            <p className="feedback success">Conta criada com sucesso. Ja podes iniciar sessao.</p>
-          )}
           {status === 'error' && (
             <p className="feedback error">Nao foi possivel criar a conta. Tenta novamente.</p>
           )}
