@@ -31,34 +31,37 @@ function LoginPage() {
     try {
       setStatus('submitting')
 
-      const params = new URLSearchParams({
-        loginType: 'email',
-        identifier: formData.email.trim(),
-        password: formData.password,
-      })
-
-      const response = await fetch(`${API_BASE_URL}/login`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Type': 'application/json',
         },
-        body: params.toString(),
-        credentials: 'include',
-        redirect: 'follow',
+        body: JSON.stringify({
+          identifier: formData.email.trim(),
+          password: formData.password,
+        }),
       })
 
-      if (response.redirected && response.url.includes('/profile')) {
-        navigate('/home')
-        return
-      }
+      const data = await response.json()
 
-      if (response.ok) {
+      if (response.ok && data.token) {
+        // Guarda o token e os dados do user no localStorage
+        localStorage.setItem('token', data.token)
+        localStorage.setItem('user', JSON.stringify({
+          id: data.userId,
+          username: data.username,
+          type: data.userType
+        }))
+        
+        // Dispara um evento para o Header saber que o utilizador fez login
+        window.dispatchEvent(new Event('auth-change'))
+        
         navigate('/home')
         return
       }
 
       setStatus('error')
-      setMessage('Credenciais invalidas ou sessao nao iniciada. Tenta novamente.')
+      setMessage(data.error || 'Credenciais invalidas ou sessao nao iniciada. Tenta novamente.')
     } catch {
       setStatus('error')
       setMessage('Nao foi possivel ligar ao servidor. Confirma se o backend esta a correr.')

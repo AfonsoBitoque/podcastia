@@ -52,7 +52,7 @@ function RegisterPage() {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/register/generate-tag?username=${encodeURIComponent(formData.username.trim())}`,
+        `${API_BASE_URL}/api/register/generate-tag?username=${encodeURIComponent(formData.username.trim())}`,
       )
       const text = await response.text()
 
@@ -88,7 +88,7 @@ function RegisterPage() {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/register/check-tag?username=${encodeURIComponent(formData.username.trim())}&tag=${encodeURIComponent(formData.tag)}`,
+        `${API_BASE_URL}/api/register/check-tag?username=${encodeURIComponent(formData.username.trim())}&tag=${encodeURIComponent(formData.tag)}`,
       )
       const text = await response.text()
 
