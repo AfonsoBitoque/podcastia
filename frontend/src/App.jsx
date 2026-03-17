@@ -4,6 +4,7 @@ import Footer from './components/layout/Footer'
 import RegisterPage from './pages/RegisterPage'
 import LoginPage from './pages/LoginPage'
 import HomePage from './pages/HomePage'
+import UserPage from './pages/UserPage'
 import './styles/layout.css'
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/home" element={<HomePage />} />
+          <Route path="/user" element={<UserPage />} />
         </Routes>
       </div>
       <Footer />

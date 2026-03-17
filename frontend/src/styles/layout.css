@@ -41,6 +41,12 @@
   gap: 0.75rem;
 }
 
+.site-user-nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .site-nav a {
   color: #6a4d41;
   text-decoration: none;
@@ -57,6 +63,11 @@
 .site-nav a.active {
   background: rgba(224, 90, 42, 0.2);
   color: #4e3028;
+}
+
+.site-nav .site-user-link {
+  font-size: 0.95rem;
+  text-transform: none;
 }
 
 .site-footer {
