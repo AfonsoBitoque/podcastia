@@ -71,6 +71,7 @@ const resolveProfilePicture = (path) => {
 function UserPage() {
   const navigate = useNavigate()
   const editButtonRef = useRef(null)
+  const bioTextareaRef = useRef(null)
   const photoInputRef = useRef(null)
   const [sessionUser, setSessionUser] = useState(null)
   const [user, setUser] = useState(null)
@@ -84,6 +85,7 @@ function UserPage() {
   const [photoMessage, setPhotoMessage] = useState('')
   const [photoError, setPhotoError] = useState('')
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false)
+  const [focusBioOnOpen, setFocusBioOnOpen] = useState(false)
   const [avatarVersion, setAvatarVersion] = useState(0)
   const [avatarFailed, setAvatarFailed] = useState(false)
   const [avatarLoading, setAvatarLoading] = useState(false)
@@ -96,6 +98,39 @@ function UserPage() {
     setAvatarFailed(false)
     setAvatarLoading(Boolean(resolveProfilePicture(user?.profilePicturePath)))
   }, [user?.profilePicturePath])
+
+  useEffect(() => {
+    if (!profileFormSuccess) return undefined
+
+    const timerId = window.setTimeout(() => {
+      setProfileFormSuccess('')
+    }, 5000)
+
+    return () => {
+      window.clearTimeout(timerId)
+    }
+  }, [profileFormSuccess])
+
+  useEffect(() => {
+    if (!photoMessage) return undefined
+
+    const timerId = window.setTimeout(() => {
+      setPhotoMessage('')
+    }, 5000)
+
+    return () => {
+      window.clearTimeout(timerId)
+    }
+  }, [photoMessage])
+
+  useEffect(() => {
+    if (!isEditingProfile || !focusBioOnOpen) return
+
+    bioTextareaRef.current?.focus()
+    const valueLength = bioTextareaRef.current?.value?.length || 0
+    bioTextareaRef.current?.setSelectionRange(valueLength, valueLength)
+    setFocusBioOnOpen(false)
+  }, [isEditingProfile, focusBioOnOpen])
 
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -323,7 +358,8 @@ function UserPage() {
   }
 
   const focusEditButton = () => {
-    editButtonRef.current?.focus()
+    setFocusBioOnOpen(true)
+    openEditProfile()
   }
 
   useEffect(() => {
@@ -518,6 +554,7 @@ function UserPage() {
 
                   <label htmlFor="edit-bio">Biografia</label>
                   <textarea
+                    ref={bioTextareaRef}
                     id="edit-bio"
                     name="bio"
                     value={profileForm.bio}
