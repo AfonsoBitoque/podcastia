@@ -167,6 +167,16 @@
   font-size: 0.9rem;
 }
 
+.user-success {
+  margin: 0;
+  padding: 0.65rem 0.8rem;
+  border-radius: 10px;
+  border: 1px solid rgba(65, 136, 77, 0.35);
+  background: rgba(220, 246, 224, 0.8);
+  color: #245a30;
+  font-size: 0.9rem;
+}
+
 .user-card p {
   color: #5d4338;
 }
@@ -239,6 +249,59 @@
 .user-main-info {
   display: grid;
   gap: 0.85rem;
+}
+
+.user-edit-form {
+  border: 1px solid rgba(124, 85, 67, 0.25);
+  border-radius: 14px;
+  padding: 1rem;
+  background: rgba(255, 251, 248, 0.8);
+  display: grid;
+  gap: 0.55rem;
+}
+
+.user-edit-form label {
+  color: #5f4134;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.user-edit-form input,
+.user-edit-form textarea {
+  width: 100%;
+  border: 1px solid rgba(118, 74, 57, 0.32);
+  border-radius: 10px;
+  padding: 0.62rem 0.72rem;
+  font: inherit;
+  color: #42261d;
+  background: #fffaf7;
+}
+
+.user-edit-form input:focus,
+.user-edit-form textarea:focus {
+  outline: 2px solid rgba(188, 90, 50, 0.22);
+  border-color: rgba(188, 90, 50, 0.55);
+}
+
+.user-edit-form textarea {
+  resize: vertical;
+  min-height: 6rem;
+}
+
+.user-edit-counter {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #7b5f53;
+  justify-self: end;
+}
+
+.user-edit-actions {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.user-edit-actions .user-action-btn {
+  width: auto;
 }
 
 .info-block {
