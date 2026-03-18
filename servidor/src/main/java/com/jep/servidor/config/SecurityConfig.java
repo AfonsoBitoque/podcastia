@@ -44,7 +44,7 @@ public class SecurityConfig {
         .authorizeHttpRequests(auth -> auth
             // Endpoints públicos
             .requestMatchers("/api/auth/**").permitAll() // Login REST
-            .requestMatchers("/users").permitAll() // Registo de conta
+            .requestMatchers("/users", "/users/**").permitAll() // Registo de conta
             .requestMatchers("/api/register/**").permitAll() // Gerar/Verificar Tag REST
             .requestMatchers("/h2-console/**").permitAll() // H2 Console
             
