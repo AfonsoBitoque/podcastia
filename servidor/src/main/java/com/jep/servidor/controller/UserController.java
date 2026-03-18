@@ -115,6 +115,9 @@ public class UserController {
     User saved = userRepository.save(user);
 
     return ResponseEntity.ok(saved);
+  }
+
+  /**
    * Altera a password de um utilizador.
    *
    * @param userId ID do utilizador.
