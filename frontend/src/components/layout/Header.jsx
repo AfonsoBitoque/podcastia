@@ -56,10 +56,10 @@ function Header() {
           <NavLink to="/home">Explorar</NavLink>
           
           {user ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                Bem vindo, <strong>{user.username}</strong>
-              </span>
+            <div className="site-user-nav">
+              <NavLink to="/user" className="site-user-link">
+                {user.username}
+              </NavLink>
               <a href="#" onClick={handleLogout} style={{ color: 'var(--accent-red, #ef4444)' }}>
                 Logout
               </a>

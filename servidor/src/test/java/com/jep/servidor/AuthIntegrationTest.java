@@ -1,6 +1,7 @@
 package com.jep.servidor;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -17,9 +18,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import com.jayway.jsonpath.JsonPath;
 
 /**
- * Testes de integração para o AuthController (fluxo de login).
+ * Testes de integração para o AuthController (fluxo de login e sessões).
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -51,7 +54,7 @@ class AuthIntegrationTest {
         testUser.setUsername("testuser");
         testUser.setTag("1234");
         testUser.setEmail("test@example.com");
-        testUser.setPassword(passwordEncoder.encode("password123")); // Password encriptada
+        testUser.setPassword(passwordEncoder.encode("password123")); // Password encriptada pelo PasswordEncoder (guardada no Hibernate/DB)
         testUser.setUserType(User.UserType.USERNORMAL);
         testUser.setStatus(User.UserStatus.ACTIVE);
         userRepository.save(testUser);
@@ -67,7 +70,7 @@ class AuthIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").exists())
+                .andExpect(jsonPath("$.token").exists()) // Resposta com um Token
                 .andExpect(jsonPath("$.userId").value(testUser.getId()))
                 .andExpect(jsonPath("$.username").value(testUser.getUsername()))
                 .andExpect(jsonPath("$.userType").value(testUser.getUserType().name()));
@@ -84,7 +87,7 @@ class AuthIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").exists())
+                .andExpect(jsonPath("$.token").exists()) // Resposta com um Token
                 .andExpect(jsonPath("$.userId").value(testUser.getId()))
                 .andExpect(jsonPath("$.username").value(testUser.getUsername()))
                 .andExpect(jsonPath("$.userType").value(testUser.getUserType().name()));
@@ -99,7 +102,7 @@ class AuthIntegrationTest {
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(loginRequest)))
-                .andExpect(status().isUnauthorized())
+                .andExpect(status().isUnauthorized()) // 401 Unauthorized se a password estiver errada
                 .andExpect(jsonPath("$.error").value("Credenciais inválidas"));
     }
 
@@ -109,6 +112,7 @@ class AuthIntegrationTest {
         loginRequest.identifier = "nonexistent@example.com";
         loginRequest.password = "password123";
 
+        // 401 e erro ao tentar login com email não registado, evito dar pistas (mensagem genérica)
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(loginRequest)))
@@ -146,5 +150,56 @@ class AuthIntegrationTest {
                 .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error").value("Conta suspensa ou banida"));
+    }
+
+    @Test
+    void shouldAccessProtectedEndpointWithValidToken() throws Exception {
+        // 1. Faz Login para obter token
+        LoginRequest loginRequest = new LoginRequest();
+        loginRequest.identifier = "test@example.com";
+        loginRequest.password = "password123";
+
+        MvcResult result = mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String response = result.getResponse().getContentAsString();
+        String token = JsonPath.parse(response).read("$.token");
+
+        // 2. Faz pedido a endpoint protegido (/podcasts) com o token
+        mockMvc.perform(get("/podcasts")
+                .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void shouldRejectAccessWithMalformedToken() throws Exception {
+        // Token inválido/malformado
+        String malformedToken = "eyMalformadoTokenAqui.abc.xyz";
+
+        mockMvc.perform(get("/podcasts")
+                .header("Authorization", "Bearer " + malformedToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void shouldRejectAccessWithExpiredToken() throws Exception {
+        // Token expirado propositadamente - Simulando
+        // Na prática JwtUtil ou outro utilitario gerararia, mas passamos um token expirado estático ou geramos um
+        String expiredToken = io.jsonwebtoken.Jwts.builder()
+                .setSubject(testUser.getEmail())
+                .claim("id", testUser.getId())
+                .claim("type", testUser.getUserType().name())
+                .setIssuedAt(new java.util.Date(System.currentTimeMillis() - 100000))
+                .setExpiration(new java.util.Date(System.currentTimeMillis() - 10000)) // Passado
+                .signWith(io.jsonwebtoken.security.Keys.secretKeyFor(io.jsonwebtoken.SignatureAlgorithm.HS256))
+                .compact();
+
+        // O sistema deve rejeitar o token e possivelmente retornar 403 (ou 401 dependendo do config do spring security, por defeito 403 nas exceções)
+        mockMvc.perform(get("/podcasts")
+                .header("Authorization", "Bearer " + expiredToken))
+                .andExpect(status().isForbidden());
     }
 }

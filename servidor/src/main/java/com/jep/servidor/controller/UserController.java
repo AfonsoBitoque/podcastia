@@ -1,18 +1,22 @@
 package com.jep.servidor.controller;
 
+import com.jep.servidor.dto.ChangePasswordRequest;
 import com.jep.servidor.model.User;
 import com.jep.servidor.repository.UserRepository;
 import com.jep.servidor.dto.UserUpdateRequest;
 import jakarta.validation.Valid;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -111,5 +115,35 @@ public class UserController {
     User saved = userRepository.save(user);
 
     return ResponseEntity.ok(saved);
+   * Altera a password de um utilizador.
+   *
+   * @param userId ID do utilizador.
+   * @param request Dados da alteração de password.
+   * @return Resposta de sucesso ou erro.
+   */
+  @PutMapping("/{userId}/password")
+  public ResponseEntity<?> changePassword(
+      @PathVariable Long userId,
+      @Valid @RequestBody ChangePasswordRequest request) {
+
+    Optional<User> userOpt = userRepository.findById(userId);
+    if (userOpt.isEmpty()) {
+      return ResponseEntity.status(HttpStatus.NOT_FOUND)
+          .body(Map.of("error", "Utilizador não encontrado"));
+    }
+
+    User user = userOpt.get();
+
+    // Verifica se a password atual coincide
+    if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+          .body(Map.of("error", "A password atual não coincide"));
+    }
+
+    // Atualiza a password
+    user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+    userRepository.save(user);
+
+    return ResponseEntity.ok(Map.of("message", "Password alterada com sucesso"));
   }
 }
