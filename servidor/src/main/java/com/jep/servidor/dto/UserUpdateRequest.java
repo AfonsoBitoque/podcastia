@@ -3,7 +3,7 @@ package com.jep.servidor.dto;
 import jakarta.validation.constraints.Size;
 
 public class UserUpdateRequest {
-  @Size(min = 1, message = "O nome de utilizador não pode ser vazio")
+  @Size(min = 3, message = "O nome de utilizador não pode ser vazio")
   private String username;
 
   @Size(max = 160, message = "A biografia não pode exceder as 160 letras")
