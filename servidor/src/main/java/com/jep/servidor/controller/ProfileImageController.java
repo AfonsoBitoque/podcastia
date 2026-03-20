@@ -9,11 +9,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
 
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,6 +30,8 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/users/{userId}/profile-image")
 public class ProfileImageController {
+
+  private static final String DEFAULT_PROFILE_IMAGE = "static/images/profile_picture.png";
 
   private final UserRepository userRepository;
   private final ProfileImageService profileImageService;
@@ -88,13 +92,18 @@ public class ProfileImageController {
   @GetMapping
   public ResponseEntity<Resource> getProfileImage(@PathVariable Long userId) {
     Optional<User> userOptional = userRepository.findById(userId);
-    
-    if (userOptional.isEmpty() || userOptional.get().getProfilePicturePath() == null) {
+
+    if (userOptional.isEmpty()) {
       return ResponseEntity.notFound().build();
     }
 
+    User user = userOptional.get();
+    if (user.getProfilePicturePath() == null || user.getProfilePicturePath().isBlank()) {
+      return defaultProfileImageResponse();
+    }
+
     try {
-      Path imagePath = Paths.get(userOptional.get().getProfilePicturePath());
+      Path imagePath = Paths.get(user.getProfilePicturePath());
       Resource resource = new UrlResource(imagePath.toUri());
 
       if (resource.exists() || resource.isReadable()) {
@@ -107,10 +116,48 @@ public class ProfileImageController {
             .contentType(MediaType.parseMediaType(contentType))
             .body(resource);
       } else {
-        return ResponseEntity.notFound().build();
+        return defaultProfileImageResponse();
       }
     } catch (IOException e) {
+      return defaultProfileImageResponse();
+    }
+  }
+
+  private ResponseEntity<Resource> defaultProfileImageResponse() {
+    Resource resource = new ClassPathResource(DEFAULT_PROFILE_IMAGE);
+
+    if (!resource.exists()) {
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
+
+    return ResponseEntity.ok()
+        .contentType(MediaType.IMAGE_PNG)
+        .body(resource);
+  }
+
+  /**
+   * Remove a imagem de perfil atual do utilizador.
+   */
+  @DeleteMapping
+  public ResponseEntity<?> deleteProfileImage(@PathVariable Long userId) {
+    Optional<User> userOptional = userRepository.findById(userId);
+
+    if (userOptional.isEmpty()) {
+      return ResponseEntity.status(HttpStatus.NOT_FOUND)
+          .body("Utilizador não encontrado.");
+    }
+
+    User user = userOptional.get();
+    String currentImagePath = user.getProfilePicturePath();
+
+    if (currentImagePath == null || currentImagePath.isBlank()) {
+      return ResponseEntity.noContent().build();
+    }
+
+    user.setProfilePicturePath(null);
+    userRepository.save(user);
+    profileImageService.deleteOldImage(currentImagePath);
+
+    return ResponseEntity.noContent().build();
   }
 }

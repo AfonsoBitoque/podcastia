@@ -71,19 +71,66 @@ const resolveProfilePicture = (path) => {
 function UserPage() {
   const navigate = useNavigate()
   const editButtonRef = useRef(null)
+  const bioTextareaRef = useRef(null)
+  const photoInputRef = useRef(null)
   const [sessionUser, setSessionUser] = useState(null)
   const [user, setUser] = useState(null)
   const [status, setStatus] = useState('loading')
   const [errorMessage, setErrorMessage] = useState('')
+  const [isEditingProfile, setIsEditingProfile] = useState(false)
+  const [profileForm, setProfileForm] = useState({ username: '', bio: '' })
+  const [profileFormError, setProfileFormError] = useState('')
+  const [profileFormSuccess, setProfileFormSuccess] = useState('')
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [photoMessage, setPhotoMessage] = useState('')
+  const [photoError, setPhotoError] = useState('')
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false)
+  const [focusBioOnOpen, setFocusBioOnOpen] = useState(false)
+  const [avatarVersion, setAvatarVersion] = useState(0)
   const [avatarFailed, setAvatarFailed] = useState(false)
   const [avatarLoading, setAvatarLoading] = useState(false)
 
-  const avatarUrl = !avatarFailed ? resolveProfilePicture(user?.profilePicturePath) : ''
+  const avatarUrl = !avatarFailed
+    ? resolveProfilePicture(user?.id ? `users/${user.id}/profile-image?v=${avatarVersion}` : '')
+    : ''
 
   useEffect(() => {
     setAvatarFailed(false)
     setAvatarLoading(Boolean(resolveProfilePicture(user?.profilePicturePath)))
   }, [user?.profilePicturePath])
+
+  useEffect(() => {
+    if (!profileFormSuccess) return undefined
+
+    const timerId = window.setTimeout(() => {
+      setProfileFormSuccess('')
+    }, 5000)
+
+    return () => {
+      window.clearTimeout(timerId)
+    }
+  }, [profileFormSuccess])
+
+  useEffect(() => {
+    if (!photoMessage) return undefined
+
+    const timerId = window.setTimeout(() => {
+      setPhotoMessage('')
+    }, 5000)
+
+    return () => {
+      window.clearTimeout(timerId)
+    }
+  }, [photoMessage])
+
+  useEffect(() => {
+    if (!isEditingProfile || !focusBioOnOpen) return
+
+    bioTextareaRef.current?.focus()
+    const valueLength = bioTextareaRef.current?.value?.length || 0
+    bioTextareaRef.current?.setSelectionRange(valueLength, valueLength)
+    setFocusBioOnOpen(false)
+  }, [isEditingProfile, focusBioOnOpen])
 
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -92,8 +139,227 @@ function UserPage() {
     navigate('/login')
   }
 
+  const openPhotoPicker = () => {
+    setPhotoError('')
+    setPhotoMessage('')
+    photoInputRef.current?.click()
+  }
+
+  const parseApiErrorText = async (response) => {
+    const text = await response.text()
+    if (!text) return ''
+
+    try {
+      const parsed = JSON.parse(text)
+      if (typeof parsed === 'string') return parsed
+      if (parsed?.error) return parsed.error
+      if (parsed?.message) return parsed.message
+      return text
+    } catch {
+      return text
+    }
+  }
+
+  const updateStoredUser = (patch) => {
+    const storedUserRaw = localStorage.getItem('user')
+    if (!storedUserRaw) return
+
+    try {
+      const storedUser = JSON.parse(storedUserRaw)
+      const mergedSessionUser = {
+        ...storedUser,
+        ...patch,
+      }
+      localStorage.setItem('user', JSON.stringify(mergedSessionUser))
+      setSessionUser(mergedSessionUser)
+      window.dispatchEvent(new Event('auth-change'))
+    } catch {
+      // Ignorar se o localStorage estiver corrompido.
+    }
+  }
+
+  const handlePhotoSelected = async (event) => {
+    const selectedFile = event.target.files?.[0]
+    event.target.value = ''
+
+    if (!selectedFile) {
+      return
+    }
+
+    const targetId = user?.id || sessionUser?.id
+    if (!targetId) {
+      setPhotoError('Nao foi possivel identificar o utilizador para atualizar a foto.')
+      return
+    }
+
+    const allowedTypes = ['image/jpeg', 'image/png']
+    if (!allowedTypes.includes(selectedFile.type)) {
+      setPhotoError('Apenas ficheiros JPG e PNG sao permitidos.')
+      return
+    }
+
+    const maxFileSize = 5 * 1024 * 1024
+    if (selectedFile.size > maxFileSize) {
+      setPhotoError('O ficheiro excede o tamanho maximo de 5MB.')
+      return
+    }
+
+    setPhotoError('')
+    setPhotoMessage('')
+    setIsUploadingPhoto(true)
+
+    try {
+      const token = localStorage.getItem('token')
+      const headers = {}
+      if (token) {
+        headers.Authorization = `Bearer ${token}`
+      }
+
+      const formData = new FormData()
+      formData.append('file', selectedFile)
+
+      const response = await fetch(`${API_BASE_URL}/users/${targetId}/profile-image`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorText = await parseApiErrorText(response)
+        throw new Error(errorText || 'Nao foi possivel atualizar a foto de perfil.')
+      }
+
+      const returnedPath = (await response.text()).trim()
+
+      setUser((previous) => ({
+        ...previous,
+        profilePicturePath: returnedPath || previous?.profilePicturePath || 'uploaded',
+      }))
+      updateStoredUser({ profilePicturePath: returnedPath || 'uploaded' })
+      setAvatarFailed(false)
+      setAvatarLoading(true)
+      setAvatarVersion((previous) => previous + 1)
+      setPhotoMessage('Foto de perfil atualizada com sucesso.')
+    } catch (error) {
+      setPhotoError(error?.message || 'Nao foi possivel atualizar a foto de perfil.')
+    } finally {
+      setIsUploadingPhoto(false)
+    }
+  }
+
+  const openEditProfile = () => {
+    const source = user || sessionUser || {}
+    setProfileForm({
+      username: String(source.username || ''),
+      bio: String(source.bio || ''),
+    })
+    setProfileFormError('')
+    setProfileFormSuccess('')
+    setIsEditingProfile(true)
+  }
+
+  const closeEditProfile = () => {
+    setIsEditingProfile(false)
+    setProfileFormError('')
+  }
+
+  const handleProfileInputChange = (event) => {
+    const { name, value } = event.target
+    setProfileForm((previous) => ({
+      ...previous,
+      [name]: value,
+    }))
+  }
+
+  const parseErrorBody = async (response) => {
+    const text = await response.text()
+    if (!text) return ''
+
+    try {
+      const parsed = JSON.parse(text)
+      if (typeof parsed === 'string') return parsed
+      if (parsed?.error) return parsed.error
+      if (parsed?.message) return parsed.message
+      return text
+    } catch {
+      return text
+    }
+  }
+
+  const handleSaveProfile = async (event) => {
+    event.preventDefault()
+    setProfileFormError('')
+    setProfileFormSuccess('')
+
+    const targetId = user?.id || sessionUser?.id
+    if (!targetId) {
+      setProfileFormError('Nao foi possivel identificar o utilizador para guardar alteracoes.')
+      return
+    }
+
+    const nextUsername = profileForm.username.trim()
+    const nextBio = profileForm.bio
+
+    if (!nextUsername) {
+      setProfileFormError('O nome de utilizador nao pode ficar vazio.')
+      return
+    }
+
+    if (nextBio.length > 160) {
+      setProfileFormError('A biografia nao pode exceder 160 caracteres.')
+      return
+    }
+
+    setIsSavingProfile(true)
+
+    try {
+      const token = localStorage.getItem('token')
+      const headers = {
+        'Content-Type': 'application/json',
+      }
+
+      if (token) {
+        headers.Authorization = `Bearer ${token}`
+      }
+
+      const response = await fetch(`${API_BASE_URL}/users/${targetId}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({
+          username: nextUsername,
+          bio: nextBio,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorCode = await parseErrorBody(response)
+
+        if (response.status === 409 && errorCode === 'username+tag-already-exists') {
+          throw new Error('Esse nome de utilizador com a tua tag ja existe.')
+        }
+
+        throw new Error(errorCode || 'Nao foi possivel guardar o perfil.')
+      }
+
+      const updatedUser = await response.json()
+      setUser(updatedUser)
+      updateStoredUser({
+        username: updatedUser.username,
+        bio: updatedUser.bio,
+      })
+
+      setIsEditingProfile(false)
+      setProfileFormSuccess('Perfil atualizado com sucesso.')
+    } catch (error) {
+      setProfileFormError(error?.message || 'Nao foi possivel atualizar o perfil.')
+    } finally {
+      setIsSavingProfile(false)
+    }
+  }
+
   const focusEditButton = () => {
-    editButtonRef.current?.focus()
+    setFocusBioOnOpen(true)
+    openEditProfile()
   }
 
   useEffect(() => {
@@ -189,6 +455,14 @@ function UserPage() {
         <article className="user-card">
 
           <div className="user-intro">
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/png,image/jpeg"
+              className="user-photo-input"
+              onChange={handlePhotoSelected}
+            />
+
             <div className="user-avatar-wrap">
               {avatarUrl ? (
                 <>
@@ -209,6 +483,16 @@ function UserPage() {
                   {getAvatarInitial(user?.username || sessionUser?.username)}
                 </div>
               )}
+
+              <button
+                type="button"
+                className="user-avatar-upload-trigger"
+                onClick={openPhotoPicker}
+                disabled={isUploadingPhoto}
+                aria-label="Alterar foto de perfil"
+              >
+                {isUploadingPhoto ? 'A carregar...' : 'Alterar foto'}
+              </button>
             </div>
 
             <div className="user-headline">
@@ -218,6 +502,8 @@ function UserPage() {
                 {formatText(user?.tag, '0000')}
               </p>
               <p className="user-email">{formatText(user?.email, 'Sem email associado')}</p>
+              {photoMessage && <p className="user-success user-inline-feedback">{photoMessage}</p>}
+              {photoError && <p className="user-warning user-inline-feedback">{photoError}</p>}
             </div>
         </div>
 
@@ -225,7 +511,12 @@ function UserPage() {
 
           <div className="user-content-grid">
             <aside className="user-actions">
-              <button type="button" className="user-action-btn user-action-btn--primary" ref={editButtonRef}>
+              <button
+                type="button"
+                className="user-action-btn user-action-btn--primary"
+                ref={editButtonRef}
+                onClick={openEditProfile}
+              >
                 <span className="icon-dot" aria-hidden="true" />
                 Editar perfil
               </button>
@@ -242,6 +533,52 @@ function UserPage() {
             </aside>
 
             <section className="user-main-info" aria-label="Detalhes do perfil">
+              {profileFormSuccess && <p className="user-success">{profileFormSuccess}</p>}
+
+              {isEditingProfile && (
+                <form className="user-edit-form" onSubmit={handleSaveProfile}>
+                  <p className="info-title">Editar perfil</p>
+
+                  <label htmlFor="edit-username">Nome de utilizador</label>
+                  <input
+                    id="edit-username"
+                    name="username"
+                    type="text"
+                    value={profileForm.username}
+                    onChange={handleProfileInputChange}
+                    required
+                    minLength={1}
+                    disabled={isSavingProfile}
+                    autoComplete="username"
+                  />
+
+                  <label htmlFor="edit-bio">Biografia</label>
+                  <textarea
+                    ref={bioTextareaRef}
+                    id="edit-bio"
+                    name="bio"
+                    value={profileForm.bio}
+                    onChange={handleProfileInputChange}
+                    rows={4}
+                    maxLength={160}
+                    disabled={isSavingProfile}
+                  />
+
+                  <p className="user-edit-counter">{profileForm.bio.length}/160</p>
+
+                  {profileFormError && <p className="user-warning">{profileFormError}</p>}
+
+                  <div className="user-edit-actions">
+                    <button type="button" className="user-action-btn" onClick={closeEditProfile} disabled={isSavingProfile}>
+                      Cancelar
+                    </button>
+                    <button type="submit" className="user-action-btn user-action-btn--primary" disabled={isSavingProfile}>
+                      {isSavingProfile ? 'A guardar...' : 'Guardar alteracoes'}
+                    </button>
+                  </div>
+                </form>
+              )}
+
               <div className="info-block">
                 <p className="info-title">
                   <span className="icon-dot" aria-hidden="true" />
