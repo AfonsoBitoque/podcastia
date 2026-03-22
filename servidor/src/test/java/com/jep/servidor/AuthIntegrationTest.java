@@ -10,6 +10,7 @@ import com.jep.servidor.config.JwtUtil;
 import com.jep.servidor.controller.AuthController.LoginRequest;
 import com.jep.servidor.model.User;
 import com.jep.servidor.repository.UserRepository;
+import com.jep.servidor.repository.UserRelationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +36,9 @@ class AuthIntegrationTest {
     private UserRepository userRepository;
 
     @Autowired
+    private UserRelationRepository userRelationRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -47,6 +51,9 @@ class AuthIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        // Delete user relations first (child table) before deleting users (parent table)
+        // to avoid referential integrity constraint violations
+        userRelationRepository.deleteAll();
         userRepository.deleteAll(); // Limpa a base de dados antes de cada teste
 
         // Cria um utilizador de teste para usar nos logins
