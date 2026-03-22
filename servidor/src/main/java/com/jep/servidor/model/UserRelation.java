@@ -14,7 +14,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
 /**
- * Entidade que representa uma relação entre utilizadores.
+ * Entidade que representa uma relação entre utilizadores..
  */
 @Entity
 @Table(name = "user_relations",
