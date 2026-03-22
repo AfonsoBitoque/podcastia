@@ -376,6 +376,8 @@
 .user-edit-form textarea {
   resize: vertical;
   min-height: 6rem;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .user-edit-counter {
@@ -417,6 +419,8 @@
   margin: 0;
   white-space: pre-wrap;
   line-height: 1.5;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .user-bio-empty {
