@@ -9,6 +9,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jep.servidor.config.JwtUtil;
 import com.jep.servidor.controller.AuthController.LoginRequest;
 import com.jep.servidor.model.User;
+import com.jep.servidor.repository.PlaylistItemRepository;
+import com.jep.servidor.repository.PlaylistRepository;
+import com.jep.servidor.repository.PodcastRepository;
 import com.jep.servidor.repository.UserRepository;
 import com.jep.servidor.repository.UserRelationRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,6 +42,15 @@ class AuthIntegrationTest {
     private UserRelationRepository userRelationRepository;
 
     @Autowired
+    private PlaylistItemRepository playlistItemRepository;
+
+    @Autowired
+    private PlaylistRepository playlistRepository;
+
+    @Autowired
+    private PodcastRepository podcastRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -51,10 +63,12 @@ class AuthIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        // Delete user relations first (child table) before deleting users (parent table)
-        // to avoid referential integrity constraint violations
+        // Clear dependent entities first to avoid FK violations when deleting users.
+        playlistItemRepository.deleteAll();
+        playlistRepository.deleteAll();
+        podcastRepository.deleteAll();
         userRelationRepository.deleteAll();
-        userRepository.deleteAll(); // Limpa a base de dados antes de cada teste
+        userRepository.deleteAll();
 
         // Cria um utilizador de teste para usar nos logins
         testUser = new User();
