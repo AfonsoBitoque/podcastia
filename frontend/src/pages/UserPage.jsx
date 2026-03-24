@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import '../styles/user-page.css'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
+const PASSWORD_COMPLEXITY_REGEX = /^(?=.*[A-Z])(?=.*\d).{8,}$/
 
 const formatDateTime = (value) => {
   if (!value) return 'Sem registo'
@@ -73,6 +74,7 @@ function UserPage() {
   const usernameInputRef = useRef(null)
   const bioTextareaRef = useRef(null)
   const photoInputRef = useRef(null)
+  const reauthTimeoutRef = useRef(null)
   const [sessionUser, setSessionUser] = useState(null)
   const [user, setUser] = useState(null)
   const [status, setStatus] = useState('loading')
@@ -88,6 +90,19 @@ function UserPage() {
   const [avatarVersion, setAvatarVersion] = useState(0)
   const [avatarFailed, setAvatarFailed] = useState(false)
   const [avatarLoading, setAvatarLoading] = useState(false)
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  })
+  const [passwordFormError, setPasswordFormError] = useState('')
+  const [passwordFormSuccess, setPasswordFormSuccess] = useState('')
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [showPasswords, setShowPasswords] = useState({
+    currentPassword: false,
+    newPassword: false,
+    confirmPassword: false,
+  })
 
   const avatarUrl = !avatarFailed
     ? resolveProfilePicture(user?.id ? `users/${user.id}/profile-image?v=${avatarVersion}` : '')
@@ -111,6 +126,18 @@ function UserPage() {
   }, [profileFormSuccess])
 
   useEffect(() => {
+    if (!passwordFormSuccess) return undefined
+
+    const timerId = window.setTimeout(() => {
+      setPasswordFormSuccess('')
+    }, 5000)
+
+    return () => {
+      window.clearTimeout(timerId)
+    }
+  }, [passwordFormSuccess])
+
+  useEffect(() => {
     if (!photoMessage) return undefined
 
     const timerId = window.setTimeout(() => {
@@ -121,6 +148,14 @@ function UserPage() {
       window.clearTimeout(timerId)
     }
   }, [photoMessage])
+
+  useEffect(() => {
+    return () => {
+      if (reauthTimeoutRef.current) {
+        window.clearTimeout(reauthTimeoutRef.current)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (activeEditSection === 'username') {
@@ -274,9 +309,26 @@ function UserPage() {
     setActiveEditSection('bio')
   }
 
+  const openPasswordEditor = () => {
+    setPasswordForm({
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+    })
+    setShowPasswords({
+      currentPassword: false,
+      newPassword: false,
+      confirmPassword: false,
+    })
+    setPasswordFormError('')
+    setPasswordFormSuccess('')
+    setActiveEditSection('password')
+  }
+
   const closeEditProfile = () => {
     setActiveEditSection(null)
     setProfileFormError('')
+    setPasswordFormError('')
   }
 
   const handleProfileInputChange = (event) => {
@@ -285,6 +337,117 @@ function UserPage() {
       ...previous,
       [name]: value,
     }))
+  }
+
+  const handlePasswordInputChange = (event) => {
+    const { name, value } = event.target
+    setPasswordForm((previous) => ({
+      ...previous,
+      [name]: value,
+    }))
+  }
+
+  const togglePasswordVisibility = (field) => {
+    setShowPasswords((previous) => ({
+      ...previous,
+      [field]: !previous[field],
+    }))
+  }
+
+  const triggerReauthentication = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    window.dispatchEvent(new Event('auth-change'))
+    navigate('/login', { replace: true })
+  }
+
+  const handleChangePassword = async (event) => {
+    event.preventDefault()
+    setPasswordFormError('')
+    setPasswordFormSuccess('')
+
+    const targetId = user?.id || sessionUser?.id
+    if (!targetId) {
+      setPasswordFormError('Não foi possivel identificar o utilizador para alterar a password.')
+      return
+    }
+
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      setPasswordFormError('Preenche os três campos obrigatórios.')
+      return
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordFormError('A nova password e a confirmação devem ser iguais.')
+      return
+    }
+
+    if (!PASSWORD_COMPLEXITY_REGEX.test(passwordForm.newPassword)) {
+      setPasswordFormError('A nova password deve ter pelo menos 8 caracteres, uma letra maiuscula e um numero.')
+      return
+    }
+
+    if (passwordForm.newPassword === passwordForm.currentPassword) {
+      setPasswordFormError('A nova password deve ser diferente da password atual.')
+      return
+    }
+
+    setIsChangingPassword(true)
+
+    try {
+      const token = localStorage.getItem('token')
+      const headers = {
+        'Content-Type': 'application/json',
+      }
+
+      if (token) {
+        headers.Authorization = `Bearer ${token}`
+      }
+
+      const response = await fetch(`${API_BASE_URL}/users/${targetId}/password`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword,
+        }),
+      })
+
+      if (!response.ok) {
+        const apiError = await parseApiErrorText(response)
+        const normalizedError = String(apiError || '').toLowerCase()
+
+        if (response.status === 401 || normalizedError.includes('nao coincide')) {
+          throw new Error('A password atual introduzida não é válida.')
+        }
+
+        throw new Error(apiError || 'Nao foi possivel alterar a password.')
+      }
+
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      })
+      setShowPasswords({
+        currentPassword: false,
+        newPassword: false,
+        confirmPassword: false,
+      })
+      setPasswordFormSuccess('Password alterada com sucesso. Por seguranca, vais iniciar sessao novamente.')
+
+      if (reauthTimeoutRef.current) {
+        window.clearTimeout(reauthTimeoutRef.current)
+      }
+
+      reauthTimeoutRef.current = window.setTimeout(() => {
+        triggerReauthentication()
+      }, 2200)
+    } catch (error) {
+      setPasswordFormError(error?.message || 'Nao foi possivel alterar a password.')
+    } finally {
+      setIsChangingPassword(false)
+    }
   }
 
   const parseErrorBody = async (response) => {
@@ -611,7 +774,12 @@ function UserPage() {
 
           <div className="user-content-grid">
             <aside className="user-actions">
-              <button type="button" className="user-action-btn">
+              <button
+                type="button"
+                className={`user-action-btn ${activeEditSection === 'password' ? 'is-active' : ''}`}
+                onClick={openPasswordEditor}
+                disabled={isChangingPassword}
+              >
                 <span className="icon-dot" aria-hidden="true" />
                 Alterar password
               </button>
@@ -624,6 +792,128 @@ function UserPage() {
 
             <section className="user-main-info" aria-label="Detalhes do perfil">
               {profileFormSuccess && <p className="user-success">{profileFormSuccess}</p>}
+
+              {activeEditSection === 'password' && (
+                <div className="info-block">
+                  <p className="info-title">
+                    <span className="icon-dot" aria-hidden="true" />
+                    Alterar password
+                  </p>
+
+                  <form className="user-edit-form" onSubmit={handleChangePassword} noValidate>
+                    <label htmlFor="currentPassword">Password Atual</label>
+                    <div className="password-input-shell">
+                      <input
+                        id="currentPassword"
+                        name="currentPassword"
+                        type={showPasswords.currentPassword ? 'text' : 'password'}
+                        value={passwordForm.currentPassword}
+                        onChange={handlePasswordInputChange}
+                        required
+                        autoComplete="current-password"
+                        disabled={isChangingPassword}
+                      />
+                      <button
+                        type="button"
+                        className="password-visibility-btn"
+                        onClick={() => togglePasswordVisibility('currentPassword')}
+                        disabled={isChangingPassword}
+                        aria-label={showPasswords.currentPassword ? 'Mascarar password atual' : 'Desmascarar password atual'}
+                      >
+                        <svg className="password-visibility-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <path d="M2 12s3.8-6 10-6 10 6 10 6-3.8 6-10 6-10-6-10-6Z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                        <span className="visually-hidden">
+                          {showPasswords.currentPassword ? 'Mascarar password atual' : 'Desmascarar password atual'}
+                        </span>
+                      </button>
+                    </div>
+
+                    <label htmlFor="newPassword">Nova Password</label>
+                    <div className="password-input-shell">
+                      <input
+                        id="newPassword"
+                        name="newPassword"
+                        type={showPasswords.newPassword ? 'text' : 'password'}
+                        value={passwordForm.newPassword}
+                        onChange={handlePasswordInputChange}
+                        required
+                        autoComplete="new-password"
+                        disabled={isChangingPassword}
+                      />
+                      <button
+                        type="button"
+                        className="password-visibility-btn"
+                        onClick={() => togglePasswordVisibility('newPassword')}
+                        disabled={isChangingPassword}
+                        aria-label={showPasswords.newPassword ? 'Mascarar nova password' : 'Desmascarar nova password'}
+                      >
+                        <svg className="password-visibility-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <path d="M2 12s3.8-6 10-6 10 6 10 6-3.8 6-10 6-10-6-10-6Z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                        <span className="visually-hidden">
+                          {showPasswords.newPassword ? 'Mascarar nova password' : 'Desmascarar nova password'}
+                        </span>
+                      </button>
+                    </div>
+                    <p className="user-password-hint">
+                      Minimo de 8 caracteres, incluindo uma letra maiuscula e um numero.
+                    </p>
+
+                    <label htmlFor="confirmPassword">Confirmacao da Nova Password</label>
+                    <div className="password-input-shell">
+                      <input
+                        id="confirmPassword"
+                        name="confirmPassword"
+                        type={showPasswords.confirmPassword ? 'text' : 'password'}
+                        value={passwordForm.confirmPassword}
+                        onChange={handlePasswordInputChange}
+                        required
+                        autoComplete="new-password"
+                        disabled={isChangingPassword}
+                      />
+                      <button
+                        type="button"
+                        className="password-visibility-btn"
+                        onClick={() => togglePasswordVisibility('confirmPassword')}
+                        disabled={isChangingPassword}
+                        aria-label={showPasswords.confirmPassword ? 'Mascarar confirmacao da nova password' : 'Desmascarar confirmacao da nova password'}
+                      >
+                        <svg className="password-visibility-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <path d="M2 12s3.8-6 10-6 10 6 10 6-3.8 6-10 6-10-6-10-6Z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                        <span className="visually-hidden">
+                          {showPasswords.confirmPassword ? 'Mascarar confirmacao da nova password' : 'Desmascarar confirmacao da nova password'}
+                        </span>
+                      </button>
+                    </div>
+
+                    {passwordFormError && <p className="user-warning">{passwordFormError}</p>}
+                    {passwordFormSuccess && <p className="user-success">{passwordFormSuccess}</p>}
+
+                    <div className="user-edit-actions">
+                      <button
+                        type="button"
+                        className="user-action-btn"
+                        onClick={closeEditProfile}
+                        disabled={isChangingPassword}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        className="user-action-btn user-action-btn--primary"
+                        disabled={isChangingPassword}
+                      >
+                        {isChangingPassword ? 'A carregar...' : 'Alterar password'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
 
               <div className="info-block">
                 <div className="info-block-header">

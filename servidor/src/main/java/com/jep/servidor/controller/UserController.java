@@ -140,7 +140,7 @@ public class UserController {
     // Verifica se a password atual coincide
     if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-          .body(Map.of("error", "A password atual não coincide"));
+          .body(Map.of("error", "A password atual nao coincide"));
     }
 
     // Atualiza a password
