@@ -8,10 +8,12 @@ import com.jep.servidor.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import java.util.List;
 
 @Component
+@ConditionalOnProperty(name="seeder.enabled", havingValue="true", matchIfMissing=true)
 public class DataSeeder implements CommandLineRunner {
 
     private final UserRepository userRepository;
