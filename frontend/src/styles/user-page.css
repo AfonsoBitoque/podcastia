@@ -125,6 +125,34 @@
   cursor: wait;
 }
 
+.user-avatar-delete-trigger {
+  position: absolute;
+  inset: 6px 6px auto auto;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.32rem 0.52rem;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fff5f2;
+  background: rgba(133, 43, 33, 0.9);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.user-avatar-wrap:hover .user-avatar-delete-trigger,
+.user-avatar-wrap:focus-within .user-avatar-delete-trigger {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.user-avatar-delete-trigger:disabled {
+  opacity: 1;
+  cursor: wait;
+}
+
 .user-avatar {
   width: 120px;
   height: 120px;
@@ -316,6 +344,12 @@
   background: rgba(255, 225, 220, 0.9);
 }
 
+.user-action-btn.is-active {
+  border-color: rgba(143, 66, 36, 0.62);
+  box-shadow: 0 10px 18px rgba(87, 49, 36, 0.18);
+  background: rgba(255, 244, 236, 0.95);
+}
+
 .user-inline-feedback {
   margin-top: 0.55rem;
 }
@@ -365,6 +399,56 @@
   font: inherit;
   color: #42261d;
   background: #fffaf7;
+}
+
+.password-input-shell {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.password-input-shell input {
+  min-width: 0;
+}
+
+.password-visibility-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(118, 74, 57, 0.28);
+  border-radius: 10px;
+  padding: 0.54rem;
+  min-width: 2.5rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #6a3f31;
+  background: rgba(255, 248, 242, 0.9);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.password-visibility-icon {
+  width: 1.06rem;
+  height: 1.06rem;
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+
+.password-visibility-btn:hover {
+  background: rgba(255, 244, 235, 1);
+}
+
+.password-visibility-btn:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.user-password-hint {
+  margin: -0.1rem 0 0.2rem;
+  font-size: 0.82rem;
+  color: #7d5a4b;
 }
 
 .user-edit-form input:focus,
@@ -551,6 +635,19 @@
   .user-avatar-upload-trigger {
     opacity: 1;
     transform: none;
+  }
+
+  .user-avatar-delete-trigger {
+    opacity: 1;
+    transform: none;
+  }
+
+  .password-input-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .password-visibility-btn {
+    justify-self: start;
   }
 }
 
