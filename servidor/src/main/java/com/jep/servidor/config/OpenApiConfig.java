@@ -2,6 +2,7 @@ package com.jep.servidor.config;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.info.License;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -9,11 +10,12 @@ import org.springframework.context.annotation.Configuration;
 public class OpenApiConfig {
 
   @Bean
-  public OpenAPI customOpenApi() {
+  public OpenAPI customOpenAPI() {
     return new OpenAPI()
         .info(new Info()
-            .title("API Podcastia")
+            .title("Podcastia API")
             .version("v1.0.0")
-            .description("Documentação da API REST do projeto Podcastia."));
+            .description("Documentação da API REST do projeto Podcastia.")
+            .license(new License().name("Apache 2.0").url("http://springdoc.org")));
   }
 }
