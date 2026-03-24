@@ -172,6 +172,53 @@
   min-width: 0;
 }
 
+.user-title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.user-title-row--editing {
+  width: 100%;
+}
+
+.user-title-inline-input {
+  min-width: 0;
+  width: min(100%, 195px);
+  border: 1px solid rgba(118, 74, 57, 0.32);
+  border-radius: 10px;
+  padding: 0.34rem 0.56rem;
+  font-size: clamp(1.35rem, 2.3vw, 1.8rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: #42261d;
+  background: #fffaf7;
+}
+
+.user-title-inline-input:focus {
+  outline: 2px solid rgba(188, 90, 50, 0.22);
+  border-color: rgba(188, 90, 50, 0.55);
+}
+
+.user-inline-edit-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .user-handle {
   margin: 0.15rem 0 0;
   font-size: 0.95rem;
@@ -296,6 +343,13 @@
   gap: 0.55rem;
 }
 
+.user-edit-form--inline {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+}
+
 .user-edit-form label {
   color: #5f4134;
   font-size: 0.88rem;
@@ -322,6 +376,8 @@
 .user-edit-form textarea {
   resize: vertical;
   min-height: 6rem;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .user-edit-counter {
@@ -363,6 +419,8 @@
   margin: 0;
   white-space: pre-wrap;
   line-height: 1.5;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .user-bio-empty {
@@ -382,6 +440,46 @@
 
 .text-link-btn:hover {
   text-decoration: underline;
+}
+
+.user-inline-edit-btn {
+  border: 1px solid rgba(118, 74, 57, 0.28);
+  border-radius: 999px;
+  padding: 0.28rem 0.62rem;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #6a3f31;
+  background: rgba(255, 248, 242, 0.9);
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
+}
+
+.user-inline-edit-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 244, 235, 1);
+  box-shadow: 0 8px 16px rgba(87, 49, 36, 0.14);
+}
+
+.user-inline-edit-btn--primary {
+  color: #fff8f3;
+  border-color: rgba(143, 66, 36, 0.6);
+  background: linear-gradient(138deg, #d46b43 0%, #b94f2a 100%);
+}
+
+.user-inline-edit-btn--primary:hover {
+  background: linear-gradient(138deg, #de7a52 0%, #c05a35 100%);
+}
+
+.info-block-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.info-block-header .info-title {
+  margin-bottom: 0.55rem;
 }
 
 .user-meta-line {
