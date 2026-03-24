@@ -125,6 +125,34 @@
   cursor: wait;
 }
 
+.user-avatar-delete-trigger {
+  position: absolute;
+  inset: 6px 6px auto auto;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.32rem 0.52rem;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fff5f2;
+  background: rgba(133, 43, 33, 0.9);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.user-avatar-wrap:hover .user-avatar-delete-trigger,
+.user-avatar-wrap:focus-within .user-avatar-delete-trigger {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.user-avatar-delete-trigger:disabled {
+  opacity: 1;
+  cursor: wait;
+}
+
 .user-avatar {
   width: 120px;
   height: 120px;
@@ -605,6 +633,11 @@
   }
 
   .user-avatar-upload-trigger {
+    opacity: 1;
+    transform: none;
+  }
+
+  .user-avatar-delete-trigger {
     opacity: 1;
     transform: none;
   }

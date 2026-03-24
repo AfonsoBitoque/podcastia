@@ -87,6 +87,7 @@ function UserPage() {
   const [photoMessage, setPhotoMessage] = useState('')
   const [photoError, setPhotoError] = useState('')
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false)
+  const [isDeletingPhoto, setIsDeletingPhoto] = useState(false)
   const [avatarVersion, setAvatarVersion] = useState(0)
   const [avatarFailed, setAvatarFailed] = useState(false)
   const [avatarLoading, setAvatarLoading] = useState(false)
@@ -107,6 +108,7 @@ function UserPage() {
   const avatarUrl = !avatarFailed
     ? resolveProfilePicture(user?.id ? `users/${user.id}/profile-image?v=${avatarVersion}` : '')
     : ''
+  const hasProfilePicture = Boolean(String(user?.profilePicturePath || sessionUser?.profilePicturePath || '').trim()) && !avatarFailed
 
   useEffect(() => {
     setAvatarFailed(false)
@@ -180,9 +182,54 @@ function UserPage() {
   }
 
   const openPhotoPicker = () => {
+    if (isDeletingPhoto) return
     setPhotoError('')
     setPhotoMessage('')
     photoInputRef.current?.click()
+  }
+
+  const handleDeletePhoto = async () => {
+    const targetId = user?.id || sessionUser?.id
+    if (!targetId) {
+      setPhotoError('Nao foi possivel identificar o utilizador para remover a foto.')
+      return
+    }
+
+    setPhotoError('')
+    setPhotoMessage('')
+    setIsDeletingPhoto(true)
+
+    try {
+      const token = localStorage.getItem('token')
+      const headers = {}
+      if (token) {
+        headers.Authorization = `Bearer ${token}`
+      }
+
+      const response = await fetch(`${API_BASE_URL}/users/${targetId}/profile-image`, {
+        method: 'DELETE',
+        headers,
+      })
+
+      if (!response.ok) {
+        const errorText = await parseApiErrorText(response)
+        throw new Error(errorText || 'Nao foi possivel remover a foto de perfil.')
+      }
+
+      setUser((previous) => ({
+        ...previous,
+        profilePicturePath: null,
+      }))
+      updateStoredUser({ profilePicturePath: null })
+      setAvatarFailed(false)
+      setAvatarLoading(true)
+      setAvatarVersion((previous) => previous + 1)
+      setPhotoMessage('Foto de perfil removida com sucesso.')
+    } catch (error) {
+      setPhotoError(error?.message || 'Nao foi possivel remover a foto de perfil.')
+    } finally {
+      setIsDeletingPhoto(false)
+    }
   }
 
   const parseApiErrorText = async (response) => {
@@ -699,11 +746,23 @@ function UserPage() {
                 type="button"
                 className="user-avatar-upload-trigger"
                 onClick={openPhotoPicker}
-                disabled={isUploadingPhoto}
+                disabled={isUploadingPhoto || isDeletingPhoto}
                 aria-label="Alterar foto de perfil"
               >
                 {isUploadingPhoto ? 'A carregar...' : 'Alterar foto'}
               </button>
+
+              {hasProfilePicture && (
+                <button
+                  type="button"
+                  className="user-avatar-delete-trigger"
+                  onClick={handleDeletePhoto}
+                  disabled={isUploadingPhoto || isDeletingPhoto}
+                  aria-label="Eliminar foto atual"
+                >
+                  {isDeletingPhoto ? 'A remover...' : 'Eliminar'}
+                </button>
+              )}
             </div>
 
             <div className="user-headline">
