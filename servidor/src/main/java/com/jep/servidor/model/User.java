@@ -78,6 +78,18 @@ public class User {
   @Column(length = 500)
   private String bio;
 
+  @Column(nullable = false)
+  private int pontosDesporto = 0;
+
+  @Column(nullable = false)
+  private int pontosPolitica = 0;
+
+  @Column(nullable = false)
+  private int pontosFinancas = 0;
+
+  @Column(nullable = false)
+  private int pontosGeral = 0;
+
   private String profilePicturePath;
 
   /**
@@ -177,5 +189,37 @@ public class User {
 
   public void setStatus(UserStatus status) {
     this.status = status;
+  }
+
+  public int getPontosDesporto() {
+    return pontosDesporto;
+  }
+
+  public void setPontosDesporto(int pontosDesporto) {
+    this.pontosDesporto = pontosDesporto;
+  }
+
+  public int getPontosPolitica() {
+    return pontosPolitica;
+  }
+
+  public void setPontosPolitica(int pontosPolitica) {
+    this.pontosPolitica = pontosPolitica;
+  }
+
+  public int getPontosFinancas() {
+    return pontosFinancas;
+  }
+
+  public void setPontosFinancas(int pontosFinancas) {
+    this.pontosFinancas = pontosFinancas;
+  }
+
+  public int getPontosGeral() {
+    return pontosGeral;
+  }
+
+  public void setPontosGeral(int pontosGeral) {
+    this.pontosGeral = pontosGeral;
   }
 }

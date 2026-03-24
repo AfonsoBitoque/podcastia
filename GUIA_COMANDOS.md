@@ -6,7 +6,7 @@ Este guia contém os comandos necessários para compilar, testar e executar o se
 Todos os comandos do servidor devem ser executados dentro da pasta `servidor`.
 
 ```bash
-cd /home/predm/Git/University/LES/podcastia/servidor
+cd servidor
 ```
 
 ## 🛠️ Comandos Maven (Usando o Wrapper)

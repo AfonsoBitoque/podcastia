@@ -4,6 +4,8 @@ import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -44,8 +46,9 @@ public class Podcast {
 
   @ElementCollection
   @CollectionTable(name = "podcast_tags", joinColumns = @JoinColumn(name = "podcast_id"))
+  @Enumerated(EnumType.STRING)
   @Column(name = "tag")
-  private List<String> tags;
+  private List<PodcastTag> tags;
 
   /**
    * Construtor padrão.
@@ -85,11 +88,11 @@ public class Podcast {
     this.conteudoPath = conteudoPath;
   }
 
-  public List<String> getTags() {
+  public List<PodcastTag> getTags() {
     return tags;
   }
 
-  public void setTags(List<String> tags) {
+  public void setTags(List<PodcastTag> tags) {
     this.tags = tags;
   }
 

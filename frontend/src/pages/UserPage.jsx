@@ -421,6 +421,29 @@ function UserPage() {
     }
   }, [])
 
+  const currentProfile = user || sessionUser;
+  const totalPoints = (currentProfile?.pontosDesporto || 0) + 
+                      (currentProfile?.pontosPolitica || 0) + 
+                      (currentProfile?.pontosFinancas || 0) + 
+                      (currentProfile?.pontosGeral || 0);
+
+  let desportoPct = 0, politicaPct = 0, financasPct = 0, geralPct = 0;
+  if (totalPoints > 0) {
+    desportoPct = Math.round(((currentProfile.pontosDesporto || 0) / totalPoints) * 100);
+    politicaPct = Math.round(((currentProfile.pontosPolitica || 0) / totalPoints) * 100);
+    financasPct = Math.round(((currentProfile.pontosFinancas || 0) / totalPoints) * 100);
+    geralPct = 100 - desportoPct - politicaPct - financasPct;
+  }
+
+  const conicGradient = totalPoints > 0 
+    ? `conic-gradient(
+        #3b82f6 0% ${desportoPct}%, 
+        #ef4444 ${desportoPct}% ${desportoPct + politicaPct}%, 
+        #10b981 ${desportoPct + politicaPct}% ${desportoPct + politicaPct + financasPct}%, 
+        #f59e0b ${desportoPct + politicaPct + financasPct}% 100%
+      )`
+    : '';
+
   if (status === 'loading') {
     return (
       <main className="user-page" aria-labelledby="user-title">
@@ -610,6 +633,23 @@ function UserPage() {
                   <strong>{formatRelativeTime(user?.lastActiveAt)}</strong>
                 </p>
                 <p className="user-meta-detail">{formatDateTime(user?.lastActiveAt)}</p>
+              </div>
+
+              <div className="user-style-section">
+                <p className="info-title">A tua Roda de Estilo Percentual</p>
+                {totalPoints > 0 ? (
+                  <>
+                    <div className="user-style-wheel" style={{ background: conicGradient }} aria-label="Grafico percentual das tuas escutas"></div>
+                    <div className="style-legend">
+                      <div className="legend-item"><span className="legend-color" style={{background: '#3b82f6'}}></span>Desporto ({desportoPct}%)</div>
+                      <div className="legend-item"><span className="legend-color" style={{background: '#ef4444'}}></span>Politica ({politicaPct}%)</div>
+                      <div className="legend-item"><span className="legend-color" style={{background: '#10b981'}}></span>Financas ({financasPct}%)</div>
+                      <div className="legend-item"><span className="legend-color" style={{background: '#f59e0b'}}></span>Geral ({geralPct}%)</div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="user-style-wheel user-style-empty">Ouve podcasts para revelar!</div>
+                )}
               </div>
             </section>
           </div>
