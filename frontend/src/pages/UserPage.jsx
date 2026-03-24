@@ -980,7 +980,7 @@ function UserPage() {
                     <span className="icon-dot" aria-hidden="true" />
                     Bio
                   </p>
-                  {activeEditSection !== 'bio' && (
+                  {activeEditSection !== 'bio' && String(user?.bio || '').trim() && (
                     <button
                       type="button"
                       className="user-inline-edit-btn"
