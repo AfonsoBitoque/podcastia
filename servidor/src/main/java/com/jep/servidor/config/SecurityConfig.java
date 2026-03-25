@@ -47,6 +47,7 @@ public class SecurityConfig {
             .requestMatchers("/users", "/users/**").permitAll() // Registo de conta
             .requestMatchers("/api/register/**").permitAll() // Gerar/Verificar Tag REST
             .requestMatchers("/h2-console/**").permitAll() // H2 Console
+            .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll() // Swagger OpenAPI
             
             // Tudo o resto exige estar autenticado com um JWT válido
             .anyRequest().authenticated()
