@@ -111,17 +111,17 @@ function HomePage() {
     return `${mins}:${secs}`;
   }
 
-  const renderGrid = (podcasts, isContinueListening = false) => {
+  const renderCarousel = (podcasts, isContinueListening = false) => {
     if (!podcasts || podcasts.length === 0) return <p className="empty-state">Nenhum podcast disponível nesta secção.</p>
     
     return (
-      <div className="podcast-grid">
+      <div className="podcast-carousel" role="list" aria-label="Lista horizontal de podcasts">
         {podcasts.map(pod => {
           const actualId = pod.id || pod.podcastId;
           const progressPercent = isContinueListening && pod.duracao ? Math.min(100, Math.round((pod.progressSeconds / (pod.duracao * 60)) * 100)) : 0;
           
           return (
-            <article key={actualId} className={`podcast-card ${activePodcastId === actualId ? 'active-play' : ''}`}>
+            <article key={actualId} role="listitem" className={`podcast-card ${activePodcastId === actualId ? 'active-play' : ''}`}>
               <h3>{pod.titulo}</h3>
               <p className="pod-tags">{pod.tags?.join(', ')}</p>
               <p className="pod-meta">{pod.duracao} min | Host: {pod.host || pod.user?.username}</p>
@@ -159,19 +159,19 @@ function HomePage() {
             {data.continueListening && data.continueListening.length > 0 && (
               <section className="feed-section">
                 <h2>Continuar a ouvir</h2>
-                {renderGrid(data.continueListening, true)}
+                {renderCarousel(data.continueListening, true)}
               </section>
             )}
 
             <section className="feed-section">
               <h2>Recomendados para ti</h2>
               <p className="section-desc">Seleção com 90% de afinidade ao teu estilo e 10% descoberta garantida.</p>
-              {renderGrid(data.recommended)}
+              {renderCarousel(data.recommended)}
             </section>
 
             <section className="feed-section">
               <h2>Acabados de Lançar</h2>
-              {renderGrid(data.newReleases)}
+              {renderCarousel(data.newReleases)}
             </section>
           </div>
         )}
