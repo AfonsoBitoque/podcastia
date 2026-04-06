@@ -200,6 +200,11 @@
   min-width: 360px;
   max-width: 440px;
   flex-basis: clamp(360px, 40vw, 440px);
+  padding: 1rem;
+}
+
+.podcast-card-continue .pod-content {
+  gap: 0.6rem;
 }
 
 .podcast-card-discover {
@@ -356,10 +361,10 @@
 }
 
 .progress-track {
-  height: 6px;
+  height: 8px;
   background: rgba(114, 71, 56, 0.15);
   border-radius: 999px;
-  margin-top: 0.08rem;
+  margin-top: 0.2rem;
   overflow: hidden;
 }
 

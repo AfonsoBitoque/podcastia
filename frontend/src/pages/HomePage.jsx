@@ -174,13 +174,20 @@ function HomePage() {
             <article key={actualId} role="listitem" className={`podcast-card ${isContinueListening ? 'podcast-card-continue' : 'podcast-card-discover'} ${activePodcastId === actualId ? 'active-play' : ''}`}>
               <div className={`pod-thumb ${primaryTag.thumbClass}`} aria-hidden="true">
                 <span className="thumb-label">{primaryTag.short}</span>
-                {isContinueListening && (
-                  <button className="thumb-play" aria-label={`Retomar ${pod.titulo}`} onClick={() => handleListen(pod, true)}>
-                    ▶
+                {playingPodcast && (playingPodcast.id || playingPodcast.podcastId) === actualId ? (
+                  <button 
+                    className="thumb-play" 
+                    aria-label={isPlaying ? `Pausar ${pod.titulo}` : `Retomar ${pod.titulo}`} 
+                    onClick={togglePlayPause}
+                  >
+                    {isPlaying ? '⏸' : '▶'}
                   </button>
-                )}
-                {!isContinueListening && (
-                  <button className="thumb-play" aria-label={`Ouvir ${pod.titulo}`} onClick={() => handleListen(pod, false)}>
+                ) : (
+                  <button 
+                    className="thumb-play" 
+                    aria-label={isContinueListening ? `Retomar ${pod.titulo}` : `Ouvir ${pod.titulo}`} 
+                    onClick={() => handleListen(pod, isContinueListening)}
+                  >
                     ▶
                   </button>
                 )}
