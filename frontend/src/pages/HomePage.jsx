@@ -179,6 +179,11 @@ function HomePage() {
                     ▶
                   </button>
                 )}
+                {!isContinueListening && (
+                  <button className="thumb-play" aria-label={`Ouvir ${pod.titulo}`} onClick={() => handleListen(pod, false)}>
+                    ▶
+                  </button>
+                )}
               </div>
 
               <div className="pod-content">
@@ -202,12 +207,6 @@ function HomePage() {
                       <div className="progress-fill progress-fill-accent" style={{ width: `${progressPercent}%` }}></div>
                     </div>
                   </>
-                )}
-
-                {!isContinueListening && (
-                  <button className="play-button compact" onClick={() => handleListen(pod, false)}>
-                    Ouvir agora
-                  </button>
                 )}
               </div>
             </article>
