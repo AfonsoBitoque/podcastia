@@ -3,16 +3,31 @@ import '../styles/home-page.css'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
 
+const TAG_UI = {
+  DESPORTO: { label: 'Desporto', className: 'tag-desporto', thumbClass: 'thumb-desporto', short: 'SPT' },
+  FINANCAS: { label: 'Financas', className: 'tag-financas', thumbClass: 'thumb-financas', short: 'FIN' },
+  POLITICA: { label: 'Politica', className: 'tag-politica', thumbClass: 'thumb-politica', short: 'POL' },
+  GERAL: { label: 'Geral', className: 'tag-geral', thumbClass: 'thumb-geral', short: 'GEN' },
+  DEFAULT: { label: 'Podcast', className: 'tag-geral', thumbClass: 'thumb-geral', short: 'POD' },
+}
+
 function HomePage() {
   const [data, setData] = useState({ continueListening: [], recommended: [], newReleases: [] })
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
   const [activePodcastId, setActivePodcastId] = useState(null)
+  const [viewerName, setViewerName] = useState('')
   
   // Simulated Player State
   const [playingPodcast, setPlayingPodcast] = useState(null)
   const [progressSecs, setProgressSecs] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
+
+  const getSafeTags = (pod) => (Array.isArray(pod?.tags) ? pod.tags : [])
+
+  const getTagUi = (tag) => TAG_UI[String(tag || '').toUpperCase()] || TAG_UI.DEFAULT
+
+  const getPrimaryTagUi = (pod) => getTagUi(getSafeTags(pod)[0])
 
   const fetchHomeData = async () => {
     try {
@@ -32,6 +47,13 @@ function HomePage() {
   }
 
   useEffect(() => {
+    try {
+      const parsed = JSON.parse(localStorage.getItem('user') || '{}')
+      setViewerName(parsed?.username ? String(parsed.username) : '')
+    } catch {
+      setViewerName('')
+    }
+
     fetchHomeData()
   }, [])
 
@@ -111,30 +133,89 @@ function HomePage() {
     return `${mins}:${secs}`;
   }
 
-  const renderGrid = (podcasts, isContinueListening = false) => {
+  const getTopInterest = () => {
+    const counts = {}
+    data.recommended.forEach((pod) => {
+      getSafeTags(pod).forEach((tag) => {
+        const normalized = String(tag).toUpperCase()
+        counts[normalized] = (counts[normalized] || 0) + 1
+      })
+    })
+
+    const [topTag = 'DEFAULT'] = Object.entries(counts).sort((a, b) => b[1] - a[1])[0] || []
+    return getTagUi(topTag).label
+  }
+
+  const getContinueMeta = (pod) => {
+    const totalSeconds = Math.max(0, (Number(pod?.duracao) || 0) * 60)
+    const progress = Math.max(0, Number(pod?.progressSeconds) || 0)
+    const remaining = Math.max(0, totalSeconds - progress)
+    const remainingMinutes = Math.ceil(remaining / 60)
+
+    return {
+      pausedAt: `Paraste aos ${formatTime(progress)}`,
+      remaining: remaining === 0 ? 'Quase a terminar' : `Faltam ${remainingMinutes} min`,
+    }
+  }
+
+  const renderCarousel = (podcasts, isContinueListening = false) => {
     if (!podcasts || podcasts.length === 0) return <p className="empty-state">Nenhum podcast disponível nesta secção.</p>
     
     return (
-      <div className="podcast-grid">
+      <div className={`podcast-carousel ${isContinueListening ? 'carousel-continue' : 'carousel-discover'}`} role="list" aria-label="Lista horizontal de podcasts">
         {podcasts.map(pod => {
           const actualId = pod.id || pod.podcastId;
           const progressPercent = isContinueListening && pod.duracao ? Math.min(100, Math.round((pod.progressSeconds / (pod.duracao * 60)) * 100)) : 0;
+          const primaryTag = getPrimaryTagUi(pod)
+          const continueMeta = isContinueListening ? getContinueMeta(pod) : null
+          const safeTags = getSafeTags(pod)
           
           return (
-            <article key={actualId} className={`podcast-card ${activePodcastId === actualId ? 'active-play' : ''}`}>
-              <h3>{pod.titulo}</h3>
-              <p className="pod-tags">{pod.tags?.join(', ')}</p>
-              <p className="pod-meta">{pod.duracao} min | Host: {pod.host || pod.user?.username}</p>
-              
-              {isContinueListening && (
-                 <div className="progress-track" title={`${pod.progressSeconds}s ouvidos`}>
-                   <div className="progress-fill" style={{ width: `${progressPercent}%` }}></div>
-                 </div>
-              )}
-              
-              <button className="play-button" onClick={() => handleListen(pod, isContinueListening)}>
-                {isContinueListening ? '▶ Retomar' : '▶ Ouvir agora'}
-              </button>
+            <article key={actualId} role="listitem" className={`podcast-card ${isContinueListening ? 'podcast-card-continue' : 'podcast-card-discover'} ${activePodcastId === actualId ? 'active-play' : ''}`}>
+              <div className={`pod-thumb ${primaryTag.thumbClass}`} aria-hidden="true">
+                <span className="thumb-label">{primaryTag.short}</span>
+                {playingPodcast && (playingPodcast.id || playingPodcast.podcastId) === actualId ? (
+                  <button 
+                    className="thumb-play" 
+                    aria-label={isPlaying ? `Pausar ${pod.titulo}` : `Retomar ${pod.titulo}`} 
+                    onClick={togglePlayPause}
+                  >
+                    {isPlaying ? '⏸' : '▶'}
+                  </button>
+                ) : (
+                  <button 
+                    className="thumb-play" 
+                    aria-label={isContinueListening ? `Retomar ${pod.titulo}` : `Ouvir ${pod.titulo}`} 
+                    onClick={() => handleListen(pod, isContinueListening)}
+                  >
+                    ▶
+                  </button>
+                )}
+              </div>
+
+              <div className="pod-content">
+                <h3>{pod.titulo}</h3>
+
+                <div className="pod-chip-list" aria-label="Categorias do podcast">
+                  {safeTags.length > 0
+                    ? safeTags.map((tag) => {
+                      const tagUi = getTagUi(tag)
+                      return <span key={`${actualId}-${tag}`} className={`pod-chip ${tagUi.className}`}>{tagUi.label}</span>
+                    })
+                    : <span className="pod-chip tag-geral">Podcast</span>}
+                </div>
+
+                <p className="pod-meta">{pod.duracao} min | Host: {pod.host || pod.user?.username}</p>
+
+                {isContinueListening && (
+                  <>
+                    <p className="continue-meta">{continueMeta?.remaining} | {continueMeta?.pausedAt}</p>
+                    <div className="progress-track" title={`${pod.progressSeconds}s ouvidos`}>
+                      <div className="progress-fill progress-fill-accent" style={{ width: `${progressPercent}%` }}></div>
+                    </div>
+                  </>
+                )}
+              </div>
             </article>
           )
         })}
@@ -145,9 +226,12 @@ function HomePage() {
   return (
     <>
       <main className="home-page" aria-labelledby="home-title">
-        <section className="home-header">
-          <p className="home-kicker">O teu Hub</p>
-          <h1 id="home-title">Bem-vindo à Podcastia!</h1>
+        <section className="home-banner">
+          <h2 id="home-title">Bem-vindo à Podcastia!</h2>
+          <p>Descobre os melhores podcasts baseados nos teus interesses</p>
+          <div className="visual-ring ring-a" aria-hidden="true" />
+          <div className="visual-ring ring-b" aria-hidden="true" />
+          <div className="visual-ring ring-c" aria-hidden="true" />
         </section>
 
         {message && <div className="home-notification">{message}</div>}
@@ -159,19 +243,18 @@ function HomePage() {
             {data.continueListening && data.continueListening.length > 0 && (
               <section className="feed-section">
                 <h2>Continuar a ouvir</h2>
-                {renderGrid(data.continueListening, true)}
+                {renderCarousel(data.continueListening, true)}
               </section>
             )}
 
             <section className="feed-section">
               <h2>Recomendados para ti</h2>
-              <p className="section-desc">Seleção com 90% de afinidade ao teu estilo e 10% descoberta garantida.</p>
-              {renderGrid(data.recommended)}
+              {renderCarousel(data.recommended)}
             </section>
 
             <section className="feed-section">
               <h2>Acabados de Lançar</h2>
-              {renderGrid(data.newReleases)}
+              {renderCarousel(data.newReleases)}
             </section>
           </div>
         )}
