@@ -40,6 +40,9 @@ public class Podcast {
   @Column(nullable = false)
   private String conteudoPath;
 
+  @Column(name = "cover_image_path")
+  private String coverImagePath;
+
   @ManyToOne(optional = false)
   @JoinColumn(name = "user_id", nullable = false)
   private User user;
@@ -86,6 +89,14 @@ public class Podcast {
 
   public void setConteudoPath(String conteudoPath) {
     this.conteudoPath = conteudoPath;
+  }
+
+  public String getCoverImagePath() {
+    return coverImagePath;
+  }
+
+  public void setCoverImagePath(String coverImagePath) {
+    this.coverImagePath = coverImagePath;
   }
 
   public List<PodcastTag> getTags() {

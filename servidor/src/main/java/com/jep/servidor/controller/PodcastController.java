@@ -119,6 +119,7 @@ public class PodcastController {
         map.put("tags", p.getPodcast().getTags());
         map.put("host", p.getPodcast().getUser().getUsername());
         map.put("hostId", p.getPodcast().getUser().getId());
+        map.put("coverImagePath", p.getPodcast().getCoverImagePath());
         map.put("progressSeconds", p.getProgressSeconds());
         return map;
     }).toList();
@@ -161,6 +162,9 @@ public class PodcastController {
    */
   @PostMapping
   public ResponseEntity<Podcast> create(@RequestBody Podcast podcast) {
+    if (podcast.getCoverImagePath() == null || podcast.getCoverImagePath().trim().isEmpty()) {
+      podcast.setCoverImagePath("/placeholder.png");
+    }
     Podcast saved = podcastRepository.save(podcast);
     return ResponseEntity.status(HttpStatus.CREATED).body(saved);
   }
