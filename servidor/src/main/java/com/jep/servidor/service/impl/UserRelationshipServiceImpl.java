@@ -92,16 +92,16 @@ public class UserRelationshipServiceImpl implements UserRelationshipService {
     @Override
     @Transactional
     public void blockUser(Long blockerId, Long blockedId) {
-        // Procura e remove qualquer relação existente entre os dois utilizadores, em qualquer direção.
-        // Isto garante que pedidos pendentes, amizades ou até bloqueios antigos na direção oposta sejam limpos.
-        userRelationRepository.findRelationship(blockerId, blockedId).ifPresent(userRelationRepository::delete);
+        User blocker = userRepository.findById(blockerId).orElseThrow(() -> new BusinessException("Utilizador bloqueador não encontrado."));
+        User blocked = userRepository.findById(blockedId).orElseThrow(() -> new BusinessException("Utilizador a ser bloqueado não encontrado."));
 
-        // Cria (ou atualiza) a nova relação de bloqueio
-        UserRelation blockRelation = new UserRelation();
-        blockRelation.setSender(userRepository.findById(blockerId).orElseThrow(() -> new BusinessException("Utilizador bloqueador não encontrado.")));
-        blockRelation.setReceiver(userRepository.findById(blockedId).orElseThrow(() -> new BusinessException("Utilizador a ser bloqueado não encontrado.")));
-        blockRelation.setType(RelationType.BLOQUEADO);
-        userRelationRepository.save(blockRelation);
+        UserRelation relation = userRelationRepository.findRelationship(blockerId, blockedId)
+                .orElse(new UserRelation());
+
+        relation.setSender(blocker);
+        relation.setReceiver(blocked);
+        relation.setType(RelationType.BLOQUEADO);
+        userRelationRepository.save(relation);
     }
 
     @Override

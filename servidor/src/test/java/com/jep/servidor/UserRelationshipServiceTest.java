@@ -2,11 +2,12 @@ package com.jep.servidor;
 
 import com.jep.servidor.model.User;
 import com.jep.servidor.model.UserRelation;
-import com.jep.servidor.model.StatusEnum;
 import com.jep.servidor.repository.UserRelationRepository;
-import com.jep.servidor.service.UserRelationshipService;
+import com.jep.servidor.repository.UserRepository;
+import com.jep.servidor.service.impl.UserRelationshipServiceImpl;
 import com.jep.servidor.service.NotificationService;
 import com.jep.servidor.exceptions.BusinessException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -21,147 +22,141 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 public class UserRelationshipServiceTest {
 
     @InjectMocks
-    private UserRelationshipService userRelationshipService;
+    private UserRelationshipServiceImpl userRelationshipService;
 
     @Mock
     private UserRelationRepository userRelationRepository;
 
     @Mock
+    private UserRepository userRepository;
+
+    @Mock
     private NotificationService notificationService;
+
+    private User user1;
+    private User user2;
+
+    @BeforeEach
+    void setUp() {
+        user1 = new User();
+        user1.setId(1L);
+        user1.setUsername("user1");
+
+        user2 = new User();
+        user2.setId(2L);
+        user2.setUsername("user2");
+    }
 
     @Test
     public void testSelfFriendRequest() {
-        Long userId = 1L;
-
         BusinessException exception = assertThrows(BusinessException.class, () -> {
-            userRelationshipService.sendFriendRequest(userId, userId);
+            userRelationshipService.sendFriendRequest(1L, 1L);
         });
         assertEquals("Não pode enviar um pedido de amizade a si mesmo.", exception.getMessage());
     }
 
     @Test
     public void testDuplicateFriendRequest() {
-        Long senderId = 1L;
-        Long receiverId = 2L;
-
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user1));
+        when(userRelationRepository.findRelationship(2L, 1L)).thenReturn(Optional.empty());
         UserRelation existingRelation = new UserRelation();
-        existingRelation.setStatus(StatusEnum.PEDIDO);
-
-        when(userRelationRepository.findRelationship(senderId, receiverId)).thenReturn(Optional.of(existingRelation));
+        existingRelation.setType(UserRelation.RelationType.PEDIDO);
+        when(userRelationRepository.findRelationship(1L, 2L)).thenReturn(Optional.of(existingRelation));
 
         BusinessException exception = assertThrows(BusinessException.class, () -> {
-            userRelationshipService.sendFriendRequest(senderId, receiverId);
+            userRelationshipService.sendFriendRequest(1L, 2L);
         });
         assertEquals("Já existe um pedido de amizade pendente ou uma amizade estabelecida.", exception.getMessage());
     }
 
     @Test
     public void testRecentRejectionCooldown() {
-        Long senderId = 1L;
-        Long receiverId = 2L;
-
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user1));
+        when(userRelationRepository.findRelationship(2L, 1L)).thenReturn(Optional.empty());
         UserRelation existingRelation = new UserRelation();
-        existingRelation.setStatus(StatusEnum.PEDIDO_REJEITADO);
+        existingRelation.setType(UserRelation.RelationType.PEDIDO_REJEITADO);
         existingRelation.setUpdatedAt(LocalDateTime.now().minusDays(2));
-
-        when(userRelationRepository.findRelationship(senderId, receiverId)).thenReturn(Optional.of(existingRelation));
+        when(userRelationRepository.findRelationship(1L, 2L)).thenReturn(Optional.of(existingRelation));
 
         BusinessException exception = assertThrows(BusinessException.class, () -> {
-            userRelationshipService.sendFriendRequest(senderId, receiverId);
+            userRelationshipService.sendFriendRequest(1L, 2L);
         });
         assertEquals("Ainda não pode enviar um novo pedido de amizade a este utilizador.", exception.getMessage());
     }
 
     @Test
     public void testExpiredRejectionCooldown() {
-        Long senderId = 1L;
-        Long receiverId = 2L;
-
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user1));
+        when(userRelationRepository.findRelationship(2L, 1L)).thenReturn(Optional.empty());
         UserRelation existingRelation = new UserRelation();
-        existingRelation.setStatus(StatusEnum.PEDIDO_REJEITADO);
+        existingRelation.setType(UserRelation.RelationType.PEDIDO_REJEITADO);
         existingRelation.setUpdatedAt(LocalDateTime.now().minusDays(15));
+        when(userRelationRepository.findRelationship(1L, 2L)).thenReturn(Optional.of(existingRelation));
 
-        when(userRelationRepository.findRelationship(senderId, receiverId)).thenReturn(Optional.of(existingRelation));
-
-        userRelationshipService.sendFriendRequest(senderId, receiverId);
+        userRelationshipService.sendFriendRequest(1L, 2L);
 
         verify(userRelationRepository).save(any(UserRelation.class));
     }
 
     @Test
     public void testFriendRequestToBlockedUser() {
-        Long senderId = 1L;
-        Long receiverId = 2L;
-
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user1));
         UserRelation existingRelation = new UserRelation();
-        existingRelation.setStatus(StatusEnum.BLOQUEADO);
-
-        when(userRelationRepository.findRelationship(receiverId, senderId)).thenReturn(Optional.of(existingRelation));
+        existingRelation.setType(UserRelation.RelationType.BLOQUEADO);
+        when(userRelationRepository.findRelationship(2L, 1L)).thenReturn(Optional.of(existingRelation));
 
         BusinessException exception = assertThrows(BusinessException.class, () -> {
-            userRelationshipService.sendFriendRequest(senderId, receiverId);
+            userRelationshipService.sendFriendRequest(1L, 2L);
         });
         assertEquals("Não pode enviar um pedido de amizade a um utilizador que o bloqueou.", exception.getMessage());
     }
 
     @Test
-    public void testBlockUserRemovesExistingRequest() {
-        Long userAId = 1L;
-        Long userBId = 2L;
+    public void testBlockUser() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user1));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(user2));
+        when(userRelationRepository.findRelationship(1L, 2L)).thenReturn(Optional.empty());
 
-        UserRelation existingRequest = new UserRelation();
-        existingRequest.setStatus(StatusEnum.PEDIDO);
+        userRelationshipService.blockUser(1L, 2L);
 
-        when(userRelationRepository.findRelationship(userAId, userBId)).thenReturn(Optional.of(existingRequest));
-
-        userRelationshipService.blockUser(userBId, userAId);
-
-        verify(userRelationRepository).delete(existingRequest);
+        verify(userRelationRepository).save(any(UserRelation.class));
     }
 
     @Test
     public void testNotificationTrigger() {
-        Long senderId = 1L;
-        Long receiverId = 2L;
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user1));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(user2));
+        when(userRelationRepository.findRelationship(1L, 2L)).thenReturn(Optional.empty());
+        when(userRelationRepository.findRelationship(2L, 1L)).thenReturn(Optional.empty());
 
-        when(userRelationRepository.findRelationship(senderId, receiverId)).thenReturn(Optional.empty());
-
-        userRelationshipService.sendFriendRequest(senderId, receiverId);
+        userRelationshipService.sendFriendRequest(1L, 2L);
 
         verify(notificationService).sendNotification(any(), any());
     }
 
     @Test
     public void testAcceptNonExistentRequest() {
-        Long senderId = 1L;
-        Long receiverId = 2L;
-
-        when(userRelationRepository.findRelationship(senderId, receiverId)).thenReturn(Optional.empty());
+        when(userRelationRepository.findRelationship(1L, 2L)).thenReturn(Optional.empty());
 
         BusinessException exception = assertThrows(BusinessException.class, () -> {
-            userRelationshipService.acceptFriendRequest(senderId, receiverId);
+            userRelationshipService.acceptFriendRequest(1L, 2L);
         });
         assertEquals("Este pedido já não está disponível.", exception.getMessage());
     }
 
     @Test
     public void testAcceptCanceledRequest() {
-        Long senderId = 1L;
-        Long receiverId = 2L;
-
         UserRelation canceledRequest = new UserRelation();
-        canceledRequest.setStatus(StatusEnum.CANCELADO);
-
-        when(userRelationRepository.findRelationship(senderId, receiverId)).thenReturn(Optional.of(canceledRequest));
+        canceledRequest.setType(UserRelation.RelationType.CANCELADO);
+        when(userRelationRepository.findRelationship(1L, 2L)).thenReturn(Optional.of(canceledRequest));
 
         BusinessException exception = assertThrows(BusinessException.class, () -> {
-            userRelationshipService.acceptFriendRequest(senderId, receiverId);
+            userRelationshipService.acceptFriendRequest(1L, 2L);
         });
         assertEquals("Este pedido já não está disponível.", exception.getMessage());
     }
