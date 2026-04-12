@@ -1,89 +1,40 @@
 package com.jep.servidor.controller;
 
-import com.jep.servidor.model.UserRelation;
-import com.jep.servidor.repository.UserRelationRepository;
-
-import java.util.List;
-
-import org.springframework.http.HttpStatus;
+import com.jep.servidor.dto.RelationStatusDto;
+import com.jep.servidor.service.UserRelationshipService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.*;
 
-/**
- * Controlador REST para gerir relações entre utilizadores.
- */
 @RestController
-@RequestMapping("/relations")
+@RequestMapping("/api/relations")
 public class UserRelationController {
-  private final UserRelationRepository relationRepository;
 
-  /**
-   * Construtor para injeção de dependências.
-   *
-   * @param relationRepository Repositório de relações.
-   */
-  public UserRelationController(UserRelationRepository relationRepository) {
-    this.relationRepository = relationRepository;
-  }
+    private final UserRelationshipService userRelationshipService;
 
-  /**
-   * Retorna todas as relações de um utilizador.
-   *
-   * @param userId ID do utilizador.
-   * @return Lista de relações.
-   */
-  @GetMapping("/user/{userId}")
-  public List<UserRelation> getAllRelations(@PathVariable("userId") Long userId) {
-    com.jep.servidor.model.User user = new com.jep.servidor.model.User();
-    user.setId(userId);
-    return relationRepository.findByUser(user);
-  }
-
-  /**
-   * Retorna relações de um utilizador por tipo.
-   *
-   * @param userId ID do utilizador.
-   * @param type   Tipo de relação.
-   * @return Lista de relações filtradas.
-   */
-  @GetMapping("/user/{userId}/{type}")
-  public List<UserRelation> getRelationsByType(@PathVariable("userId") Long userId,
-                                               @PathVariable("type") UserRelation.RelationType type) {
-    com.jep.servidor.model.User user = new com.jep.servidor.model.User();
-    user.setId(userId);
-    return relationRepository.findByUserAndType(user, type);
-  }
-
-  /**
-   * Cria uma nova relação.
-   *
-   * @param relation Dados da relação a criar.
-   * @return A relação criada.
-   */
-  @PostMapping
-  public ResponseEntity<UserRelation> create(@RequestBody UserRelation relation) {
-    UserRelation saved = relationRepository.save(relation);
-    return ResponseEntity.status(HttpStatus.CREATED).body(saved);
-  }
-
-  /**
-   * Remove uma relação pelo ID.
-   *
-   * @param id ID da relação a remover.
-   * @return Resposta sem conteúdo ou 404.
-   */
-  @DeleteMapping("/{id}")
-  public ResponseEntity<Void> delete(@PathVariable("id") Long id) {
-    if (!relationRepository.existsById(id)) {
-      return ResponseEntity.notFound().build();
+    public UserRelationController(UserRelationshipService userRelationshipService) {
+        this.userRelationshipService = userRelationshipService;
     }
-    relationRepository.deleteById(id);
-    return ResponseEntity.noContent().build();
-  }
+
+    @PostMapping("/friend-request/{friendId}")
+    public ResponseEntity<Void> sendFriendRequest(@AuthenticationPrincipal Jwt jwt, @PathVariable Long friendId) {
+        Long userId = Long.parseLong(jwt.getSubject());
+        userRelationshipService.sendFriendRequest(userId, friendId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/status/{targetUserId}")
+    public ResponseEntity<RelationStatusDto> getRelationStatus(@AuthenticationPrincipal Jwt jwt, @PathVariable Long targetUserId) {
+        Long userId = Long.parseLong(jwt.getSubject());
+        RelationStatusDto status = userRelationshipService.getRelationStatus(userId, targetUserId);
+        return ResponseEntity.ok(status);
+    }
+
+    @DeleteMapping("/friend-request/{friendId}/cancel")
+    public ResponseEntity<Void> cancelFriendRequest(@AuthenticationPrincipal Jwt jwt, @PathVariable Long friendId) {
+        Long userId = Long.parseLong(jwt.getSubject());
+        userRelationshipService.cancelFriendRequest(userId, friendId);
+        return ResponseEntity.noContent().build();
+    }
 }

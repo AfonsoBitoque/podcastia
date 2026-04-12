@@ -17,6 +17,7 @@ import com.jep.servidor.repository.PodcastRepository;
 import com.jep.servidor.repository.PlaylistRepository;
 import com.jep.servidor.repository.UserRelationRepository;
 import com.jep.servidor.repository.UserRepository;
+import java.time.LocalDateTime;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -74,6 +75,8 @@ class PlaylistIntegrationTest {
     userRepository.save(bob);
 
     UserRelation relation = new UserRelation(alice, bob, UserRelation.RelationType.AMIGO);
+    relation.setCreatedAt(LocalDateTime.now());
+    relation.setUpdatedAt(LocalDateTime.now());
     relationRepository.save(relation);
 
     tokenAlice = login("alice@example.com", "password123");
