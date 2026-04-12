@@ -1,5 +1,6 @@
 package com.jep.servidor.service.impl;
 
+import com.jep.servidor.model.User;
 import com.jep.servidor.model.UserRelation;
 import com.jep.servidor.model.UserRelation.RelationType;
 import com.jep.servidor.repository.UserRelationRepository;
@@ -37,6 +38,9 @@ public class UserRelationshipServiceImpl implements UserRelationshipService {
             throw new BusinessException("Não pode enviar um pedido de amizade a si mesmo.");
         }
 
+        User sender = userRepository.findById(senderId)
+                .orElseThrow(() -> new BusinessException("Remetente não encontrado."));
+
         // Verificar se o destinatário bloqueou o remetente
         if (userRelationRepository.findRelationship(receiverId, senderId)
                 .filter(r -> r.getType() == RelationType.BLOQUEADO)
@@ -66,13 +70,14 @@ public class UserRelationshipServiceImpl implements UserRelationshipService {
         } else {
             // Criar novo pedido
             UserRelation newRequest = new UserRelation();
-            newRequest.setSender(userRepository.findById(senderId).orElseThrow(() -> new BusinessException("Remetente não encontrado.")));
+            newRequest.setSender(sender);
             newRequest.setReceiver(userRepository.findById(receiverId).orElseThrow(() -> new BusinessException("Destinatário não encontrado.")));
             newRequest.setType(RelationType.PEDIDO);
             userRelationRepository.save(newRequest);
         }
 
-        notificationService.sendNotification(receiverId.toString(), "Você recebeu um novo pedido de amizade.");
+        String notificationMessage = String.format("%s enviou-lhe um pedido de amizade.", sender.getUsername());
+        notificationService.sendNotification(receiverId.toString(), notificationMessage);
     }
 
     @Override
