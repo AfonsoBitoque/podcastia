@@ -1,5 +1,6 @@
 package com.jep.servidor.service.impl;
 
+import com.jep.servidor.dto.RelationStatusDto;
 import com.jep.servidor.model.User;
 import com.jep.servidor.model.UserRelation;
 import com.jep.servidor.model.UserRelation.RelationType;
@@ -41,7 +42,6 @@ public class UserRelationshipServiceImpl implements UserRelationshipService {
         User sender = userRepository.findById(senderId)
                 .orElseThrow(() -> new BusinessException("Remetente não encontrado."));
 
-        // Verificar se o destinatário bloqueou o remetente
         if (userRelationRepository.findRelationship(receiverId, senderId)
                 .filter(r -> r.getType() == RelationType.BLOQUEADO)
                 .isPresent()) {
@@ -64,11 +64,9 @@ public class UserRelationshipServiceImpl implements UserRelationshipService {
                     userRelationRepository.save(relation);
                     break;
                 default:
-                    // Outros casos, como BLOQUEADO (do remetente para o destinatário)
                     throw new BusinessException("Não é possível enviar um pedido de amizade devido a uma relação existente.");
             }
         } else {
-            // Criar novo pedido
             UserRelation newRequest = new UserRelation();
             newRequest.setSender(sender);
             newRequest.setReceiver(userRepository.findById(receiverId).orElseThrow(() -> new BusinessException("Destinatário não encontrado.")));
@@ -94,7 +92,6 @@ public class UserRelationshipServiceImpl implements UserRelationshipService {
     @Override
     @Transactional
     public void blockUser(Long blockerId, Long blockedId) {
-        // Remove qualquer pedido de amizade existente
         userRelationRepository.findRelationship(blockedId, blockerId).ifPresent(userRelationRepository::delete);
 
         UserRelation blockRelation = userRelationRepository.findRelationship(blockerId, blockedId)
@@ -104,5 +101,44 @@ public class UserRelationshipServiceImpl implements UserRelationshipService {
         blockRelation.setReceiver(userRepository.findById(blockedId).orElseThrow(() -> new BusinessException("Utilizador a ser bloqueado não encontrado.")));
         blockRelation.setType(RelationType.BLOQUEADO);
         userRelationRepository.save(blockRelation);
+    }
+
+    @Override
+    @Transactional
+    public void cancelFriendRequest(Long senderId, Long receiverId) {
+        UserRelation relation = userRelationRepository.findRelationship(senderId, receiverId)
+                .filter(r -> r.getType() == RelationType.PEDIDO)
+                .orElseThrow(() -> new BusinessException("Não existe um pedido de amizade para cancelar."));
+
+        relation.setType(RelationType.CANCELADO);
+        userRelationRepository.save(relation);
+    }
+
+    @Override
+    public RelationStatusDto getRelationStatus(Long userId, Long targetUserId) {
+        Optional<UserRelation> relationOpt = userRelationRepository.findRelationship(userId, targetUserId);
+
+        if (!relationOpt.isPresent()) {
+            return new RelationStatusDto("NONE", true);
+        }
+
+        UserRelation relation = relationOpt.get();
+        boolean isSender = relation.getSender().getId().equals(userId);
+
+        switch (relation.getType()) {
+            case AMIGO:
+                return new RelationStatusDto("FRIENDS", false);
+            case BLOQUEADO:
+                return new RelationStatusDto(isSender ? "BLOCKED_BY_YOU" : "BLOCKED_BY_OTHER", false);
+            case PEDIDO:
+                return new RelationStatusDto(isSender ? "PENDING_SENT" : "PENDING_RECEIVED", false);
+            case PEDIDO_REJEITADO:
+                boolean canRequest = relation.getUpdatedAt().plusDays(COOLDOWN_DAYS).isBefore(LocalDateTime.now());
+                return new RelationStatusDto("REJECTED", canRequest);
+            case CANCELADO:
+                return new RelationStatusDto("CANCELLED", true);
+            default:
+                return new RelationStatusDto("NONE", true);
+        }
     }
 }
