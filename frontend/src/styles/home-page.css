@@ -411,21 +411,30 @@
   font-size: 0.8rem;
 }
 
-/* Simulated Audio Player */
+/* Modern Floating Audio Player */
 .player-bar {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: linear-gradient(0deg, #111827 0%, #1e293b 100%);
-  color: white;
-  padding: 0.8rem 2rem;
+  bottom: 20px;
+  left: 40px;  /* Aumentado de 20px */
+  right: 40px;  /* Aumentado de 20px */
+  max-width: 900px;
+  margin: 0 auto;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 80px);  /* Ajustado para manter o cálculo correto */
+  background: rgba(255, 255, 255, 0.75);  /* Transparência aumentada */
+  color: #1f2937;
+  padding: 1rem 1.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 -8px 25px rgba(0, 0, 0, 0.4);
+  gap: 1.5rem;
+  border-radius: 20px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
   z-index: 1000;
-  animation: slide-up 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(15px);  /* Aumentado para efeito de vidro mais forte */
+  -webkit-backdrop-filter: blur(15px);
 }
 
 @keyframes slide-up {
@@ -435,8 +444,39 @@
 
 .player-info {
   display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 280px;
+  min-width: 0;
+}
+
+.player-cover {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(224, 90, 42, 0.15);
+}
+
+.player-cover-placeholder {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(224, 90, 42, 0.15);
+}
+
+.player-text {
+  display: flex;
   flex-direction: column;
-  width: 250px;
+  min-width: 0;
+  flex: 1;
 }
 
 .player-title {
@@ -446,12 +486,12 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #f8fafc;
+  color: #1f2937;
 }
 
 .player-host {
   font-size: 0.85rem;
-  color: #94a3b8;
+  color: #6b7280;
   margin: 0.2rem 0 0 0;
 }
 
@@ -466,7 +506,7 @@
 
 .player-buttons {
   display: flex;
-  gap: 1.5rem;
+  gap: 1rem;
   align-items: center;
   margin-bottom: 0.5rem;
 }
@@ -474,53 +514,94 @@
 .btn-icon {
   background: none;
   border: none;
-  color: #cbd5e1;
+  color: #9ca3af;
   font-size: 1.2rem;
   cursor: pointer;
-  transition: color 0.15s;
+  transition: color 0.15s, transform 0.1s;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-icon:hover {
-  color: white;
+  color: #374151;
+}
+
+.btn-icon:active {
+  transform: scale(0.95);
+}
+
+.btn-skip {
+  font-size: 1.3rem;
+  opacity: 0.6;
+  transition: opacity 0.15s, color 0.15s, transform 0.1s;
+}
+
+.btn-skip:hover {
+  opacity: 1;
+  color: #1f2937;
 }
 
 .btn-circular {
-  background: white;
-  color: #111827;
-  width: 40px;
-  height: 40px;
+  background: linear-gradient(135deg, #e05a2a 0%, #d94d1f 100%);
+  color: white;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   border: none;
   cursor: pointer;
-  font-size: 1.2rem;
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  font-size: 1.3rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+  box-shadow: 0 6px 16px rgba(224, 90, 42, 0.35);
+  flex-shrink: 0;
 }
 
 .btn-circular:hover {
-  transform: scale(1.08);
+  transform: scale(1.1);
+  box-shadow: 0 8px 20px rgba(224, 90, 42, 0.45);
+  filter: brightness(1.1);
+}
+
+.btn-circular:active {
+  transform: scale(0.95);
 }
 
 .player-progress-container {
   display: flex;
   align-items: center;
   width: 100%;
-  gap: 1rem;
-  font-size: 0.8rem;
-  color: #94a3b8;
+  gap: 0.8rem;
+  font-size: 0.75rem;
+  color: #6b7280;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .player-timeline {
   flex: 1;
-  height: 6px;
-  background: rgba(114, 71, 56, 0.3);
+  height: 3px;
+  background: #e5e7eb;
   border-radius: 4px;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
+  cursor: pointer;
+  transition: height 0.2s ease, background 0.2s ease;
+  display: flex;
+  align-items: center;
+}
+
+.player-timeline:hover {
+  height: 6px;
+  background: #d1d5db;
+}
+
+.player-timeline:hover .player-timeline-thumb {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .player-timeline-fill {
@@ -528,18 +609,35 @@
   height: 100%;
   border-radius: 4px;
   transition: width 1s linear;
+  pointer-events: none;
+}
+
+.player-timeline-thumb {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: #e05a2a;
+  border-radius: 50%;
+  top: 50%;
+  transform: translateY(-50%) translateX(-50%) scale(0);
+  box-shadow: 0 2px 6px rgba(224, 90, 42, 0.6);
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  pointer-events: none;
+}
+
+.time-display {
+  width: 40px;
+  text-align: center;
 }
 
 .player-extra {
-  width: 250px;
-  text-align: right;
-  opacity: 0.8;
-  font-size: 0.85rem;
-  color: #f8fafc;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.5rem;
+  gap: 1rem;
+  min-width: 100px;
+  flex-shrink: 0;
 }
 
 @media (max-width: 720px) {
@@ -557,5 +655,50 @@
     width: 92px;
     min-width: 92px;
     height: 92px;
+  }
+
+  .player-bar {
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    padding: 0.8rem;
+    border-radius: 16px;
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+
+  .player-info {
+    width: 100%;
+    margin-bottom: 0.6rem;
+  }
+
+  .player-controls {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .player-buttons {
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .player-progress-container {
+    gap: 0.6rem;
+  }
+
+  .player-extra {
+    width: 100%;
+    justify-content: center;
+    margin-top: 0.4rem;
+  }
+
+  .btn-circular {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+  }
+
+  .btn-icon {
+    font-size: 0.9rem;
   }
 }
