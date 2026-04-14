@@ -33,5 +33,6 @@ build/
 .vscode/
 
 ### Database ###
-*.db
-
+data/
+*.mv.db
+*.trace.db
