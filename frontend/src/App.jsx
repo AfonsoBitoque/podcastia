@@ -5,6 +5,7 @@ import RegisterPage from './pages/RegisterPage'
 import LoginPage from './pages/LoginPage'
 import HomePage from './pages/HomePage'
 import UserPage from './pages/UserPage'
+import SearchPageTest from './pages/SearchPageTest'
 import './styles/layout.css'
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/home" element={<HomePage />} />
           <Route path="/user" element={<UserPage />} />
+          <Route path="/search-test" element={<SearchPageTest />} />
         </Routes>
       </div>
       <Footer />
