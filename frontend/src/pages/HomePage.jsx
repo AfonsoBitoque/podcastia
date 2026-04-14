@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import '../styles/home-page.css'
 import PodcastSidebar from '../components/PodcastSidebar'
+import PlaybackSpeedControl from '../components/PlaybackSpeedControl'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
 
@@ -24,6 +25,11 @@ function HomePage() {
   const [progressSecs, setProgressSecs] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
+  const [playbackSpeed, setPlaybackSpeed] = useState(() => {
+    // Load saved playback speed from localStorage on mount
+    const saved = localStorage.getItem('playbackSpeed')
+    return saved ? parseFloat(saved) : 1
+  })
 
   // Sidebar State
   const [selectedPodcast, setSelectedPodcast] = useState(null)
@@ -116,22 +122,23 @@ function HomePage() {
     fetchHomeData()
   }, [])
 
-  // Simulated player timer
+  // Simulated player timer - incrementa com base na velocidade
   useEffect(() => {
     let interval;
     if (isPlaying && playingPodcast) {
       interval = setInterval(() => {
         setProgressSecs(prev => {
-          if (prev >= playingPodcast.duracao * 60) {
+          const newValue = prev + playbackSpeed;
+          if (newValue >= playingPodcast.duracao * 60) {
             setIsPlaying(false);
             return playingPodcast.duracao * 60;
           }
-          return prev + 1;
+          return newValue;
         });
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isPlaying, playingPodcast]);
+  }, [isPlaying, playingPodcast, playbackSpeed]);
 
   const handleListen = async (pod, isResume) => {
     try {
@@ -240,6 +247,22 @@ function HomePage() {
     const currentIndex = allPodcasts.findIndex(p => (p.id || p.podcastId) === currentId);
     const prevIndex = currentIndex === 0 ? allPodcasts.length - 1 : currentIndex - 1;
     handleListen(allPodcasts[prevIndex], false);
+  };
+
+  const handleSpeedChange = (speed) => {
+    setPlaybackSpeed(speed);
+    localStorage.setItem('playbackSpeed', speed.toString());
+    
+    // TODO: Quando integrar com elemento <audio> real:
+    // if (audioRef.current) {
+    //   audioRef.current.playbackRate = speed;
+    //   // Preservar pitch (evita efeito "esquilo")
+    //   if (audioRef.current.preservesPitch !== undefined) {
+    //     audioRef.current.preservesPitch = true;
+    //   }
+    // }
+    
+    console.log(`Velocidade de reprodução alterada para: ${speed}x`);
   };
 
   const seekTo = (seconds) => {
@@ -461,42 +484,48 @@ function HomePage() {
           </div>
           
           <div className="player-controls">
-            <div className="player-buttons">
-              <button 
-                className="btn-icon btn-skip" 
-                onClick={previousPodcast}
-                title="Podcast anterior"
-                aria-label="Podcast anterior"
-              >
-                ⏮
-              </button>
-              <button 
-                className="btn-icon" 
-                onClick={rewindSeconds}
-                title="Recuar 15 segundos"
-                aria-label="Recuar 15 segundos"
-              >
-                ⏪
-              </button>
-              <button className="btn-circular" onClick={togglePlayPause}>
-                {isPlaying ? '⏸' : '▶'}
-              </button>
-              <button 
-                className="btn-icon" 
-                onClick={forwardSeconds}
-                title="Avançar 15 segundos"
-                aria-label="Avançar 15 segundos"
-              >
-                ⏩
-              </button>
-              <button 
-                className="btn-icon btn-skip" 
-                onClick={nextPodcast}
-                title="Próximo podcast"
-                aria-label="Próximo podcast"
-              >
-                ⏭
-              </button>
+            <div className="player-buttons-wrapper">
+              <div className="player-buttons">
+                <button 
+                  className="btn-icon btn-skip" 
+                  onClick={previousPodcast}
+                  title="Podcast anterior"
+                  aria-label="Podcast anterior"
+                >
+                  ⏮
+                </button>
+                <button 
+                  className="btn-icon" 
+                  onClick={rewindSeconds}
+                  title="Recuar 15 segundos"
+                  aria-label="Recuar 15 segundos"
+                >
+                  ⏪
+                </button>
+                <button className="btn-circular" onClick={togglePlayPause}>
+                  {isPlaying ? '⏸' : '▶'}
+                </button>
+                <button 
+                  className="btn-icon" 
+                  onClick={forwardSeconds}
+                  title="Avançar 15 segundos"
+                  aria-label="Avançar 15 segundos"
+                >
+                  ⏩
+                </button>
+                <button 
+                  className="btn-icon btn-skip" 
+                  onClick={nextPodcast}
+                  title="Próximo podcast"
+                  aria-label="Próximo podcast"
+                >
+                  ⏭
+                </button>
+              </div>
+              <PlaybackSpeedControl 
+                currentSpeed={playbackSpeed} 
+                onSpeedChange={handleSpeedChange}
+              />
             </div>
             <div className="player-progress-container">
               <span className="time-display">{formatTime(progressSecs)}</span>
@@ -509,10 +538,14 @@ function HomePage() {
                 aria-valuemin="0"
                 aria-valuemax={playingPodcast.duracao * 60}
                 aria-valuenow={progressSecs}
+                style={{ '--animation-speed': `${1 / playbackSpeed}s` }}
               >
                 <div 
                   className="player-timeline-fill" 
-                  style={{ width: `${Math.min(100, (progressSecs / (playingPodcast.duracao * 60)) * 100)}%` }}
+                  style={{ 
+                    width: `${Math.min(100, (progressSecs / (playingPodcast.duracao * 60)) * 100)}%`,
+                    '--animation-speed': `${1 / playbackSpeed}s`
+                  }}
                 ></div>
                 <div 
                   className="player-timeline-thumb" 
