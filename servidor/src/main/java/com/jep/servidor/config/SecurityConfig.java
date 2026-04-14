@@ -46,6 +46,7 @@ public class SecurityConfig {
             .requestMatchers("/api/auth/**").permitAll() // Login REST
             .requestMatchers("/users", "/users/**").permitAll() // Registo de conta
             .requestMatchers("/api/register/**").permitAll() // Gerar/Verificar Tag REST
+            .requestMatchers("/api/search/**").permitAll() // Pesquisa publica
             .requestMatchers("/h2-console/**").permitAll() // H2 Console
             .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll() // Swagger OpenAPI
             
