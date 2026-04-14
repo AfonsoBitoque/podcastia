@@ -5,6 +5,7 @@ import com.jep.servidor.model.User;
 
 import java.util.List;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
@@ -12,4 +13,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
  */
 public interface PodcastRepository extends JpaRepository<Podcast, Long> {
   List<Podcast> findByUser(User user);
+
+  List<Podcast> findByTituloContainingIgnoreCaseOrUser_UsernameContainingIgnoreCase(String titulo, String username, Pageable pageable);
 }

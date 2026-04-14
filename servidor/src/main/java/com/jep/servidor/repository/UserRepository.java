@@ -5,6 +5,7 @@ import com.jep.servidor.model.User;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -23,6 +24,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
   List<User> findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(
       String username, String email);
+
+  List<User> findByUsernameContainingIgnoreCase(String username, Pageable pageable);
 
   @Query("SELECT COUNT(r) FROM UserRelation r "
       + "WHERE (r.user.id = :userId OR r.friend.id = :userId) AND r.type = 'AMIGO'")
