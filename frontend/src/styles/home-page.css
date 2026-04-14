@@ -431,15 +431,25 @@
   gap: 1.5rem;
   border-radius: 20px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
-  z-index: 1000;
+  z-index: 997;
   animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   backdrop-filter: blur(15px);  /* Aumentado para efeito de vidro mais forte */
   -webkit-backdrop-filter: blur(15px);
+  transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 @keyframes slide-up {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
+}
+
+/* Player deslocado quando sidebar está aberta */
+.player-bar.sidebar-open {
+  left: 40px;
+  right: auto;
+  max-width: calc(100% - 420px - 80px);
+  transform: none;
+  transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .player-info {
@@ -665,6 +675,14 @@
     border-radius: 16px;
     flex-direction: column;
     gap: 0.8rem;
+  }
+
+  .player-bar.sidebar-open {
+    /* No mobile, a sidebar ocupa todo o ecrã, então o player fica escondido atrás */
+    left: 10px;
+    right: auto;
+    max-width: calc(100% - 20px);
+    transform: none;
   }
 
   .player-info {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import '../styles/home-page.css'
+import PodcastSidebar from '../components/PodcastSidebar'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
 
@@ -24,11 +25,68 @@ function HomePage() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
 
+  // Sidebar State
+  const [selectedPodcast, setSelectedPodcast] = useState(null)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+
   const getSafeTags = (pod) => (Array.isArray(pod?.tags) ? pod.tags : [])
 
   const getTagUi = (tag) => TAG_UI[String(tag || '').toUpperCase()] || TAG_UI.DEFAULT
 
   const getPrimaryTagUi = (pod) => getTagUi(getSafeTags(pod)[0])
+
+  // Sidebar Functions
+  const openSidebar = (podcast) => {
+    setSelectedPodcast(podcast)
+    setIsSidebarOpen(true)
+  }
+
+  const closeSidebar = () => {
+    setIsSidebarOpen(false)
+    setTimeout(() => setSelectedPodcast(null), 300) // Wait for animation
+  }
+
+  const handlePlayFromSidebar = () => {
+    if (!selectedPodcast) return
+
+    const selectedId = selectedPodcast.id || selectedPodcast.podcastId
+    const playingId = playingPodcast?.id || playingPodcast?.podcastId
+
+    // Se é o mesmo podcast que está a tocar
+    if (selectedId === playingId) {
+      // Toggle play/pause
+      togglePlayPause()
+    } else {
+      // Diferente podcast - começar a reproduzir
+      handleListen(selectedPodcast, false)
+    }
+  }
+
+  const handleSaveToPodcasts = () => {
+    if (selectedPodcast) {
+      try {
+        const token = localStorage.getItem('token')
+        const headers = token ? { Authorization: `Bearer ${token}` } : {}
+        const actualId = selectedPodcast.id || selectedPodcast.podcastId
+
+        // API call to save to library
+        fetch(`${API_BASE_URL}/podcasts/${actualId}/favorite`, {
+          method: 'POST',
+          headers,
+        }).then(() => {
+          // Show success message
+          setMessage(`"${selectedPodcast.titulo}" foi adicionado à tua biblioteca!`)
+          setTimeout(() => setMessage(''), 3000)
+        }).catch(err => {
+          console.error('Erro ao guardar podcast:', err)
+          setMessage('Erro ao guardar o podcast. Tenta novamente.')
+          setTimeout(() => setMessage(''), 3000)
+        })
+      } catch (err) {
+        console.error(err)
+      }
+    }
+  }
 
   const fetchHomeData = async () => {
     try {
@@ -277,14 +335,23 @@ function HomePage() {
           const safeTags = getSafeTags(pod)
           
           return (
-            <article key={actualId} role="listitem" className={`podcast-card ${isContinueListening ? 'podcast-card-continue' : 'podcast-card-discover'} ${activePodcastId === actualId ? 'active-play' : ''}`}>
+            <article 
+              key={actualId} 
+              role="listitem" 
+              className={`podcast-card ${isContinueListening ? 'podcast-card-continue' : 'podcast-card-discover'} ${activePodcastId === actualId ? 'active-play' : ''}`}
+              onClick={() => openSidebar(pod)}
+              style={{ cursor: 'pointer' }}
+            >
               <div className={`pod-thumb ${primaryTag.thumbClass}`} aria-hidden="true">
                 <span className="thumb-label">{primaryTag.short}</span>
                 {playingPodcast && (playingPodcast.id || playingPodcast.podcastId) === actualId ? (
                   <button 
                     className="thumb-play" 
                     aria-label={isPlaying ? `Pausar ${pod.titulo}` : `Retomar ${pod.titulo}`} 
-                    onClick={togglePlayPause}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      togglePlayPause()
+                    }}
                   >
                     {isPlaying ? '⏸' : '▶'}
                   </button>
@@ -292,7 +359,10 @@ function HomePage() {
                   <button 
                     className="thumb-play" 
                     aria-label={isContinueListening ? `Retomar ${pod.titulo}` : `Ouvir ${pod.titulo}`} 
-                    onClick={() => handleListen(pod, isContinueListening)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleListen(pod, isContinueListening)
+                    }}
                   >
                     ▶
                   </button>
@@ -368,7 +438,7 @@ function HomePage() {
 
       {/* Persistent Bottom Player */}
       {playingPodcast && (
-        <div className="player-bar">
+        <div className={`player-bar ${isSidebarOpen ? 'sidebar-open' : ''}`}>
           <div className="player-info">
             {playingPodcast.coverImagePath ? (
               <img 
@@ -454,6 +524,17 @@ function HomePage() {
           </div>
         </div>
       )}
+
+      {/* Podcast Sidebar */}
+      <PodcastSidebar
+        podcast={selectedPodcast}
+        isOpen={isSidebarOpen}
+        onClose={closeSidebar}
+        onPlayNow={handlePlayFromSidebar}
+        onSave={handleSaveToPodcasts}
+        isPlaying={playingPodcast && (playingPodcast.id || playingPodcast.podcastId) === (selectedPodcast?.id || selectedPodcast?.podcastId) ? isPlaying : false}
+        API_BASE_URL={API_BASE_URL}
+      />
     </>
   )
 }
