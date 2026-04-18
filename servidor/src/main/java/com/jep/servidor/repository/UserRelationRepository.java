@@ -17,6 +17,8 @@ public interface UserRelationRepository extends JpaRepository<UserRelation, Long
 
   List<UserRelation> findByUserAndType(User user, UserRelation.RelationType type);
 
+  List<UserRelation> findByFriendIdAndType(Long friendId, UserRelation.RelationType type);
+
   @Query("SELECT r FROM UserRelation r WHERE (r.user.id = :userId1 AND r.friend.id = :userId2) OR (r.user.id = :userId2 AND r.friend.id = :userId1)")
   Optional<UserRelation> findRelationship(@Param("userId1") Long userId1, @Param("userId2") Long userId2);
 }

@@ -1,6 +1,7 @@
 package com.jep.servidor.service.impl;
 
 import com.jep.servidor.dto.RelationStatusDto;
+import com.jep.servidor.dto.PendingRequestDto;
 import com.jep.servidor.model.User;
 import com.jep.servidor.model.UserRelation;
 import com.jep.servidor.model.UserRelation.RelationType;
@@ -13,7 +14,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class UserRelationshipServiceImpl implements UserRelationshipService {
@@ -86,6 +89,36 @@ public class UserRelationshipServiceImpl implements UserRelationshipService {
             .orElseThrow(() -> new BusinessException("Este pedido já não está disponível."));
 
         relation.setType(RelationType.AMIGO);
+        relation.setUpdatedAt(LocalDateTime.now());
+        userRelationRepository.save(relation);
+
+        User sender = userRepository.findById(senderId)
+                .orElseThrow(() -> new BusinessException("Utilizador remetente não encontrado."));
+        User receiver = userRepository.findById(receiverId)
+                .orElseThrow(() -> new BusinessException("Utilizador destinatário não encontrado."));
+
+        UserRelation inverseRelation = userRelationRepository.findRelationship(receiverId, senderId)
+                .orElse(new UserRelation());
+
+        inverseRelation.setSender(receiver);
+        inverseRelation.setReceiver(sender);
+        inverseRelation.setType(RelationType.AMIGO);
+        inverseRelation.setUpdatedAt(LocalDateTime.now());
+        userRelationRepository.save(inverseRelation);
+
+        String notificationMessage = String.format("%s aceitou o seu pedido de amizade.", receiver.getUsername());
+        notificationService.sendNotification(senderId.toString(), notificationMessage);
+    }
+
+    @Override
+    @Transactional
+    public void rejectFriendRequest(Long senderId, Long receiverId) {
+        UserRelation relation = userRelationRepository.findRelationship(senderId, receiverId)
+                .filter(r -> r.getType() == RelationType.PEDIDO)
+                .orElseThrow(() -> new BusinessException("Este pedido já não está disponível."));
+
+        relation.setType(RelationType.PEDIDO_REJEITADO);
+        relation.setUpdatedAt(LocalDateTime.now());
         userRelationRepository.save(relation);
     }
 
@@ -134,6 +167,10 @@ public class UserRelationshipServiceImpl implements UserRelationshipService {
             case PEDIDO:
                 return new RelationStatusDto(isSender ? "PENDING_SENT" : "PENDING_RECEIVED", false);
             case PEDIDO_REJEITADO:
+                // Tratamento de Privacidade (US-6-2)
+                if (isSender) {
+                     return new RelationStatusDto("NONE", true);
+                }
                 boolean canRequest = relation.getUpdatedAt().plusDays(COOLDOWN_DAYS).isBefore(LocalDateTime.now());
                 return new RelationStatusDto("REJECTED", canRequest);
             case CANCELADO:
@@ -141,5 +178,13 @@ public class UserRelationshipServiceImpl implements UserRelationshipService {
             default:
                 return new RelationStatusDto("NONE", true);
         }
+    }
+
+    @Override
+    public List<PendingRequestDto> getPendingFriendRequests(Long userId) {
+         List<UserRelation> relations = userRelationRepository.findByFriendIdAndType(userId, RelationType.PEDIDO);
+         return relations.stream()
+                 .map(r -> new PendingRequestDto(r.getId(), r.getSender().getId(), r.getSender().getUsername()))
+                 .collect(Collectors.toList());
     }
 }
