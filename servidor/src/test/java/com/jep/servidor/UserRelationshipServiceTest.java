@@ -222,7 +222,10 @@ public class UserRelationshipServiceTest {
     void testGetPendingFriendRequests_ReturnsOnlyPending() {
         UserRelation request1 = new UserRelation(user1, user2, UserRelation.RelationType.PEDIDO);
         request1.setId(10L);
-        UserRelation request2 = new UserRelation(new User(), user2, UserRelation.RelationType.PEDIDO);
+        User user3 = new User();
+        user3.setId(3L);
+        user3.setUsername("user3");
+        UserRelation request2 = new UserRelation(user3, user2, UserRelation.RelationType.PEDIDO);
         request2.setId(11L);
 
         when(userRelationRepository.findByFriendIdAndType(user2.getId(), UserRelation.RelationType.PEDIDO))

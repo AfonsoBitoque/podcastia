@@ -167,7 +167,6 @@ public class UserRelationshipServiceImpl implements UserRelationshipService {
             case PEDIDO:
                 return new RelationStatusDto(isSender ? "PENDING_SENT" : "PENDING_RECEIVED", false);
             case PEDIDO_REJEITADO:
-                // Tratamento de Privacidade (US-6-2)
                 if (isSender) {
                      return new RelationStatusDto("NONE", true);
                 }
@@ -184,7 +183,12 @@ public class UserRelationshipServiceImpl implements UserRelationshipService {
     public List<PendingRequestDto> getPendingFriendRequests(Long userId) {
          List<UserRelation> relations = userRelationRepository.findByFriendIdAndType(userId, RelationType.PEDIDO);
          return relations.stream()
-                 .map(r -> new PendingRequestDto(r.getId(), r.getSender().getId(), r.getSender().getUsername()))
+                 .map(r -> new PendingRequestDto(
+                         r.getId(),
+                         r.getSender().getId(),
+                         r.getSender().getUsername(),
+                         r.getSender().getProfilePicturePath()
+                 ))
                  .collect(Collectors.toList());
     }
 }
