@@ -1,27 +1,29 @@
 package com.jep.servidor;
 
+import com.jep.servidor.dto.PendingRequestDto;
+import com.jep.servidor.dto.RelationStatusDto;
+import com.jep.servidor.exceptions.BusinessException;
 import com.jep.servidor.model.User;
 import com.jep.servidor.model.UserRelation;
 import com.jep.servidor.repository.UserRelationRepository;
 import com.jep.servidor.repository.UserRepository;
-import com.jep.servidor.service.impl.UserRelationshipServiceImpl;
 import com.jep.servidor.service.NotificationService;
-import com.jep.servidor.exceptions.BusinessException;
+import com.jep.servidor.service.impl.UserRelationshipServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class UserRelationshipServiceTest {
@@ -159,5 +161,91 @@ public class UserRelationshipServiceTest {
             userRelationshipService.acceptFriendRequest(1L, 2L);
         });
         assertEquals("Este pedido já não está disponível.", exception.getMessage());
+    }
+
+    @Test
+    void testAcceptFriendRequest_ShouldCreateMutualFriendship() {
+
+        UserRelation pendingRequest = new UserRelation();
+        pendingRequest.setSender(user1);
+        pendingRequest.setReceiver(user2);
+        pendingRequest.setType(UserRelation.RelationType.PEDIDO);
+
+        when(userRelationRepository.findRelationship(user1.getId(), user2.getId()))
+                .thenReturn(Optional.of(pendingRequest));
+
+        when(userRelationRepository.findRelationship(user2.getId(), user1.getId()))
+                .thenReturn(Optional.empty());
+
+        when(userRepository.findById(user1.getId())).thenReturn(Optional.of(user1));
+        when(userRepository.findById(user2.getId())).thenReturn(Optional.of(user2));
+
+        userRelationshipService.acceptFriendRequest(user1.getId(), user2.getId());
+
+        ArgumentCaptor<UserRelation> relationCaptor = ArgumentCaptor.forClass(UserRelation.class);
+        verify(userRelationRepository, times(2)).save(relationCaptor.capture());
+
+        List<UserRelation> savedRelations = relationCaptor.getAllValues();
+
+        UserRelation originalRelation = savedRelations.stream()
+                .filter(r -> r.getSender().getId().equals(user1.getId()))
+                .findFirst().orElse(null);
+        assertNotNull(originalRelation);
+        assertEquals(UserRelation.RelationType.AMIGO, originalRelation.getType());
+
+        UserRelation inverseRelation = savedRelations.stream()
+                .filter(r -> r.getSender().getId().equals(user2.getId()))
+                .findFirst().orElse(null);
+        assertNotNull(inverseRelation);
+        assertEquals(UserRelation.RelationType.AMIGO, inverseRelation.getType());
+        assertEquals(user1.getId(), inverseRelation.getReceiver().getId());
+    }
+
+    @Test
+    void testRejectFriendRequest_Success() {
+        UserRelation pendingRequest = new UserRelation();
+        pendingRequest.setSender(user1);
+        pendingRequest.setReceiver(user2);
+        pendingRequest.setType(UserRelation.RelationType.PEDIDO);
+
+        when(userRelationRepository.findRelationship(user1.getId(), user2.getId()))
+                .thenReturn(Optional.of(pendingRequest));
+
+        userRelationshipService.rejectFriendRequest(user1.getId(), user2.getId());
+
+        assertEquals(UserRelation.RelationType.PEDIDO_REJEITADO, pendingRequest.getType());
+        verify(userRelationRepository).save(pendingRequest);
+        verify(notificationService, never()).sendNotification(any(), any());
+    }
+
+    @Test
+    void testGetPendingFriendRequests_ReturnsOnlyPending() {
+        UserRelation request1 = new UserRelation(user1, user2, UserRelation.RelationType.PEDIDO);
+        request1.setId(10L);
+        UserRelation request2 = new UserRelation(new User(), user2, UserRelation.RelationType.PEDIDO);
+        request2.setId(11L);
+
+        when(userRelationRepository.findByFriendIdAndType(user2.getId(), UserRelation.RelationType.PEDIDO))
+                .thenReturn(List.of(request1, request2));
+
+        List<PendingRequestDto> pending = userRelationshipService.getPendingFriendRequests(user2.getId());
+
+        assertEquals(2, pending.size());
+        assertEquals(10L, pending.get(0).getId());
+        assertEquals(11L, pending.get(1).getId());
+    }
+
+    @Test
+    void testGetRelationStatus_PrivacyWhenRejected() {
+        UserRelation rejectedRequest = new UserRelation(user1, user2, UserRelation.RelationType.PEDIDO_REJEITADO);
+        rejectedRequest.setUpdatedAt(LocalDateTime.now().minusDays(1));
+
+        when(userRelationRepository.findRelationship(user1.getId(), user2.getId()))
+                .thenReturn(Optional.of(rejectedRequest));
+
+        RelationStatusDto status = userRelationshipService.getRelationStatus(user1.getId(), user2.getId());
+
+        assertEquals("NONE", status.getStatus());
+        assertTrue(status.isCanRequest());
     }
 }
