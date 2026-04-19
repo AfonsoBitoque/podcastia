@@ -57,6 +57,7 @@ function Header() {
           
           {user ? (
             <div className="site-user-nav">
+              <NavLink to="/generate">Gerar Podcast</NavLink>
               <NavLink to="/user" className="site-user-link">
                 {user.username}
               </NavLink>
