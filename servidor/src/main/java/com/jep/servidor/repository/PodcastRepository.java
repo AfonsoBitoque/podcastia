@@ -14,5 +14,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface PodcastRepository extends JpaRepository<Podcast, Long> {
   List<Podcast> findByUser(User user);
 
+  List<Podcast> findByUserOrderByCreatedAtDesc(User user);
+
   List<Podcast> findByTituloContainingIgnoreCaseOrUser_UsernameContainingIgnoreCase(String titulo, String username, Pageable pageable);
 }

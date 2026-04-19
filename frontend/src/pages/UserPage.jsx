@@ -104,6 +104,9 @@ function UserPage() {
     newPassword: false,
     confirmPassword: false,
   })
+  const [myPodcasts, setMyPodcasts] = useState([])
+  const [podcastsLoading, setPodcastsLoading] = useState(false)
+  const [togglingPodcastId, setTogglingPodcastId] = useState(null)
 
   const avatarUrl = !avatarFailed
     ? resolveProfilePicture(user?.id ? `users/${user.id}/profile-image?v=${avatarVersion}` : '')
@@ -657,6 +660,45 @@ function UserPage() {
   }, [])
 
   const currentProfile = user || sessionUser;
+
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    setPodcastsLoading(true)
+    fetch(`${API_BASE_URL}/api/podcasts/mine`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => setMyPodcasts(Array.isArray(data) ? data : []))
+      .catch(() => setMyPodcasts([]))
+      .finally(() => setPodcastsLoading(false))
+  }, [])
+
+  const handleTogglePodcastVisibility = async (podcastId, currentPublico) => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    setTogglingPodcastId(podcastId)
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/podcasts/${podcastId}/visibility`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ publico: !currentPublico }),
+      })
+      if (response.ok) {
+        setMyPodcasts((prev) =>
+          prev.map((p) => (p.id === podcastId ? { ...p, publico: !currentPublico } : p))
+        )
+      }
+    } catch (err) {
+      console.error('Erro ao alterar visibilidade:', err)
+    } finally {
+      setTogglingPodcastId(null)
+    }
+  }
+
   const totalPoints = (currentProfile?.pontosDesporto || 0) + 
                       (currentProfile?.pontosPolitica || 0) + 
                       (currentProfile?.pontosFinancas || 0) + 
@@ -1066,6 +1108,70 @@ function UserPage() {
               </div>
             </section>
           </div>
+
+          <section className="user-podcasts-section" aria-label="Os meus podcasts">
+            <div className="info-block">
+              <div className="info-block-header">
+                <p className="info-title">
+                  <span className="icon-dot" aria-hidden="true" />
+                  Os Meus Podcasts
+                </p>
+                <Link to="/generate" className="user-inline-edit-btn">
+                  Gerar Novo
+                </Link>
+              </div>
+
+              {podcastsLoading ? (
+                <p className="user-podcasts-loading">A carregar podcasts...</p>
+              ) : myPodcasts.length === 0 ? (
+                <p className="user-podcasts-empty">
+                  Ainda não geraste nenhum podcast.{' '}
+                  <Link to="/generate" className="text-link-btn">
+                    Gerar o primeiro
+                  </Link>
+                </p>
+              ) : (
+                <div className="user-podcasts-list">
+                  {myPodcasts.map((podcast) => (
+                    <div key={podcast.id} className="user-podcast-item">
+                      <div className="user-podcast-info">
+                        <h3 className="user-podcast-title">{podcast.titulo}</h3>
+                        <div className="user-podcast-meta">
+                          <span className="user-podcast-duration">{podcast.duracao} min</span>
+                          <span className={`user-podcast-visibility ${podcast.publico ? 'public' : 'private'}`}>
+                            {podcast.publico ? 'Público' : 'Privado'}
+                          </span>
+                          {podcast.tags && podcast.tags.length > 0 && (
+                            <span className="user-podcast-tags">
+                              {podcast.tags.join(', ')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="user-podcast-actions">
+                        <audio
+                          src={`${API_BASE_URL}/api/podcasts/${podcast.id}/audio`}
+                          controls
+                          className="user-podcast-audio"
+                        />
+                        <button
+                          className={`user-podcast-toggle-btn ${podcast.publico ? 'is-public' : 'is-private'}`}
+                          onClick={() => handleTogglePodcastVisibility(podcast.id, podcast.publico)}
+                          disabled={togglingPodcastId === podcast.id}
+                        >
+                          {togglingPodcastId === podcast.id
+                            ? '...'
+                            : podcast.publico
+                              ? 'Tornar Privado'
+                              : 'Publicar'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
         </article>
       </section>
     </main>
