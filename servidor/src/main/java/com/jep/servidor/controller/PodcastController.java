@@ -192,10 +192,13 @@ public class PodcastController {
    */
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> delete(@PathVariable("id") Long id) {
-    if (!podcastRepository.existsById(id)) {
+    Optional<Podcast> podcastOpt = podcastRepository.findById(id);
+    if (podcastOpt.isEmpty()) {
       return ResponseEntity.notFound().build();
     }
-    podcastRepository.deleteById(id);
+    Podcast podcast = podcastOpt.get();
+    podcast.setAvailable(false);
+    podcastRepository.save(podcast);
     return ResponseEntity.noContent().build();
   }
 }

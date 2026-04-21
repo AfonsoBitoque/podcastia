@@ -80,7 +80,8 @@ public class AuthController {
                         "token", token,
                         "userId", user.getId(),
                         "username", user.getUsername(),
-                        "userType", user.getUserType().name()
+                        "userType", user.getUserType().name(),
+                        "playbackSpeed", user.getPlaybackSpeed()
                 ));
             }
         }
