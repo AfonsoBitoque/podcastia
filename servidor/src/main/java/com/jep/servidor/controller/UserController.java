@@ -110,6 +110,10 @@ public class UserController {
        user.setBio(update.getBio());
     }
 
+    if (update.getPlaybackSpeed() != null) {
+       user.setPlaybackSpeed(update.getPlaybackSpeed());
+    }
+
     // Nenhuma redefinição de password ou e-mail deve ocorrer aqui (estas funcionalidades precisam de outros fluxos).
     // Salvamos na Base de Dados e injetamos o estado final atualizado.
     User saved = userRepository.save(user);

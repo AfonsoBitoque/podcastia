@@ -49,7 +49,15 @@ public class PlaylistService {
     playlist.setDescription(request.getDescription());
     playlist.setCoverImagePath(request.getCoverImagePath());
     playlist.setPublic(Boolean.TRUE.equals(request.getIsPublic()));
-    return playlistRepository.save(playlist);
+    Playlist savedPlaylist = playlistRepository.save(playlist);
+
+    if (request.getInitialPodcastId() != null) {
+      PlaylistAddEpisodeRequest addRequest = new PlaylistAddEpisodeRequest();
+      addRequest.setPodcastId(request.getInitialPodcastId());
+      addEpisode(owner, savedPlaylist.getId(), addRequest);
+    }
+    
+    return savedPlaylist;
   }
 
   @Transactional(readOnly = true)

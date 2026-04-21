@@ -47,6 +47,9 @@ public class Podcast {
   @Column(nullable = false)
   private boolean publico = false;
 
+  @Column(nullable = false)
+  private boolean available = true;
+
   @Column(nullable = false, updatable = false)
   private LocalDateTime createdAt;
 
@@ -143,5 +146,13 @@ public class Podcast {
 
   public void setCreatedAt(LocalDateTime createdAt) {
     this.createdAt = createdAt;
+  }
+
+  public boolean isAvailable() {
+    return available;
+  }
+
+  public void setAvailable(boolean available) {
+    this.available = available;
   }
 }

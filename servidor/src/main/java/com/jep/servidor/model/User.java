@@ -90,6 +90,9 @@ public class User {
   @Column(nullable = false)
   private int pontosGeral = 0;
 
+  @Column(nullable = false)
+  private float playbackSpeed = 1.0f;
+
   private String profilePicturePath;
 
   /**
@@ -221,5 +224,13 @@ public class User {
 
   public void setPontosGeral(int pontosGeral) {
     this.pontosGeral = pontosGeral;
+  }
+
+  public float getPlaybackSpeed() {
+    return playbackSpeed;
+  }
+
+  public void setPlaybackSpeed(float playbackSpeed) {
+    this.playbackSpeed = playbackSpeed;
   }
 }

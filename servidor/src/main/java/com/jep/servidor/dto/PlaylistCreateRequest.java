@@ -19,6 +19,8 @@ public class PlaylistCreateRequest {
 
   private Boolean isPublic;
 
+  private Long initialPodcastId;
+
   public String getTitle() {
     return title;
   }
@@ -49,5 +51,13 @@ public class PlaylistCreateRequest {
 
   public void setIsPublic(Boolean isPublic) {
     this.isPublic = isPublic;
+  }
+
+  public Long getInitialPodcastId() {
+    return initialPodcastId;
+  }
+
+  public void setInitialPodcastId(Long initialPodcastId) {
+    this.initialPodcastId = initialPodcastId;
   }
 }

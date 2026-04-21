@@ -9,6 +9,8 @@ public class UserUpdateRequest {
   @Size(max = 160, message = "A biografia não pode exceder as 160 letras")
   private String bio;
 
+  private Float playbackSpeed;
+
   public String getUsername() {
     return username;
   }
@@ -21,5 +23,12 @@ public class UserUpdateRequest {
   }
   public void setBio(String bio) {
     this.bio = bio;
+  }
+
+  public Float getPlaybackSpeed() {
+    return playbackSpeed;
+  }
+  public void setPlaybackSpeed(Float playbackSpeed) {
+    this.playbackSpeed = playbackSpeed;
   }
 }
