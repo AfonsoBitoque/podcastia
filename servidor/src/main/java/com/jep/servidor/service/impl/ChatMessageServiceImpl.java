@@ -4,13 +4,18 @@ import com.jep.servidor.dto.ChatMessageAttachmentRequest;
 import com.jep.servidor.dto.ChatMessageDto;
 import com.jep.servidor.dto.ChatMessageHistoryResponse;
 import com.jep.servidor.dto.ChatMessageRequest;
+import com.jep.servidor.dto.ChatReactionRequest;
+import com.jep.servidor.dto.ChatReactionSummaryDto;
+import com.jep.servidor.dto.ChatReactionUpdateResponse;
 import com.jep.servidor.exceptions.ChatMessageException;
 import com.jep.servidor.model.ChatMessage;
 import com.jep.servidor.model.ChatMessageMetadata;
+import com.jep.servidor.model.ChatMessageReaction;
 import com.jep.servidor.model.Podcast;
 import com.jep.servidor.model.User;
 import com.jep.servidor.model.UserRelation;
 import com.jep.servidor.repository.ChatMessageRepository;
+import com.jep.servidor.repository.ChatMessageReactionRepository;
 import com.jep.servidor.repository.PodcastRepository;
 import com.jep.servidor.repository.UserRelationRepository;
 import com.jep.servidor.repository.UserRepository;
@@ -21,8 +26,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Deque;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -52,6 +58,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
   private static final int MAX_MESSAGES_PER_MINUTE = 20;
   private static final int MAX_MESSAGES_PER_HOUR = 100;
   private static final int MAX_LINKS_PER_WINDOW = 3;
+  private static final Set<String> ALLOWED_REACTIONS = Set.of("👍", "❤️", "😂", "😮", "😢", "🔥");
   private static final Duration LINK_WINDOW = Duration.ofMinutes(10);
   private static final Duration LINK_BLOCK_DURATION = Duration.ofMinutes(15);
   private static final Duration HISTORY_CURSOR_WINDOW = Duration.ofDays(30);
@@ -71,6 +78,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
   );
 
   private final ChatMessageRepository chatMessageRepository;
+  private final ChatMessageReactionRepository chatMessageReactionRepository;
   private final UserRepository userRepository;
   private final UserRelationRepository userRelationRepository;
   private final PodcastRepository podcastRepository;
@@ -85,12 +93,14 @@ public class ChatMessageServiceImpl implements ChatMessageService {
   private final ConcurrentLinkedQueue<PushNotificationJob> pushQueue = new ConcurrentLinkedQueue<>();
 
   public ChatMessageServiceImpl(ChatMessageRepository chatMessageRepository,
+      ChatMessageReactionRepository chatMessageReactionRepository,
       UserRepository userRepository,
       UserRelationRepository userRelationRepository,
       PodcastRepository podcastRepository,
       NotificationService notificationService,
       SimpMessagingTemplate messagingTemplate) {
     this.chatMessageRepository = chatMessageRepository;
+    this.chatMessageReactionRepository = chatMessageReactionRepository;
     this.userRepository = userRepository;
     this.userRelationRepository = userRelationRepository;
     this.podcastRepository = podcastRepository;
@@ -172,6 +182,61 @@ public class ChatMessageServiceImpl implements ChatMessageService {
   }
 
   @Override
+  @Transactional
+  public ChatReactionUpdateResponse reactToMessage(Long userId, Long messageId,
+      ChatReactionRequest request) {
+    ChatMessage message = loadAccessibleMessage(userId, messageId);
+    String emoji = validateReactionEmoji(request.emoji());
+    Instant clientEventAt = request.clientEventAt() == null ? Instant.now() : request.clientEventAt();
+
+    ChatMessageReaction existingReaction = chatMessageReactionRepository
+        .findByMessageIdAndUserId(messageId, userId)
+        .orElse(null);
+
+    if (existingReaction != null && !clientEventAt.isAfter(existingReaction.getClientEventAt())) {
+      return new ChatReactionUpdateResponse(messageId, "IGNORED_STALE",
+          reactionSummary(existingReaction, userId), aggregateReactions(message, userId));
+    }
+
+    String action;
+    ChatReactionSummaryDto primaryReaction;
+
+    if (existingReaction != null && emoji.equals(existingReaction.getEmoji())) {
+      chatMessageReactionRepository.delete(existingReaction);
+      action = "REMOVED";
+      primaryReaction = new ChatReactionSummaryDto(emoji, 0L, List.of(), true);
+    } else {
+      ChatMessageReaction reaction = existingReaction == null ? new ChatMessageReaction() : existingReaction;
+      reaction.setMessage(message);
+      reaction.setUser(userRepository.findById(userId)
+          .orElseThrow(() -> new ChatMessageException(HttpStatus.NOT_FOUND, "Utilizador não encontrado.")));
+      reaction.setEmoji(emoji);
+      reaction.setClientEventAt(clientEventAt);
+      chatMessageReactionRepository.save(reaction);
+      action = existingReaction == null ? "ADDED" : "UPDATED";
+      primaryReaction = reactionSummary(reaction, userId);
+    }
+
+    List<ChatReactionSummaryDto> reactions = aggregateReactions(message, userId);
+    ChatReactionUpdateResponse response = new ChatReactionUpdateResponse(messageId, action,
+        primaryReaction, reactions);
+    broadcastReactionUpdate(message, response);
+    return response;
+  }
+
+  @Override
+  @Transactional
+  public void deleteMessage(Long userId, Long messageId) {
+    ChatMessage message = chatMessageRepository.findById(messageId)
+        .orElseThrow(() -> new ChatMessageException(HttpStatus.NOT_FOUND, "Mensagem não encontrada."));
+    if (!Objects.equals(message.getSender().getId(), userId)) {
+      throw new ChatMessageException(HttpStatus.FORBIDDEN, "Só o remetente pode apagar a mensagem.");
+    }
+    chatMessageRepository.delete(message);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
   public ChatMessageHistoryResponse getConversation(Long userId, Long friendId, String cursor,
       int limit) {
     if (!userRepository.existsById(userId)) {
@@ -202,7 +267,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 
     List<ChatMessage> chronological = new ArrayList<>(messages);
     java.util.Collections.reverse(chronological);
-    List<ChatMessageDto> dtoMessages = chronological.stream().map(this::toDto).toList();
+    List<ChatMessageDto> dtoMessages = chronological.stream().map(message -> toDto(message, userId)).toList();
     String nextCursor = hasMore && !chronological.isEmpty()
         ? encodeCursor(chronological.get(0).getCreatedAt(), chronological.get(0).getId())
         : null;
@@ -407,6 +472,10 @@ public class ChatMessageServiceImpl implements ChatMessageService {
   }
 
   private ChatMessageDto toDto(ChatMessage message) {
+    return toDto(message, null);
+  }
+
+  private ChatMessageDto toDto(ChatMessage message, Long viewerId) {
     return new ChatMessageDto(
         message.getId(),
         message.getSender().getId(),
@@ -419,8 +488,80 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         message.getMetadata() == null ? null : new ChatMessageAttachmentRequest(
             message.getMetadata().getType(),
             message.getMetadata().getPodcastId(),
-            message.getMetadata().getEpisodeId())
+            message.getMetadata().getEpisodeId()),
+        aggregateReactions(message, viewerId)
     );
+  }
+
+  private ChatMessage loadAccessibleMessage(Long userId, Long messageId) {
+    ChatMessage message = chatMessageRepository.findById(messageId)
+        .orElseThrow(() -> new ChatMessageException(HttpStatus.NOT_FOUND, "Mensagem não encontrada."));
+    boolean isParticipant = Objects.equals(message.getSender().getId(), userId)
+        || Objects.equals(message.getRecipient().getId(), userId);
+    if (!isParticipant) {
+      throw new ChatMessageException(HttpStatus.FORBIDDEN, "Não tem acesso a esta mensagem.");
+    }
+    validateConversationNotBlocked(message.getSender().getId(), message.getRecipient().getId(), userId);
+    return message;
+  }
+
+  private void validateConversationNotBlocked(Long senderId, Long recipientId, Long userId) {
+    Optional<UserRelation> relation = userRelationRepository.findRelationship(senderId, recipientId);
+    if (relation.isPresent() && relation.get().getType() == UserRelation.RelationType.BLOQUEADO) {
+      boolean userIsParticipant = Objects.equals(userId, senderId) || Objects.equals(userId, recipientId);
+      if (userIsParticipant) {
+        throw new ChatMessageException(HttpStatus.FORBIDDEN, "A conversa encontra-se bloqueada.");
+      }
+    }
+  }
+
+  private String validateReactionEmoji(String emoji) {
+    if (emoji == null || emoji.isBlank()) {
+      throw new ChatMessageException(HttpStatus.BAD_REQUEST, "Emoji de reação obrigatório.");
+    }
+    if (!ALLOWED_REACTIONS.contains(emoji)) {
+      throw new ChatMessageException(HttpStatus.BAD_REQUEST, "Emoji não permitido.");
+    }
+    return emoji;
+  }
+
+  private List<ChatReactionSummaryDto> aggregateReactions(ChatMessage message, Long viewerId) {
+    Map<String, List<Long>> grouped = new LinkedHashMap<>();
+    for (ChatMessageReaction reaction : chatMessageReactionRepository.findByMessageId(message.getId())) {
+      grouped.computeIfAbsent(reaction.getEmoji(), key -> new ArrayList<>()).add(reaction.getUser().getId());
+    }
+
+    List<ChatReactionSummaryDto> result = new ArrayList<>();
+    for (Map.Entry<String, List<Long>> entry : grouped.entrySet()) {
+      List<Long> reactorIds = List.copyOf(entry.getValue());
+      result.add(new ChatReactionSummaryDto(
+          entry.getKey(),
+          reactorIds.size(),
+          reactorIds,
+          viewerId != null && reactorIds.contains(viewerId)
+      ));
+    }
+    return result;
+  }
+
+  private ChatReactionSummaryDto reactionSummary(ChatMessageReaction reaction, Long viewerId) {
+    return new ChatReactionSummaryDto(
+        reaction.getEmoji(),
+        1L,
+        List.of(reaction.getUser().getId()),
+        viewerId != null && Objects.equals(reaction.getUser().getId(), viewerId)
+    );
+  }
+
+  private void broadcastReactionUpdate(ChatMessage message, ChatReactionUpdateResponse response) {
+    List<Long> participants = List.of(message.getSender().getId(), message.getRecipient().getId());
+    for (Long participantId : participants) {
+      messagingTemplate.convertAndSendToUser(
+          participantId.toString(),
+          "/queue/messages",
+          Map.of("eventType", "REACTION_UPDATED", "messageId", response.messageId(), "reaction", response)
+      );
+    }
   }
 
   private Cursor parseCursor(String cursor) {

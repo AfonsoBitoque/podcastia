@@ -1,6 +1,8 @@
 package com.jep.servidor.controller;
 
 import com.jep.servidor.dto.ChatMessageHistoryResponse;
+import com.jep.servidor.dto.ChatReactionRequest;
+import com.jep.servidor.dto.ChatReactionUpdateResponse;
 import com.jep.servidor.exceptions.ChatMessageException;
 import com.jep.servidor.model.User;
 import com.jep.servidor.repository.UserRepository;
@@ -13,6 +15,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -48,6 +53,38 @@ public class ChatController {
           cursor,
           limit);
       return ResponseEntity.ok(response);
+    } catch (ChatMessageException exception) {
+      return ResponseEntity.status(exception.getStatus()).body(Map.of("error", exception.getMessage()));
+    }
+  }
+
+  @PostMapping("/messages/{messageId}/reactions")
+  public ResponseEntity<?> reactToMessage(@PathVariable Long messageId,
+      @RequestBody ChatReactionRequest request) {
+    Optional<User> authUser = getAuthenticatedUser();
+    if (authUser.isEmpty()) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
+    try {
+      ChatReactionUpdateResponse response = chatMessageService.reactToMessage(
+          authUser.get().getId(), messageId, request);
+      return ResponseEntity.ok(response);
+    } catch (ChatMessageException exception) {
+      return ResponseEntity.status(exception.getStatus()).body(Map.of("error", exception.getMessage()));
+    }
+  }
+
+  @DeleteMapping("/messages/{messageId}")
+  public ResponseEntity<?> deleteMessage(@PathVariable Long messageId) {
+    Optional<User> authUser = getAuthenticatedUser();
+    if (authUser.isEmpty()) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
+    try {
+      chatMessageService.deleteMessage(authUser.get().getId(), messageId);
+      return ResponseEntity.noContent().build();
     } catch (ChatMessageException exception) {
       return ResponseEntity.status(exception.getStatus()).body(Map.of("error", exception.getMessage()));
     }

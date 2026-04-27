@@ -1,6 +1,7 @@
 package com.jep.servidor.dto;
 
 import java.time.Instant;
+import java.util.List;
 
 /**
  * Representação transportável de uma mensagem privada.
@@ -14,6 +15,7 @@ public record ChatMessageDto(
     Instant createdAt,
     Instant deliveredAt,
     Instant readAt,
-    ChatMessageAttachmentRequest metadata
+    ChatMessageAttachmentRequest metadata,
+    List<ChatReactionSummaryDto> reactions
 ) {
 }

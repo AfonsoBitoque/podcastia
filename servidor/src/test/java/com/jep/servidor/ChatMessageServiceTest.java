@@ -3,11 +3,13 @@ package com.jep.servidor;
 import com.jep.servidor.dto.ChatMessageAttachmentRequest;
 import com.jep.servidor.dto.ChatMessageRequest;
 import com.jep.servidor.exceptions.ChatMessageException;
+import java.util.List;
 import com.jep.servidor.model.ChatMessage;
 import com.jep.servidor.model.Podcast;
 import com.jep.servidor.model.User;
 import com.jep.servidor.model.UserRelation;
 import com.jep.servidor.repository.ChatMessageRepository;
+import com.jep.servidor.repository.ChatMessageReactionRepository;
 import com.jep.servidor.repository.PodcastRepository;
 import com.jep.servidor.repository.UserRelationRepository;
 import com.jep.servidor.repository.UserRepository;
@@ -40,6 +42,9 @@ class ChatMessageServiceTest {
 
   @Mock
   private ChatMessageRepository chatMessageRepository;
+
+  @Mock
+  private ChatMessageReactionRepository chatMessageReactionRepository;
 
   @Mock
   private UserRepository userRepository;
@@ -98,6 +103,7 @@ class ChatMessageServiceTest {
       message.setId(99L);
       return message;
     });
+    when(chatMessageReactionRepository.findByMessageId(anyLong())).thenReturn(List.of());
 
     chatMessageService.sendMessage(1L, new ChatMessageRequest(2L, "Mensagem offline", null));
     chatMessageService.processPushQueue();
@@ -117,6 +123,7 @@ class ChatMessageServiceTest {
 
     when(chatMessageRepository.findById(10L)).thenReturn(Optional.of(message));
     when(chatMessageRepository.save(any(ChatMessage.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    when(chatMessageReactionRepository.findByMessageId(anyLong())).thenReturn(List.of());
 
     chatMessageService.acknowledgeMessage(2L, 10L, "DELIVERED");
 

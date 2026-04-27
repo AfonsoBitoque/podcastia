@@ -13,8 +13,12 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.CascadeType;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Entidade que representa uma mensagem privada entre dois utilizadores.
@@ -49,6 +53,9 @@ public class ChatMessage {
 
   @Embedded
   private ChatMessageMetadata metadata;
+
+  @OneToMany(mappedBy = "message", cascade = CascadeType.ALL, orphanRemoval = true)
+  private List<ChatMessageReaction> reactions = new ArrayList<>();
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false)
@@ -111,6 +118,14 @@ public class ChatMessage {
 
   public void setMetadata(ChatMessageMetadata metadata) {
     this.metadata = metadata;
+  }
+
+  public List<ChatMessageReaction> getReactions() {
+    return reactions;
+  }
+
+  public void setReactions(List<ChatMessageReaction> reactions) {
+    this.reactions = reactions;
   }
 
   public MessageStatus getStatus() {
