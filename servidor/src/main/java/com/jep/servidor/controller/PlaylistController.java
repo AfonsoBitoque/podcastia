@@ -291,6 +291,7 @@ public class PlaylistController {
     response.put("duration", podcast.getDuracao());
     response.put("host", podcast.getUser().getUsername());
     response.put("hostId", podcast.getUser().getId());
+    response.put("available", podcast.isAvailable());
     return response;
   }
 }
