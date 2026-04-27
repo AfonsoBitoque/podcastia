@@ -48,6 +48,7 @@ public class SecurityConfig {
             .requestMatchers("/api/register/**").permitAll() // Gerar/Verificar Tag REST
             .requestMatchers("/api/search/**").permitAll() // Pesquisa publica
             .requestMatchers("/api/podcasts/*/audio").permitAll() // Audio streaming publico
+            .requestMatchers("/ws/**").permitAll() // Handshake WebSocket autenticado por token
             .requestMatchers("/h2-console/**").permitAll() // H2 Console
             .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll() // Swagger OpenAPI
             
