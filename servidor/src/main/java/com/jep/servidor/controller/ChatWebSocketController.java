@@ -2,6 +2,7 @@ package com.jep.servidor.controller;
 
 import com.jep.servidor.dto.ChatMessageDto;
 import com.jep.servidor.dto.ChatMessageRequest;
+import com.jep.servidor.dto.ChatReactionRequest;
 import com.jep.servidor.exceptions.ChatMessageException;
 import com.jep.servidor.service.ChatMessageService;
 import java.security.Principal;
@@ -73,6 +74,31 @@ public class ChatWebSocketController {
           : "Falha ao processar o ACK.";
       messagingTemplate.convertAndSendToUser(
           principal.getName(),
+          "/queue/messages",
+          Map.of("eventType", "ERROR", "message", errorMessage)
+      );
+    }
+  }
+
+  @MessageMapping("/chat.reaction")
+  public void react(@Payload Map<String, Object> payload, Principal principal) {
+    try {
+      if (principal == null) {
+        throw new ChatMessageException(org.springframework.http.HttpStatus.UNAUTHORIZED, "Ligação WebSocket não autenticada.");
+      }
+      Long messageId = payload.get("messageId") == null ? null : Long.valueOf(payload.get("messageId").toString());
+      String emoji = payload.get("emoji") == null ? null : payload.get("emoji").toString();
+      java.time.Instant clientEventAt = payload.get("clientEventAt") == null
+          ? null
+          : java.time.Instant.parse(payload.get("clientEventAt").toString());
+      ChatReactionRequest request = new ChatReactionRequest(emoji, clientEventAt);
+      chatMessageService.reactToMessage(Long.valueOf(principal.getName()), messageId, request);
+    } catch (Exception exception) {
+      String errorMessage = exception instanceof ChatMessageException
+          ? exception.getMessage()
+          : "Falha ao processar a reação.";
+      messagingTemplate.convertAndSendToUser(
+          principal == null ? null : principal.getName(),
           "/queue/messages",
           Map.of("eventType", "ERROR", "message", errorMessage)
       );
