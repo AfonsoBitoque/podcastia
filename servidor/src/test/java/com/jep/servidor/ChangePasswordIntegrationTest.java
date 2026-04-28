@@ -8,10 +8,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jep.servidor.config.JwtUtil;
 import com.jep.servidor.controller.AuthController.LoginRequest;
 import com.jep.servidor.dto.ChangePasswordRequest;
 import com.jep.servidor.model.User;
+import com.jep.servidor.repository.PlaylistItemRepository;
+import com.jep.servidor.repository.PlaylistRepository;
+import com.jep.servidor.repository.PodcastRepository;
+import com.jep.servidor.repository.UserRelationRepository;
 import com.jep.servidor.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,8 +40,20 @@ class ChangePasswordIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+        @Autowired
+        private UserRelationRepository userRelationRepository;
+
+        @Autowired
+        private PlaylistItemRepository playlistItemRepository;
+
+        @Autowired
+        private PlaylistRepository playlistRepository;
+
+        @Autowired
+        private PodcastRepository podcastRepository;
+
+        @Autowired
+        private PasswordEncoder passwordEncoder;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -49,7 +64,11 @@ class ChangePasswordIntegrationTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        userRepository.deleteAll();
+                playlistItemRepository.deleteAll();
+                playlistRepository.deleteAll();
+                podcastRepository.deleteAll();
+                userRelationRepository.deleteAll();
+                userRepository.deleteAll();
 
         // Cria o utilizador de teste
         testUser = new User();
