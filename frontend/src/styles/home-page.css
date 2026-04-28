@@ -103,6 +103,148 @@
   max-width: 640px;
 }
 
+.filter-panel {
+  width: 100%;
+  background: rgba(255, 249, 241, 0.92);
+  border: 1px solid rgba(114, 71, 56, 0.2);
+  border-radius: 22px;
+  padding: 1.8rem 2rem;
+  margin-bottom: 3rem;
+  box-shadow: 0 12px 30px rgba(70, 38, 31, 0.08);
+}
+
+.filter-panel-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.filter-kicker {
+  margin: 0 0 0.35rem 0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #b54b1f;
+  font-weight: 700;
+}
+
+.filter-panel-header h3 {
+  margin: 0;
+  font-size: 1.4rem;
+  color: #3b231b;
+}
+
+.filter-subtitle {
+  margin: 0.45rem 0 0 0;
+  color: #71584f;
+  font-size: 0.95rem;
+}
+
+.filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.filter-chip {
+  border: 1px solid rgba(114, 71, 56, 0.25);
+  background: #fff6ef;
+  color: #6f220f;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-chip:hover {
+  border-color: #e05a2a;
+  color: #e05a2a;
+}
+
+.filter-chip.active {
+  background: #e05a2a;
+  color: #fff6ef;
+  border-color: #e05a2a;
+}
+
+.filter-panel-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 1rem;
+  align-items: end;
+  margin-bottom: 1.6rem;
+}
+
+.filter-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-weight: 600;
+  color: #4c3329;
+}
+
+.filter-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #e05a2a;
+}
+
+.filter-row input[type="number"],
+.filter-row select {
+  border-radius: 10px;
+  border: 1px solid rgba(114, 71, 56, 0.3);
+  padding: 0.45rem 0.6rem;
+  background: #fff;
+  color: #3b231b;
+}
+
+.filter-clear {
+  border: none;
+  background: #6f220f;
+  color: #fff6ef;
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.filter-clear.secondary {
+  background: #b54b1f;
+}
+
+.filter-panel-results {
+  width: 100%;
+}
+
+.filter-status {
+  margin: 0;
+  color: #71584f;
+}
+
+.filter-status.error {
+  color: #b42318;
+}
+
+.filter-empty {
+  background: rgba(224, 90, 42, 0.08);
+  padding: 1rem;
+  border-radius: 12px;
+  color: #6f220f;
+}
+
+.filter-suggestion {
+  margin-top: 0.5rem;
+  font-weight: 600;
+}
+
+.filter-carousel .podcast-carousel {
+  margin-top: 0.6rem;
+}
+
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }

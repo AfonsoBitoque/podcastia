@@ -23,7 +23,8 @@ import java.util.List;
 @Entity
 @Table(name = "podcasts",
     indexes = {
-        @Index(columnList = "user_id")
+    @Index(columnList = "user_id"),
+    @Index(columnList = "duracao")
     }
 )
 public class Podcast {
@@ -57,8 +58,15 @@ public class Podcast {
   @JoinColumn(name = "user_id", nullable = false)
   private User user;
 
-  @ElementCollection
-  @CollectionTable(name = "podcast_tags", joinColumns = @JoinColumn(name = "podcast_id"))
+    @ElementCollection
+    @CollectionTable(
+      name = "podcast_tags",
+      joinColumns = @JoinColumn(name = "podcast_id"),
+      indexes = {
+        @Index(columnList = "tag"),
+        @Index(columnList = "podcast_id,tag")
+      }
+    )
   @Enumerated(EnumType.STRING)
   @Column(name = "tag")
   private List<PodcastTag> tags;
