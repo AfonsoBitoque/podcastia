@@ -12,6 +12,7 @@ import com.jep.servidor.config.JwtUtil;
 import com.jep.servidor.controller.AuthController.LoginRequest;
 import com.jep.servidor.dto.ChangePasswordRequest;
 import com.jep.servidor.model.User;
+import com.jep.servidor.repository.UserRelationRepository;
 import com.jep.servidor.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,9 @@ class ChangePasswordIntegrationTest {
     private UserRepository userRepository;
 
     @Autowired
+    private UserRelationRepository userRelationRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -49,6 +53,7 @@ class ChangePasswordIntegrationTest {
 
     @BeforeEach
     void setUp() throws Exception {
+        userRelationRepository.deleteAll();
         userRepository.deleteAll();
 
         // Cria o utilizador de teste
