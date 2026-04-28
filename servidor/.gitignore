@@ -37,6 +37,5 @@ data/
 *.mv.db
 *.trace.db
 
-
 ### Secrets ###
 env.properties
