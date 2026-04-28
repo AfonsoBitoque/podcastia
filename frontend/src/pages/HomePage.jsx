@@ -19,6 +19,19 @@ function HomePage() {
   const [message, setMessage] = useState('')
   const [activePodcastId, setActivePodcastId] = useState(null)
   const [viewerName, setViewerName] = useState('')
+
+  const [feedFilters, setFeedFilters] = useState({
+    type: 'all',
+    category: '',
+    isFavorite: false,
+    hidePlayed: false,
+    shorts: false,
+    maxDuration: '',
+  })
+  const [filteredFeed, setFilteredFeed] = useState([])
+  const [filteredMeta, setFilteredMeta] = useState(null)
+  const [feedLoading, setFeedLoading] = useState(false)
+  const [feedError, setFeedError] = useState('')
   
   // Simulated Player State
   const [playingPodcast, setPlayingPodcast] = useState(null)
@@ -111,6 +124,70 @@ function HomePage() {
     }
   }
 
+  const hasActiveFilters = () => {
+    return (
+      feedFilters.type !== 'all' ||
+      Boolean(feedFilters.category) ||
+      feedFilters.isFavorite ||
+      feedFilters.hidePlayed ||
+      feedFilters.shorts ||
+      Boolean(feedFilters.maxDuration)
+    )
+  }
+
+  const buildFeedQuery = () => {
+    const params = new URLSearchParams()
+    if (feedFilters.type && feedFilters.type !== 'all') {
+      params.set('type', feedFilters.type)
+    }
+    if (feedFilters.category) {
+      params.set('category', feedFilters.category)
+    }
+    if (feedFilters.isFavorite) {
+      params.set('is_favorite', 'true')
+    }
+    if (feedFilters.hidePlayed) {
+      params.set('hide_played', 'true')
+    }
+    if (feedFilters.shorts) {
+      params.set('shorts', 'true')
+    }
+    if (feedFilters.maxDuration) {
+      params.set('max_duration', feedFilters.maxDuration)
+    }
+    params.set('page', '0')
+    params.set('size', '20')
+    return params.toString()
+  }
+
+  const fetchFilteredFeed = async () => {
+    setFeedLoading(true)
+    setFeedError('')
+    try {
+      const token = localStorage.getItem('token')
+      const headers = token ? { Authorization: `Bearer ${token}` } : {}
+      const query = buildFeedQuery()
+      const url = query ? `${API_BASE_URL}/api/home?${query}` : `${API_BASE_URL}/api/home`
+      const response = await fetch(url, { headers })
+      if (!response.ok) {
+        setFeedError('Falha ao carregar o feed filtrado.')
+        setFilteredFeed([])
+        setFilteredMeta(null)
+        return
+      }
+      const payload = await response.json()
+      setFilteredFeed(Array.isArray(payload?.data) ? payload.data : [])
+      setFilteredMeta(payload?.meta || null)
+    } catch (err) {
+      console.error('Failed to load filtered feed', err)
+      setFeedError('Falha ao carregar o feed filtrado.')
+      setFilteredFeed([])
+      setFilteredMeta(null)
+    } finally {
+      setFeedLoading(false)
+    }
+  }
+
   useEffect(() => {
     try {
       const parsed = JSON.parse(localStorage.getItem('user') || '{}')
@@ -119,8 +196,23 @@ function HomePage() {
       setViewerName('')
     }
 
+    const storedFilters = localStorage.getItem('homeFeedFilters')
+    if (storedFilters) {
+      try {
+        const parsedFilters = JSON.parse(storedFilters)
+        setFeedFilters((prev) => ({ ...prev, ...parsedFilters }))
+      } catch {
+        localStorage.removeItem('homeFeedFilters')
+      }
+    }
+
     fetchHomeData()
   }, [])
+
+  useEffect(() => {
+    localStorage.setItem('homeFeedFilters', JSON.stringify(feedFilters))
+    fetchFilteredFeed()
+  }, [feedFilters])
 
   // Simulated player timer - incrementa com base na velocidade
   useEffect(() => {
@@ -434,6 +526,135 @@ function HomePage() {
         </section>
 
         {message && <div className="home-notification">{message}</div>}
+
+        <section className="filter-panel" aria-label="Filtros da homepage">
+          <div className="filter-panel-header">
+            <div>
+              <p className="filter-kicker">Filtros rapidos</p>
+              <h3>Refina o teu feed</h3>
+              <p className="filter-subtitle">Escolhe apenas o que queres ouvir agora.</p>
+            </div>
+            <div className="filter-actions">
+              <button
+                className={`filter-chip ${feedFilters.type === 'all' ? 'active' : ''}`}
+                onClick={() => setFeedFilters((prev) => ({ ...prev, type: 'all' }))}
+              >
+                Tudo
+              </button>
+              <button
+                className={`filter-chip ${feedFilters.type === 'podcast' ? 'active' : ''}`}
+                onClick={() => setFeedFilters((prev) => ({ ...prev, type: 'podcast' }))}
+              >
+                Podcasts
+              </button>
+              <button
+                className={`filter-chip ${feedFilters.type === 'news' ? 'active' : ''}`}
+                onClick={() => setFeedFilters((prev) => ({ ...prev, type: 'news' }))}
+              >
+                Noticias
+              </button>
+              <button
+                className={`filter-chip ${feedFilters.isFavorite ? 'active' : ''}`}
+                onClick={() => setFeedFilters((prev) => ({ ...prev, isFavorite: !prev.isFavorite }))}
+              >
+                Favoritos
+              </button>
+            </div>
+          </div>
+
+          <div className="filter-panel-body">
+            <label className="filter-row">
+              <span>Ocultar ouvidos</span>
+              <input
+                type="checkbox"
+                checked={feedFilters.hidePlayed}
+                onChange={(event) => setFeedFilters((prev) => ({ ...prev, hidePlayed: event.target.checked }))}
+              />
+            </label>
+            <label className="filter-row">
+              <span>Curtos (&lt;= 15 min)</span>
+              <input
+                type="checkbox"
+                checked={feedFilters.shorts}
+                onChange={(event) => setFeedFilters((prev) => ({ ...prev, shorts: event.target.checked }))}
+              />
+            </label>
+            <label className="filter-row">
+              <span>Categoria</span>
+              <select
+                value={feedFilters.category}
+                onChange={(event) => setFeedFilters((prev) => ({ ...prev, category: event.target.value }))}
+              >
+                <option value="">Todas</option>
+                <option value="desporto">Desporto</option>
+                <option value="politica">Politica</option>
+                <option value="financas">Financas</option>
+                <option value="geral">Geral</option>
+              </select>
+            </label>
+            <label className="filter-row">
+              <span>Duracao max (seg)</span>
+              <input
+                type="number"
+                min="60"
+                step="30"
+                value={feedFilters.maxDuration}
+                onChange={(event) => setFeedFilters((prev) => ({ ...prev, maxDuration: event.target.value }))}
+                placeholder="Ex: 900"
+              />
+            </label>
+            {hasActiveFilters() && (
+              <button
+                className="filter-clear"
+                onClick={() => setFeedFilters({
+                  type: 'all',
+                  category: '',
+                  isFavorite: false,
+                  hidePlayed: false,
+                  shorts: false,
+                  maxDuration: '',
+                })}
+              >
+                Limpar todos os filtros
+              </button>
+            )}
+          </div>
+
+          <div className="filter-panel-results">
+            {feedLoading && <p className="filter-status">A carregar feed filtrado...</p>}
+            {!feedLoading && feedError && <p className="filter-status error">{feedError}</p>}
+            {!feedLoading && !feedError && filteredFeed.length === 0 && (
+              <div className="filter-empty">
+                <p>Nao ha conteudos para esta combinacao.</p>
+                {filteredMeta?.category && filteredMeta?.categoryHasContent && (
+                  <p className="filter-suggestion">
+                    Nao ha conteudos de {filteredMeta.category} aqui. Quer explorar a categoria geral?
+                  </p>
+                )}
+                {hasActiveFilters() && (
+                  <button
+                    className="filter-clear secondary"
+                    onClick={() => setFeedFilters({
+                      type: 'all',
+                      category: '',
+                      isFavorite: false,
+                      hidePlayed: false,
+                      shorts: false,
+                      maxDuration: '',
+                    })}
+                  >
+                    Limpar filtros
+                  </button>
+                )}
+              </div>
+            )}
+            {!feedLoading && !feedError && filteredFeed.length > 0 && (
+              <div className="filter-carousel">
+                {renderCarousel(filteredFeed)}
+              </div>
+            )}
+          </div>
+        </section>
 
         {loading ? (
           <p>A carregar o teu feed agregado...</p>
