@@ -24,4 +24,11 @@ public interface PodcastRepository extends JpaRepository<Podcast, Long>, JpaSpec
 
   @Query("select count(p) > 0 from Podcast p join p.tags t where t = :tag")
   boolean existsByTag(@Param("tag") PodcastTag tag);
+
+  /**
+   * Encontra todos os podcasts públicos e disponíveis.
+   *
+   * @return lista de podcasts públicos e disponíveis
+   */
+  List<Podcast> findAllByPublicoTrueAndAvailableTrue();
 }
