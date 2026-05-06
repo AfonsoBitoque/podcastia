@@ -76,8 +76,8 @@ function HomePage() {
       // Toggle play/pause
       togglePlayPause()
     } else {
-      // Diferente podcast - começar a reproduzir
-      handleListen(selectedPodcast, false)
+      // Diferente podcast - continuar de onde estava parado
+      handleListen(selectedPodcast, true)
     }
   }
 
