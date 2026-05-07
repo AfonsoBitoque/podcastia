@@ -47,7 +47,9 @@ function HomePage() {
   const [feedLoading, setFeedLoading] = useState(false)
   const [feedError, setFeedError] = useState('')
   const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [filterScrollState, setFilterScrollState] = useState({ canScroll: false, thumbWidth: 100, thumbLeft: 0 })
   const filterContainerRef = useRef(null)
+  const filterScrollRef = useRef(null)
   
   // Simulated Player State
   const [playingPodcast, setPlayingPodcast] = useState(null)
@@ -179,6 +181,21 @@ function HomePage() {
     }))
   }
 
+  const updateFilterScrollIndicator = () => {
+    const element = filterScrollRef.current
+    if (!element) return
+
+    const maxScroll = element.scrollWidth - element.clientWidth
+    if (maxScroll <= 0) {
+      setFilterScrollState({ canScroll: false, thumbWidth: 100, thumbLeft: 0 })
+      return
+    }
+
+    const thumbWidth = Math.max(18, (element.clientWidth / element.scrollWidth) * 100)
+    const thumbLeft = (element.scrollLeft / maxScroll) * (100 - thumbWidth)
+    setFilterScrollState({ canScroll: true, thumbWidth, thumbLeft })
+  }
+
   const buildFeedQuery = () => {
     const params = new URLSearchParams()
     if (feedFilters.type && feedFilters.type !== 'all') {
@@ -265,6 +282,14 @@ function HomePage() {
   useEffect(() => {
     if (!isFilterOpen) return
 
+    const scrollElement = filterScrollRef.current
+    const animationFrame = window.requestAnimationFrame(updateFilterScrollIndicator)
+    const settledTimer = window.setTimeout(updateFilterScrollIndicator, 360)
+    const resizeObserver = scrollElement ? new ResizeObserver(updateFilterScrollIndicator) : null
+    if (scrollElement && resizeObserver) {
+      resizeObserver.observe(scrollElement)
+    }
+
     const handlePointerDown = (event) => {
       if (filterContainerRef.current && !filterContainerRef.current.contains(event.target)) {
         setIsFilterOpen(false)
@@ -277,9 +302,14 @@ function HomePage() {
       }
     }
 
+    window.addEventListener('resize', updateFilterScrollIndicator)
     document.addEventListener('pointerdown', handlePointerDown)
     document.addEventListener('keydown', handleEscape)
     return () => {
+      window.cancelAnimationFrame(animationFrame)
+      window.clearTimeout(settledTimer)
+      resizeObserver?.disconnect()
+      window.removeEventListener('resize', updateFilterScrollIndicator)
       document.removeEventListener('pointerdown', handlePointerDown)
       document.removeEventListener('keydown', handleEscape)
     }
@@ -619,7 +649,12 @@ function HomePage() {
             )}
           </button>
 
-          <div id="home-filter-options" className="filter-scroll">
+          <div
+            id="home-filter-options"
+            ref={filterScrollRef}
+            className="filter-scroll"
+            onScroll={updateFilterScrollIndicator}
+          >
             {TYPE_FILTERS.map((filter) => (
               <button
                 key={filter.value}
@@ -689,6 +724,19 @@ function HomePage() {
               X
             </button>
           </div>
+
+          {isFilterOpen && filterScrollState.canScroll && (
+            <div
+              className="filter-scroll-indicator"
+              aria-hidden="true"
+              style={{
+                '--thumb-width': `${filterScrollState.thumbWidth}%`,
+                '--thumb-left': `${filterScrollState.thumbLeft}%`,
+              }}
+            >
+              <span />
+            </div>
+          )}
         </section>
 
         {loading ? (

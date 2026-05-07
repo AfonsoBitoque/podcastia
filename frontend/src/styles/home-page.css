@@ -115,6 +115,8 @@
   justify-content: flex-start;
   gap: 0.55rem;
   border-radius: 999px;
+  overflow: hidden;
+  isolation: isolate;
   transition: background-color 0.28s ease, box-shadow 0.28s ease, padding 0.28s ease;
 }
 
@@ -212,9 +214,10 @@
   overflow-x: auto;
   overscroll-behavior-x: contain;
   padding: 0;
+  margin-bottom: 0;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
-  transition: max-width 0.34s ease-in-out, opacity 0.24s ease, transform 0.34s ease-in-out, padding 0.24s ease;
+  transition: max-width 0.34s ease-in-out, opacity 0.24s ease, transform 0.34s ease-in-out, padding 0.24s ease, margin-bottom 0.24s ease;
 }
 
 .filter-strip.is-expanded .filter-scroll {
@@ -223,6 +226,32 @@
   transform: translateX(0) scaleX(1);
   pointer-events: auto;
   padding: 0.08rem 0.15rem;
+  margin-bottom: 0.42rem;
+}
+
+.filter-scroll-indicator {
+  position: absolute;
+  left: 9rem;
+  right: 1.4rem;
+  bottom: 0.34rem;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(160, 82, 45, 0.13);
+  box-shadow: inset 0 0 0 1px rgba(160, 82, 45, 0.06);
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.filter-scroll-indicator span {
+  position: absolute;
+  left: var(--thumb-left, 0%);
+  width: var(--thumb-width, 100%);
+  top: 0;
+  bottom: 0;
+  border-radius: inherit;
+  background: rgba(160, 82, 45, 0.62);
+  box-shadow: 0 0 8px rgba(160, 82, 45, 0.18);
+  transition: left 0.08s linear, width 0.18s ease;
 }
 
 .filter-scroll::-webkit-scrollbar {
