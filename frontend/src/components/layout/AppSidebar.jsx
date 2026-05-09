@@ -12,13 +12,44 @@ const libraryItems = [
   { to: '/shorts', label: 'Curtos', icon: 'shorts' },
 ]
 
-const friends = [
-  { name: 'Ana', initials: 'AN', online: true },
-  { name: 'Leo', initials: 'LE', online: true },
-  { name: 'Rita', initials: 'RI', online: false },
-]
-
 function SidebarIcon({ type }) {
+  if (type === 'home') {
+    return (
+      <svg className="sidebar-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M3 10.8 12 3l9 7.8v9.7a.5.5 0 0 1-.5.5h-5.2v-6.4H8.7V21H3.5a.5.5 0 0 1-.5-.5v-9.7Z"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    )
+  }
+
+  if (type === 'chat') {
+    return (
+      <svg className="sidebar-nav-icon sidebar-nav-icon--chat-svg" viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M5 6.5A3.5 3.5 0 0 1 8.5 3h7A3.5 3.5 0 0 1 19 6.5v5A3.5 3.5 0 0 1 15.5 15H11l-5.2 4.2a.5.5 0 0 1-.8-.39V15.3A3.5 3.5 0 0 1 2 12V6.5Z"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M8 8h8M8 11h5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+      </svg>
+    )
+  }
+
   return <span className={`sidebar-nav-icon sidebar-nav-icon--${type}`} aria-hidden="true" />
 }
 
@@ -49,17 +80,6 @@ function AppSidebar() {
 
         <section className="sidebar-section" aria-labelledby="sidebar-social-title">
           <h2 id="sidebar-social-title" className="sidebar-section-label">Social</h2>
-          <div className="sidebar-friends" aria-label="Amigos">
-            {friends.map((friend) => (
-              <div key={friend.name} className="sidebar-friend">
-                <span className="sidebar-friend-avatar">
-                  {friend.initials}
-                  <span className={`sidebar-presence ${friend.online ? 'is-online' : ''}`} aria-hidden="true" />
-                </span>
-                <span>{friend.name}</span>
-              </div>
-            ))}
-          </div>
           <NavLink to="/messages" className="sidebar-nav-link sidebar-message-link">
             <SidebarIcon type="chat" />
             <span>Mensagens</span>
