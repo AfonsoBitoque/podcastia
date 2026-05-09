@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import '../styles/search-page.css';
 
 const SearchPageTest = () => {
+    const [searchParams] = useSearchParams();
     const [query, setQuery] = useState('');
     const [results, setResults] = useState([]);
     const [page, setPage] = useState(0);
@@ -57,6 +59,14 @@ const SearchPageTest = () => {
             }, 400)
         );
     };
+
+    useEffect(() => {
+        const routeQuery = searchParams.get('q') || '';
+        setQuery(routeQuery);
+        setPage(0);
+        setHasMore(Boolean(routeQuery.trim()));
+        fetchResults(routeQuery, 0, true);
+    }, [searchParams]);
 
     // Lidar com Scroll infinito (Intersect Observer na ultima div)
     const lastElementRef = useCallback(node => {
