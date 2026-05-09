@@ -275,6 +275,17 @@ function HomePage() {
   }, [])
 
   useEffect(() => {
+    const handleOpenPodcastFromSearch = (event) => {
+      if (event.detail) {
+        openSidebar(event.detail)
+      }
+    }
+
+    window.addEventListener('podcastia-open-podcast', handleOpenPodcastFromSearch)
+    return () => window.removeEventListener('podcastia-open-podcast', handleOpenPodcastFromSearch)
+  }, [])
+
+  useEffect(() => {
     localStorage.setItem('homeFeedFilters', JSON.stringify(feedFilters))
     fetchFilteredFeed()
   }, [feedFilters])
