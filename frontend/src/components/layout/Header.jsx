@@ -70,11 +70,6 @@ function Header() {
         </form>
 
         <div className="site-actions">
-          <button type="button" className="site-notification-btn" aria-label="Notificacoes">
-            <span className="site-bell-icon" aria-hidden="true" />
-            <span className="site-notification-badge" aria-hidden="true" />
-          </button>
-
           {user ? (
             <>
               <NavLink to="/generate" className="site-generate-cta">
