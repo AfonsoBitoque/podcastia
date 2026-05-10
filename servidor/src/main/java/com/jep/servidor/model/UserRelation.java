@@ -11,30 +11,28 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import java.time.LocalDateTime;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.LocalDateTime;
-
 /**
- * Entidade que representa uma relação entre utilizadores.
- * No contexto de um PEDIDO, 'user' é o remetente e 'friend' é o destinatário.
+ * Entidade que representa uma relação entre utilizadores. No contexto de um PEDIDO, 'user' é o
+ * remetente e 'friend' é o destinatário.
  */
 @Entity
 @EntityListeners(AuditingEntityListener.class)
-@Table(name = "user_relations",
-    uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"user_id", "friend_id"})
-    },
+@Table(
+    name = "user_relations",
+    uniqueConstraints = {@UniqueConstraint(columnNames = {"user_id", "friend_id"})},
     indexes = {
-        @Index(columnList = "user_id"),
-        @Index(columnList = "friend_id"),
-        @Index(columnList = "type")
-    }
-)
+      @Index(columnList = "user_id"),
+      @Index(columnList = "friend_id"),
+      @Index(columnList = "type")
+    })
 public class UserRelation {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -60,30 +58,39 @@ public class UserRelation {
   @Column(nullable = false)
   private LocalDateTime updatedAt;
 
-  /**
-   * Tipos de relação possíveis.
-   */
+  /** Tipos de relação possíveis. */
   public enum RelationType {
-    AMIGO, BLOQUEADO, PEDIDO, PEDIDO_REJEITADO, CANCELADO
+    AMIGO,
+    BLOQUEADO,
+    PEDIDO,
+    PEDIDO_REJEITADO,
+    CANCELADO
   }
 
-  /**
-   * Construtor padrão.
-   */
+  /** Construtor padrão. */
   public UserRelation() {
+    this.createdAt = LocalDateTime.now();
+    this.updatedAt = LocalDateTime.now();
   }
 
   /**
    * Construtor com parâmetros.
    *
-   * @param user   Utilizador principal (remetente).
+   * @param user Utilizador principal (remetente).
    * @param friend Utilizador relacionado (destinatário).
-   * @param type   Tipo de relação.
+   * @param type Tipo de relação.
    */
   public UserRelation(User user, User friend, RelationType type) {
     this.user = user;
     this.friend = friend;
     this.type = type;
+    this.createdAt = LocalDateTime.now();
+    this.updatedAt = LocalDateTime.now();
+  }
+
+  @PrePersist
+  protected void onUpdate() {
+    this.updatedAt = LocalDateTime.now();
   }
 
   public Long getId() {
