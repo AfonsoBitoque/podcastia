@@ -1,5 +1,6 @@
 package com.jep.servidor.service.impl;
 
+import com.jep.servidor.dto.FriendDto;
 import com.jep.servidor.dto.PendingRequestDto;
 import com.jep.servidor.dto.RelationStatusDto;
 import com.jep.servidor.exceptions.BusinessException;
@@ -247,5 +248,18 @@ public class UserRelationshipServiceImpl implements UserRelationshipService {
 
     userRelationRepository.delete(relation1);
     userRelationRepository.delete(relation2);
+  }
+
+  @Override
+  public List<FriendDto> getFriends(Long userId) {
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new BusinessException("Utilizador não encontrado."));
+    List<UserRelation> relations = userRelationRepository.findByUserAndType(user, RelationType.AMIGO);
+    return relations.stream()
+        .map(r -> new FriendDto(
+            r.getReceiver().getId(),
+            r.getReceiver().getUsername(),
+            r.getReceiver().getProfilePicturePath()))
+        .collect(Collectors.toList());
   }
 }

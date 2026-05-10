@@ -1,5 +1,6 @@
 package com.jep.servidor.service;
 
+import com.jep.servidor.dto.FriendDto;
 import com.jep.servidor.dto.PendingRequestDto;
 import com.jep.servidor.dto.RelationStatusDto;
 import java.util.List;
@@ -20,4 +21,6 @@ public interface UserRelationshipService {
   List<PendingRequestDto> getPendingFriendRequests(Long userId);
 
   void removeFriendship(Long userId, Long friendId);
+
+  List<FriendDto> getFriends(Long userId);
 }
