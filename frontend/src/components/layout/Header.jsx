@@ -1,4 +1,4 @@
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
@@ -17,7 +17,9 @@ const getCategoryQuery = (value) => {
 }
 
 function Header() {
+  const { pathname } = useLocation()
   const navigate = useNavigate()
+  const isAuthPage = pathname === '/login' || pathname === '/register'
   const [user, setUser] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
@@ -245,7 +247,8 @@ function Header() {
           <span>Podcastia</span>
         </Link>
 
-        <form
+        {!isAuthPage && (
+          <form
           ref={searchRootRef}
           className={`site-search ${searchFocused ? 'is-active' : ''}`}
           role="search"
@@ -329,7 +332,8 @@ function Header() {
               )}
             </div>
           )}
-        </form>
+          </form>
+        )}
 
         <div className="site-actions">
           {user ? (

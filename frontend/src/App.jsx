@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import Header from './components/layout/Header'
 import AppSidebar from './components/layout/AppSidebar'
 import Footer from './components/layout/Footer'
@@ -11,9 +11,12 @@ import GeneratePage from './pages/GeneratePage'
 import './styles/layout.css'
 
 function App() {
+  const { pathname } = useLocation()
+  const isAuthPage = pathname === '/login' || pathname === '/register'
+
   return (
-    <div className="app-shell">
-      <AppSidebar />
+    <div className={`app-shell${isAuthPage ? ' app-shell--auth' : ''}`}>
+      {!isAuthPage && <AppSidebar />}
       <Header />
       <div className="app-main">
         <Routes>

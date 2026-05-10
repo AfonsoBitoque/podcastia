@@ -24,6 +24,14 @@
   min-width: 0;
 }
 
+.app-shell--auth {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.app-shell--auth .app-main {
+  grid-column: 1 / -1;
+}
+
 .site-header {
   position: sticky;
   top: 0;
