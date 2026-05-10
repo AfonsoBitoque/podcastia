@@ -48,6 +48,7 @@ Para remover a pasta `target/` e ficheiros temporários:
 Para executar verificações de estilo de código e vulnerabilidades de dependências:
 ```bash
 ./mvnw verify
+./mvnw validate
 ```
 
 ---
