@@ -1,6 +1,7 @@
 package com.jep.servidor.controller;
 
 import com.jep.servidor.config.JwtUtil;
+import com.jep.servidor.dto.FriendDto;
 import com.jep.servidor.dto.PendingRequestDto;
 import com.jep.servidor.dto.RelationStatusDto;
 import com.jep.servidor.service.UserRelationshipService;
@@ -82,5 +83,13 @@ public class UserRelationController {
     Long userId = getUserIdFromToken(authHeader);
     userRelationshipService.removeFriendship(userId, friendId);
     return ResponseEntity.noContent().build();
+  }
+
+  @GetMapping("/friends")
+  public ResponseEntity<List<FriendDto>> getFriends(
+      @RequestHeader("Authorization") String authHeader) {
+    Long userId = getUserIdFromToken(authHeader);
+    List<FriendDto> friends = userRelationshipService.getFriends(userId);
+    return ResponseEntity.ok(friends);
   }
 }

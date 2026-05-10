@@ -37,6 +37,7 @@ class UserRelationIntegrationTest {
   private User user1;
   private User user2;
   private String token1;
+  private String token2;
 
   @BeforeEach
   void setUp() {
@@ -47,6 +48,7 @@ class UserRelationIntegrationTest {
     user2 = createUser("user2", "user2@test.com");
 
     token1 = generateToken(user1);
+    token2 = generateToken(user2);
   }
 
   private User createUser(String username, String email) {
@@ -155,5 +157,38 @@ class UserRelationIntegrationTest {
     mockMvc
         .perform(delete("/api/relations/friend-request/" + user2.getId()))
         .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void testRemoveFriendship_CorrectlyUpdatesMutualFriendshipStatus() throws Exception {
+    // 1. Establish friendship
+    UserRelation friendship1 = new UserRelation(user1, user2, UserRelation.RelationType.AMIGO);
+    UserRelation friendship2 = new UserRelation(user2, user1, UserRelation.RelationType.AMIGO);
+    userRelationRepository.save(friendship1);
+    userRelationRepository.save(friendship2);
+
+    // 2. Pre-verify friendship
+    mockMvc.perform(get("/api/relations/friends").header("Authorization", "Bearer " + token1))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$", hasSize(1)))
+        .andExpect(jsonPath("$[0].username").value("user2"));
+
+    mockMvc.perform(get("/api/relations/friends").header("Authorization", "Bearer " + token2))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$", hasSize(1)))
+        .andExpect(jsonPath("$[0].username").value("user1"));
+
+    // 3. User1 removes User2
+    mockMvc.perform(delete("/api/relations/friend-request/" + user2.getId()).header("Authorization", "Bearer " + token1))
+        .andExpect(status().isNoContent());
+
+    // 4. Post-verify friendship removal
+    mockMvc.perform(get("/api/relations/friends").header("Authorization", "Bearer " + token1))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$", hasSize(0)));
+
+    mockMvc.perform(get("/api/relations/friends").header("Authorization", "Bearer " + token2))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$", hasSize(0)));
   }
 }
