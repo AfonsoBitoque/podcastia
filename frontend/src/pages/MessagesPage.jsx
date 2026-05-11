@@ -14,82 +14,6 @@ const QUICK_REPLIES = [
 const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥']
 const PENDING_REACTIONS_STORAGE_PREFIX = 'podcastia.pendingReactions'
 
-const DEMO_MODE_ENABLED = import.meta.env.DEV
-
-const DEMO_FRIENDS = [
-  {
-    id: 'demo-maya',
-    username: 'Maya Demo',
-    profilePicturePath: '',
-  },
-  {
-    id: 'demo-tiago',
-    username: 'Tiago Demo',
-    profilePicturePath: '',
-  },
-]
-
-const DEMO_REPLIES = [
-  'Boa, depois diz-me se o final tambem te surpreendeu.',
-  'Tambem posso sugerir outro episodio nessa linha.',
-  'Faz sentido. Vou guardar essa ideia para ouvir mais tarde.',
-]
-
-const createDemoMessages = (sessionUser) => {
-  const userId = sessionUser?.id || 'demo-user'
-  const now = Date.now()
-
-  return {
-    'demo-maya': [
-      {
-        id: 'demo-maya-1',
-        senderId: 'demo-maya',
-        recipientId: userId,
-        content: 'Descobri um episodio sobre IA aplicada a musica. Tem muito a tua cara.',
-        status: 'READ',
-        createdAt: new Date(now - 1000 * 60 * 22).toISOString(),
-        metadata: null,
-        reactions: [],
-      },
-      {
-        id: 'demo-maya-2',
-        senderId: userId,
-        recipientId: 'demo-maya',
-        content: 'Manda-me isso. Pode dar uma boa referencia para a Podcastia.',
-        status: 'READ',
-        createdAt: new Date(now - 1000 * 60 * 18).toISOString(),
-        metadata: null,
-        reactions: [],
-      },
-      {
-        id: 'demo-maya-3',
-        senderId: 'demo-maya',
-        recipientId: userId,
-        content: 'Enviei tambem um audio curto com o resumo.',
-        status: 'READ',
-        createdAt: new Date(now - 1000 * 60 * 13).toISOString(),
-        metadata: {
-          type: 'audio',
-          transcript: 'Transcricao IA: o episodio fala sobre recomendacao personalizada e criacao de clips.',
-        },
-        reactions: [],
-      },
-    ],
-    'demo-tiago': [
-      {
-        id: 'demo-tiago-1',
-        senderId: 'demo-tiago',
-        recipientId: userId,
-        content: 'Queres testar umas sugestoes rapidas no chat?',
-        status: 'READ',
-        createdAt: new Date(now - 1000 * 60 * 8).toISOString(),
-        metadata: null,
-        reactions: [],
-      },
-    ],
-  }
-}
-
 const parseStoredUser = () => {
   try {
     const storedUser = localStorage.getItem('user')
@@ -216,7 +140,6 @@ function MessagesPage() {
   const [socketStatus, setSocketStatus] = useState('offline')
   const [error, setError] = useState('')
   const [draft, setDraft] = useState('')
-  const [isDemoMode, setIsDemoMode] = useState(false)
   const [activeReactionPickerId, setActiveReactionPickerId] = useState(null)
   const [reactionPulseMessageId, setReactionPulseMessageId] = useState(null)
 
@@ -224,7 +147,6 @@ function MessagesPage() {
   const activeFriendRef = useRef(null)
   const userIdRef = useRef(sessionUser?.id || null)
   const messagesEndRef = useRef(null)
-  const demoReplyTimeoutRef = useRef(null)
   const reactionLongPressTimeoutRef = useRef(null)
   const reactionPulseTimeoutRef = useRef(null)
 
@@ -240,20 +162,15 @@ function MessagesPage() {
     [activeFriendId, messagesByFriend]
   )
 
-  const visibleSocketStatus = isDemoMode ? 'demo' : socketStatus
-  const connectionLabel = isDemoMode
-    ? 'Demo'
-    : socketStatus === 'online'
-      ? 'Online'
-      : socketStatus === 'error'
-        ? 'Erro'
-        : 'A ligar'
-  const chatSubtitle = isDemoMode
-    ? 'Conversa demo local'
-    : socketStatus === 'online'
-      ? 'Ligacao em tempo real ativa'
-      : 'A preparar a conversa'
-  const canSendMessage = isDemoMode || socketStatus === 'online'
+  const connectionLabel = socketStatus === 'online'
+    ? 'Online'
+    : socketStatus === 'error'
+      ? 'Erro'
+      : 'A ligar'
+  const chatSubtitle = socketStatus === 'online'
+    ? 'Ligacao em tempo real ativa'
+    : 'A preparar a conversa'
+  const canSendMessage = socketStatus === 'online'
 
   const conversations = useMemo(() => friends.map((friend) => {
     const friendMessages = messagesByFriend[String(friend.id)] || []
@@ -270,32 +187,6 @@ function MessagesPage() {
 
     socket.send(encodeStompFrame(command, headers, body))
     return true
-  }
-
-  const activateDemoMode = () => {
-    if (!DEMO_MODE_ENABLED) return
-
-    window.clearTimeout(demoReplyTimeoutRef.current)
-    setIsDemoMode(true)
-    setFriends(DEMO_FRIENDS)
-    setMessagesByFriend(createDemoMessages(sessionUser))
-    setActiveFriendId(DEMO_FRIENDS[0].id)
-    setFriendsStatus('ready')
-    setHistoryStatus('ready')
-    setSocketStatus('demo')
-    setError('')
-  }
-
-  const deactivateDemoMode = () => {
-    window.clearTimeout(demoReplyTimeoutRef.current)
-    setIsDemoMode(false)
-    setFriends([])
-    setMessagesByFriend({})
-    setActiveFriendId(null)
-    setFriendsStatus('loading')
-    setHistoryStatus('idle')
-    setSocketStatus('offline')
-    setError('')
   }
 
   const applyLocalReaction = (messageId, emoji) => {
@@ -411,7 +302,7 @@ function MessagesPage() {
       && String(activeFriendRef.current) === friendId
       && String(message.recipientId) === currentUserId
 
-    if (isIncomingFromOpenChat && !isDemoMode) {
+    if (isIncomingFromOpenChat) {
       sendChatAck(message.id, 'READ')
     }
   }
@@ -512,7 +403,7 @@ function MessagesPage() {
   }, [sessionUser?.id])
 
   useEffect(() => {
-    if (isDemoMode || !token || !sessionUser?.id) {
+    if (!token || !sessionUser?.id) {
       return undefined
     }
 
@@ -549,10 +440,10 @@ function MessagesPage() {
     return () => {
       isActive = false
     }
-  }, [isDemoMode, sessionUser?.id, token])
+  }, [sessionUser?.id, token])
 
   useEffect(() => {
-    if (isDemoMode || !token || !activeFriendId) return undefined
+    if (!token || !activeFriendId) return undefined
 
     let isActive = true
     queueMicrotask(() => {
@@ -598,14 +489,9 @@ function MessagesPage() {
     }
     // sendChatAck intentionally uses the latest socket ref and does not need to retrigger history loading.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeFriendId, isDemoMode, sessionUser?.id, token])
+  }, [activeFriendId, sessionUser?.id, token])
 
   useEffect(() => {
-    if (isDemoMode) {
-      queueMicrotask(() => setSocketStatus('demo'))
-      return undefined
-    }
-
     if (!token || !sessionUser?.id) {
       return undefined
     }
@@ -670,12 +556,12 @@ function MessagesPage() {
         socketRef.current = null
       }
     }
-    // The realtime handler reads current refs/state helpers; reconnecting follows auth and demo-mode changes.
+    // The realtime handler reads current refs/state helpers; reconnecting follows auth changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDemoMode, sessionUser?.id, token])
+  }, [sessionUser?.id, token])
 
   useEffect(() => {
-    if (isDemoMode || socketStatus !== 'online' || !sessionUser?.id) return
+    if (socketStatus !== 'online' || !sessionUser?.id) return
 
     const queuedReactions = readPendingReactions(sessionUser.id)
     if (queuedReactions.length === 0) return
@@ -693,14 +579,13 @@ function MessagesPage() {
     }
     // sendReactionFrame intentionally reads the current socket ref; flushing follows socket status only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDemoMode, sessionUser?.id, socketStatus])
+  }, [sessionUser?.id, socketStatus])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ block: 'end' })
   }, [activeMessages.length, activeFriendId])
 
   useEffect(() => () => {
-    window.clearTimeout(demoReplyTimeoutRef.current)
     window.clearTimeout(reactionLongPressTimeoutRef.current)
     window.clearTimeout(reactionPulseTimeoutRef.current)
   }, [])
@@ -709,44 +594,6 @@ function MessagesPage() {
     event.preventDefault()
     const content = draft.trim()
     if (!content || !activeFriend) return
-
-    if (isDemoMode) {
-      const createdAt = new Date()
-      const demoMessage = {
-        id: `demo-local-${createdAt.getTime()}`,
-        senderId: sessionUser.id,
-        recipientId: activeFriend.id,
-        content,
-        status: 'READ',
-        createdAt: createdAt.toISOString(),
-        metadata: null,
-        reactions: [],
-      }
-
-      setMessagesByFriend((previous) => ({
-        ...previous,
-        [String(activeFriend.id)]: upsertMessage(previous[String(activeFriend.id)] || [], demoMessage),
-      }))
-      setDraft('')
-      setError('')
-
-      const reply = DEMO_REPLIES[activeMessages.length % DEMO_REPLIES.length]
-      window.clearTimeout(demoReplyTimeoutRef.current)
-      demoReplyTimeoutRef.current = window.setTimeout(() => {
-        if (String(activeFriendRef.current) !== String(activeFriend.id)) return
-        applyMessage({
-          id: `demo-reply-${Date.now()}`,
-          senderId: activeFriend.id,
-          recipientId: sessionUser.id,
-          content: reply,
-          status: 'READ',
-          createdAt: new Date().toISOString(),
-          metadata: null,
-          reactions: [],
-        })
-      }, 700)
-      return
-    }
 
     const sent = sendFrame(
       'SEND',
@@ -772,10 +619,6 @@ function MessagesPage() {
     applyLocalReaction(messageId, emoji)
     if (isAddingOrReplacingReaction) {
       triggerReactionPulse(messageId)
-    }
-
-    if (isDemoMode) {
-      return
     }
 
     const payload = {
@@ -814,7 +657,7 @@ function MessagesPage() {
               <h1 id="messages-title">Mensagens</h1>
             </div>
             <span
-              className={`connection-status-dot connection-status-dot--${visibleSocketStatus}`}
+              className={`connection-status-dot connection-status-dot--${socketStatus}`}
               aria-label={connectionLabel}
               title={connectionLabel}
             />
@@ -826,21 +669,6 @@ function MessagesPage() {
             {friendsStatus === 'ready' && conversations.length === 0 && (
               <p className="messages-muted">Ainda nao tens amigos para iniciar uma conversa.</p>
             )}
-            {DEMO_MODE_ENABLED && !isDemoMode && friendsStatus !== 'loading' && (
-              <div className="demo-shortcut">
-                <strong>Dica da Podcastia</strong>
-                <span>Queres ver como o chat vai respirar quando houver conversas reais?</span>
-                <button type="button" onClick={activateDemoMode}>Ver demo</button>
-              </div>
-            )}
-            {isDemoMode && (
-              <div className="demo-shortcut demo-shortcut--active">
-                <strong>Modo demo</strong>
-                <span>Mensagens guardadas apenas no browser durante este teste.</span>
-                <button type="button" onClick={deactivateDemoMode}>Voltar aos dados reais</button>
-              </div>
-            )}
-
             {conversations.map((friend) => (
               <button
                 key={friend.id}

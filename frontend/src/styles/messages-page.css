@@ -95,11 +95,6 @@
   color: #9f2f26;
 }
 
-.connection-pill--demo {
-  background: rgba(166, 75, 42, 0.14);
-  color: var(--brand-brown);
-}
-
 .connection-status-dot {
   flex: 0 0 auto;
   width: 10px;
@@ -118,11 +113,6 @@
     0 0 14px rgba(24, 160, 88, 0.5);
 }
 
-.connection-status-dot--demo {
-  background: var(--brand-brown);
-  box-shadow: 0 0 0 5px rgba(166, 75, 42, 0.12);
-}
-
 .connection-status-dot--error {
   background: #9f2f26;
   box-shadow: 0 0 0 5px rgba(159, 47, 38, 0.12);
@@ -135,53 +125,6 @@
   flex-direction: column;
   gap: 0.42rem;
   overflow-y: auto;
-}
-
-.demo-shortcut {
-  margin: 0.25rem 0 0.65rem;
-  border: none;
-  border-radius: 8px;
-  padding: 0.78rem;
-  display: grid;
-  gap: 0.44rem;
-  background: #f4e8dc;
-  box-shadow: 0 8px 18px rgba(70, 38, 31, 0.07);
-}
-
-.demo-shortcut--active {
-  background: rgba(166, 75, 42, 0.09);
-}
-
-.demo-shortcut strong {
-  color: var(--ink-brown);
-  font-size: 0.86rem;
-}
-
-.demo-shortcut span {
-  color: rgba(126, 99, 99, 0.78);
-  font-size: 0.78rem;
-  font-weight: 800;
-  line-height: 1.35;
-}
-
-.demo-shortcut button {
-  width: fit-content;
-  min-height: 30px;
-  border: none;
-  border-radius: 999px;
-  padding: 0.34rem 0.68rem;
-  background: #fffaf7;
-  color: var(--brand-brown);
-  font: inherit;
-  font-size: 0.76rem;
-  font-weight: 900;
-  box-shadow: 0 6px 14px rgba(70, 38, 31, 0.06);
-  cursor: pointer;
-}
-
-.demo-shortcut button:hover {
-  background: #fff;
-  color: #8b2f17;
 }
 
 .conversation-item {
@@ -806,24 +749,6 @@
     padding: 0.45rem;
   }
 
-  .demo-shortcut {
-    margin: 0.25rem 0;
-    padding: 0.45rem;
-    justify-items: center;
-  }
-
-  .demo-shortcut strong,
-  .demo-shortcut span {
-    display: none;
-  }
-
-  .demo-shortcut button {
-    width: 100%;
-    min-height: 36px;
-    padding: 0.35rem 0.2rem;
-    font-size: 0.68rem;
-  }
-
   .chat-row {
     max-width: 86%;
   }
@@ -857,25 +782,6 @@
   .conversation-item {
     flex: 0 0 78px;
     transform: none;
-  }
-
-  .demo-shortcut {
-    flex: 0 0 min(260px, 82vw);
-    margin: 0;
-    padding: 0.65rem;
-    justify-items: start;
-  }
-
-  .demo-shortcut strong,
-  .demo-shortcut span {
-    display: block;
-  }
-
-  .demo-shortcut button {
-    width: fit-content;
-    min-height: 34px;
-    padding: 0.42rem 0.72rem;
-    font-size: 0.74rem;
   }
 
   .chat-thread {
