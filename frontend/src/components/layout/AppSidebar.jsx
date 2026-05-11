@@ -83,7 +83,6 @@ function AppSidebar() {
           <NavLink to="/messages" className="sidebar-nav-link sidebar-message-link">
             <SidebarIcon type="chat" />
             <span>Mensagens</span>
-            <span className="sidebar-unread" aria-label="3 mensagens nao lidas">3</span>
           </NavLink>
         </section>
       </div>

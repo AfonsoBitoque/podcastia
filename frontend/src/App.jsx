@@ -8,6 +8,7 @@ import HomePage from './pages/HomePage'
 import UserPage from './pages/UserPage'
 import SearchPageTest from './pages/SearchPageTest'
 import GeneratePage from './pages/GeneratePage'
+import MessagesPage from './pages/MessagesPage'
 import './styles/layout.css'
 
 function App() {
@@ -26,7 +27,7 @@ function App() {
           <Route path="/user" element={<UserPage />} />
           <Route path="/playlists" element={<UserPage />} />
           <Route path="/following" element={<UserPage />} />
-          <Route path="/messages" element={<UserPage />} />
+          <Route path="/messages" element={<MessagesPage />} />
           <Route path="/search-test" element={<SearchPageTest />} />
           <Route path="/generate" element={<GeneratePage />} />
         </Routes>
