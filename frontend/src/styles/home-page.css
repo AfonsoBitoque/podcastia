@@ -1007,6 +1007,7 @@
   transition: height 0.2s ease, background 0.2s ease;
   display: flex;
   align-items: center;
+  touch-action: none;
 }
 
 .player-timeline:hover {
