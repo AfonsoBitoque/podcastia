@@ -196,6 +196,23 @@
   background: linear-gradient(150deg, #fff6f0 0%, #ffdcca 100%);
 }
 
+.user-topic-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+}
+
+.user-topic-chip {
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(255, 245, 235, 0.9);
+  border: 1px solid rgba(160, 82, 45, 0.2);
+  color: #6f220f;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
 .user-headline {
   min-width: 0;
 }

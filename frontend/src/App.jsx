@@ -6,6 +6,7 @@ import RegisterPage from './pages/RegisterPage'
 import LoginPage from './pages/LoginPage'
 import HomePage from './pages/HomePage'
 import UserPage from './pages/UserPage'
+import TopicsPage from './pages/TopicsPage'
 import SearchPageTest from './pages/SearchPageTest'
 import GeneratePage from './pages/GeneratePage'
 import MessagesPage from './pages/MessagesPage'
@@ -28,6 +29,7 @@ function App() {
           <Route path="/playlists" element={<UserPage />} />
           <Route path="/following" element={<UserPage />} />
           <Route path="/messages" element={<MessagesPage />} />
+          <Route path="/topics" element={<TopicsPage />} />
           <Route path="/search-test" element={<SearchPageTest />} />
           <Route path="/generate" element={<GeneratePage />} />
         </Routes>
