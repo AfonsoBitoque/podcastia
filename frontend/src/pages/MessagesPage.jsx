@@ -11,6 +11,9 @@ const QUICK_REPLIES = [
   'Boa ideia para um podcast.',
 ]
 
+const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥']
+const PENDING_REACTIONS_STORAGE_PREFIX = 'podcastia.pendingReactions'
+
 const DEMO_MODE_ENABLED = import.meta.env.DEV
 
 const DEMO_FRIENDS = [
@@ -100,6 +103,52 @@ const getToken = () => localStorage.getItem('token') || ''
 
 const getInitial = (name) => String(name || '?').trim().charAt(0).toUpperCase()
 
+const getPendingReactionsStorageKey = (userId) => (
+  `${PENDING_REACTIONS_STORAGE_PREFIX}.${userId || 'guest'}`
+)
+
+const readPendingReactions = (userId) => {
+  try {
+    const storedReactions = localStorage.getItem(getPendingReactionsStorageKey(userId))
+    const parsedReactions = storedReactions ? JSON.parse(storedReactions) : []
+    return Array.isArray(parsedReactions) ? parsedReactions : []
+  } catch {
+    return []
+  }
+}
+
+const writePendingReactions = (userId, reactions) => {
+  try {
+    localStorage.setItem(getPendingReactionsStorageKey(userId), JSON.stringify(reactions))
+  } catch {
+    // If local storage is unavailable, the realtime path still covers online reactions.
+  }
+}
+
+const normalizeReactionsForViewer = (reactions, viewerId) => {
+  if (!Array.isArray(reactions)) return []
+  const viewerKey = String(viewerId || '')
+
+  return reactions
+    .map((reaction) => {
+      const reactorUserIds = Array.isArray(reaction.reactorUserIds)
+        ? reaction.reactorUserIds
+        : []
+      const reactedByMe = viewerKey
+        ? reactorUserIds.some((reactorId) => String(reactorId) === viewerKey) || Boolean(reaction.reactedByMe)
+        : Boolean(reaction.reactedByMe)
+      const count = reactorUserIds.length || Number(reaction.count || 0)
+
+      return {
+        ...reaction,
+        count,
+        reactorUserIds,
+        reactedByMe,
+      }
+    })
+    .filter((reaction) => Number(reaction.count || 0) > 0)
+}
+
 const resolveMediaUrl = (path) => {
   const safePath = String(path || '').trim()
   if (!safePath) return ''
@@ -168,12 +217,16 @@ function MessagesPage() {
   const [error, setError] = useState('')
   const [draft, setDraft] = useState('')
   const [isDemoMode, setIsDemoMode] = useState(false)
+  const [activeReactionPickerId, setActiveReactionPickerId] = useState(null)
+  const [reactionPulseMessageId, setReactionPulseMessageId] = useState(null)
 
   const socketRef = useRef(null)
   const activeFriendRef = useRef(null)
   const userIdRef = useRef(sessionUser?.id || null)
   const messagesEndRef = useRef(null)
   const demoReplyTimeoutRef = useRef(null)
+  const reactionLongPressTimeoutRef = useRef(null)
+  const reactionPulseTimeoutRef = useRef(null)
 
   const token = getToken()
 
@@ -245,38 +298,91 @@ function MessagesPage() {
     setError('')
   }
 
-  const toggleDemoReaction = (messageId, emoji) => {
-    if (!activeFriendId) return
+  const applyLocalReaction = (messageId, emoji) => {
+    const viewerId = sessionUser?.id
+    if (!viewerId) return
+    const viewerKey = String(viewerId)
 
-    const friendId = String(activeFriendId)
+    setMessagesByFriend((previous) => {
+      const nextState = {}
 
-    setMessagesByFriend((previous) => ({
-      ...previous,
-      [friendId]: (previous[friendId] || []).map((message) => {
-        if (String(message.id) !== String(messageId)) return message
+      Object.entries(previous).forEach(([friendId, messages]) => {
+        nextState[friendId] = messages.map((message) => {
+          if (String(message.id) !== String(messageId)) return message
 
-        const reactions = Array.isArray(message.reactions) ? message.reactions : []
-        const currentReaction = reactions.find((reaction) => reaction.emoji === emoji)
-        const nextReactions = currentReaction?.reactedByMe
-          ? reactions
-            .map((reaction) => (
+          const normalizedReactions = normalizeReactionsForViewer(message.reactions, viewerId)
+          const currentReaction = normalizedReactions.find((reaction) => (
+            reaction.reactorUserIds.some((reactorId) => String(reactorId) === viewerKey)
+          ))
+
+          const withoutViewer = normalizedReactions
+            .map((reaction) => ({
+              ...reaction,
+              reactorUserIds: reaction.reactorUserIds.filter((reactorId) => String(reactorId) !== viewerKey),
+            }))
+            .map((reaction) => ({
+              ...reaction,
+              count: reaction.reactorUserIds.length,
+              reactedByMe: false,
+            }))
+            .filter((reaction) => reaction.count > 0)
+
+          if (currentReaction?.emoji === emoji) {
+            return { ...message, reactions: withoutViewer }
+          }
+
+          const targetReaction = withoutViewer.find((reaction) => reaction.emoji === emoji)
+          const nextReactions = targetReaction
+            ? withoutViewer.map((reaction) => (
               reaction.emoji === emoji
-                ? { ...reaction, count: Math.max(0, Number(reaction.count || 0) - 1), reactedByMe: false }
+                ? {
+                  ...reaction,
+                  reactorUserIds: [...reaction.reactorUserIds, viewerId],
+                  count: reaction.count + 1,
+                  reactedByMe: true,
+                }
                 : reaction
             ))
-            .filter((reaction) => Number(reaction.count || 0) > 0)
-          : [
-            ...reactions.filter((reaction) => reaction.emoji !== emoji),
-            {
-              emoji,
-              count: Number(currentReaction?.count || 0) + 1,
-              reactedByMe: true,
-            },
-          ]
+            : [
+              ...withoutViewer,
+              {
+                emoji,
+                count: 1,
+                reactorUserIds: [viewerId],
+                reactedByMe: true,
+              },
+            ]
 
-        return { ...message, reactions: nextReactions }
-      }),
-    }))
+          return { ...message, reactions: nextReactions }
+        })
+      })
+
+      return nextState
+    })
+  }
+
+  const queuePendingReaction = (payload) => {
+    const queuedReactions = readPendingReactions(sessionUser?.id)
+    writePendingReactions(sessionUser?.id, [...queuedReactions, payload])
+  }
+
+  const getViewerReactionEmoji = (messageId) => {
+    for (const messages of Object.values(messagesByFriend)) {
+      const message = messages.find((item) => String(item.id) === String(messageId))
+      if (message) {
+        const reactions = normalizeReactionsForViewer(message.reactions, sessionUser?.id)
+        return reactions.find((reaction) => reaction.reactedByMe)?.emoji || null
+      }
+    }
+    return null
+  }
+
+  const triggerReactionPulse = (messageId) => {
+    window.clearTimeout(reactionPulseTimeoutRef.current)
+    setReactionPulseMessageId(messageId)
+    reactionPulseTimeoutRef.current = window.setTimeout(() => {
+      setReactionPulseMessageId(null)
+    }, 280)
   }
 
   const sendChatAck = (messageId, type = 'READ') => {
@@ -324,7 +430,10 @@ function MessagesPage() {
       Object.entries(previous).forEach(([friendId, messages]) => {
         nextState[friendId] = messages.map((message) => {
           if (String(message.id) !== String(messageId)) return message
-          return { ...message, reactions: payload.reactions || message.reactions || [] }
+          return {
+            ...message,
+            reactions: normalizeReactionsForViewer(payload.reactions || message.reactions || [], sessionUser?.id),
+          }
         })
       })
       return nextState
@@ -354,9 +463,49 @@ function MessagesPage() {
     }
   }
 
+  const toggleReactionPicker = (messageId) => {
+    setActiveReactionPickerId((current) => (
+      String(current) === String(messageId) ? null : messageId
+    ))
+  }
+
+  const openReactionPicker = (messageId) => {
+    setActiveReactionPickerId(messageId)
+  }
+
+  const startReactionLongPress = (messageId) => {
+    window.clearTimeout(reactionLongPressTimeoutRef.current)
+    reactionLongPressTimeoutRef.current = window.setTimeout(() => {
+      openReactionPicker(messageId)
+    }, 420)
+  }
+
+  const cancelReactionLongPress = () => {
+    window.clearTimeout(reactionLongPressTimeoutRef.current)
+  }
+
+  const sendReactionFrame = (payload) => sendFrame(
+    'SEND',
+    { destination: '/app/chat.reaction', 'content-type': 'application/json' },
+    JSON.stringify(payload)
+  )
+
   useEffect(() => {
     activeFriendRef.current = activeFriendId
+    queueMicrotask(() => setActiveReactionPickerId(null))
   }, [activeFriendId])
+
+  useEffect(() => {
+    const handleOutsidePointerDown = (event) => {
+      if (event.target?.closest?.('[data-reaction-zone="true"]')) return
+      setActiveReactionPickerId(null)
+    }
+
+    document.addEventListener('pointerdown', handleOutsidePointerDown)
+    return () => {
+      document.removeEventListener('pointerdown', handleOutsidePointerDown)
+    }
+  }, [])
 
   useEffect(() => {
     userIdRef.current = sessionUser?.id || null
@@ -423,7 +572,12 @@ function MessagesPage() {
       })
       .then((payload) => {
         if (!isActive) return
-        const nextMessages = Array.isArray(payload?.messages) ? payload.messages : []
+        const nextMessages = Array.isArray(payload?.messages)
+          ? payload.messages.map((message) => ({
+            ...message,
+            reactions: normalizeReactionsForViewer(message.reactions, sessionUser?.id),
+          }))
+          : []
         setMessagesByFriend((previous) => ({
           ...previous,
           [String(activeFriendId)]: nextMessages,
@@ -521,11 +675,34 @@ function MessagesPage() {
   }, [isDemoMode, sessionUser?.id, token])
 
   useEffect(() => {
+    if (isDemoMode || socketStatus !== 'online' || !sessionUser?.id) return
+
+    const queuedReactions = readPendingReactions(sessionUser.id)
+    if (queuedReactions.length === 0) return
+
+    const unsentReactions = []
+    queuedReactions.forEach((payload) => {
+      const sent = sendReactionFrame(payload)
+      if (!sent) {
+        unsentReactions.push(payload)
+      }
+    })
+    writePendingReactions(sessionUser.id, unsentReactions)
+    if (unsentReactions.length === 0) {
+      queueMicrotask(() => setError(''))
+    }
+    // sendReactionFrame intentionally reads the current socket ref; flushing follows socket status only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDemoMode, sessionUser?.id, socketStatus])
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ block: 'end' })
   }, [activeMessages.length, activeFriendId])
 
   useEffect(() => () => {
     window.clearTimeout(demoReplyTimeoutRef.current)
+    window.clearTimeout(reactionLongPressTimeoutRef.current)
+    window.clearTimeout(reactionPulseTimeoutRef.current)
   }, [])
 
   const handleSendMessage = (event) => {
@@ -588,20 +765,31 @@ function MessagesPage() {
   }
 
   const handleReaction = (messageId, emoji) => {
+    const previousReactionEmoji = getViewerReactionEmoji(messageId)
+    const isAddingOrReplacingReaction = previousReactionEmoji !== emoji
+
+    setActiveReactionPickerId(null)
+    applyLocalReaction(messageId, emoji)
+    if (isAddingOrReplacingReaction) {
+      triggerReactionPulse(messageId)
+    }
+
     if (isDemoMode) {
-      toggleDemoReaction(messageId, emoji)
       return
     }
 
-    sendFrame(
-      'SEND',
-      { destination: '/app/chat.reaction', 'content-type': 'application/json' },
-      JSON.stringify({
-        messageId,
-        emoji,
-        clientEventAt: new Date().toISOString(),
-      })
-    )
+    const payload = {
+      messageId,
+      emoji,
+      clientEventAt: new Date().toISOString(),
+    }
+    const sent = sendReactionFrame(payload)
+    if (!sent) {
+      queuePendingReaction(payload)
+      setError('Reacao guardada. Vai sincronizar quando a ligacao voltar.')
+    } else {
+      setError('')
+    }
   }
 
   if (!sessionUser || !token) {
@@ -706,26 +894,97 @@ function MessagesPage() {
                   </div>
                 )}
 
-                {activeMessages.map((message) => {
+                {activeMessages.map((message, index) => {
                   const isMine = String(message.senderId) === String(sessionUser.id)
                   const sentAt = message.createdAt ? new Date(message.createdAt) : null
+                  const messageReactions = normalizeReactionsForViewer(message.reactions, sessionUser.id)
+                  const isPickerOpen = String(activeReactionPickerId) === String(message.id)
+                  const shouldOpenPickerBelow = index === 0
                   return (
-                    <article key={message.id} className={`chat-row ${isMine ? 'mine' : 'theirs'}`}>
-                      <div className="chat-bubble">
-                        <p>{message.content}</p>
-                        {message.metadata?.type === 'audio' && message.metadata?.transcript && (
-                          <span className="audio-transcript">{message.metadata.transcript}</span>
-                        )}
-                        {Array.isArray(message.reactions) && message.reactions.length > 0 && (
-                          <div className="reaction-summary">
-                            {message.reactions.map((reaction) => (
+                    <article
+                      key={message.id}
+                      className={[
+                        'chat-row',
+                        isMine ? 'mine' : 'theirs',
+                        shouldOpenPickerBelow ? 'reaction-picker-below' : '',
+                      ].filter(Boolean).join(' ')}
+                      data-reaction-zone="true"
+                    >
+                      <div className="message-body">
+                        <button
+                          type="button"
+                          className={`reaction-trigger ${isPickerOpen ? 'active' : ''}`}
+                          aria-label="Reagir a mensagem"
+                          aria-expanded={isPickerOpen}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            toggleReactionPicker(message.id)
+                          }}
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <circle cx="12" cy="12" r="9" />
+                            <path d="M8 14s1.4 2 4 2 4-2 4-2" />
+                            <path d="M9 9h.01" />
+                            <path d="M15 9h.01" />
+                          </svg>
+                        </button>
+
+                        <div
+                          className={[
+                            'chat-bubble',
+                            messageReactions.length > 0 ? 'chat-bubble--with-reactions' : '',
+                            String(reactionPulseMessageId) === String(message.id) ? 'chat-bubble--reaction-pulse' : '',
+                          ].filter(Boolean).join(' ')}
+                          onClick={() => openReactionPicker(message.id)}
+                          onPointerDown={() => startReactionLongPress(message.id)}
+                          onPointerUp={cancelReactionLongPress}
+                          onPointerLeave={cancelReactionLongPress}
+                          onPointerCancel={cancelReactionLongPress}
+                        >
+                          <p>{message.content}</p>
+                          {message.metadata?.type === 'audio' && message.metadata?.transcript && (
+                            <span className="audio-transcript">{message.metadata.transcript}</span>
+                          )}
+                          {messageReactions.length > 0 && (
+                            <div className="reaction-summary" aria-label="Reacoes da mensagem">
+                              {messageReactions.map((reaction) => (
+                                <button
+                                  key={`${message.id}-${reaction.emoji}`}
+                                  type="button"
+                                  className={reaction.reactedByMe ? 'reacted' : ''}
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    handleReaction(message.id, reaction.emoji)
+                                  }}
+                                >
+                                  {reaction.emoji} {reaction.count}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {isPickerOpen && (
+                          <div className="reaction-picker" role="menu" aria-label="Escolher reacao">
+                            {REACTION_EMOJIS.map((emoji) => (
                               <button
-                                key={`${message.id}-${reaction.emoji}`}
+                                key={emoji}
                                 type="button"
-                                className={reaction.reactedByMe ? 'reacted' : ''}
-                                onClick={() => handleReaction(message.id, reaction.emoji)}
+                                role="menuitem"
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  handleReaction(message.id, emoji)
+                                }}
                               >
-                                {reaction.emoji} {reaction.count}
+                                {emoji}
                               </button>
                             ))}
                           </div>
@@ -734,7 +993,6 @@ function MessagesPage() {
                       <div className="message-meta">
                         {sentAt && <span>{sentAt.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</span>}
                         {isMine && <span>{message.status === 'READ' ? 'Lida' : message.status === 'DELIVERED' ? 'Entregue' : 'Enviada'}</span>}
-                        <button type="button" onClick={() => handleReaction(message.id, '👍')}>👍</button>
                       </div>
                     </article>
                   )
