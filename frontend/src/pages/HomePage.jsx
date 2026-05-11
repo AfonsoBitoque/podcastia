@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import '../styles/home-page.css'
 import PodcastSidebar from '../components/PodcastSidebar'
 import PlaybackSpeedControl from '../components/PlaybackSpeedControl'
@@ -35,6 +36,7 @@ const CATEGORY_FILTERS = [
 ]
 
 function HomePage() {
+  const navigate = useNavigate()
   const [data, setData] = useState({ continueListening: [], recommended: [], newReleases: [] })
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
@@ -71,6 +73,43 @@ function HomePage() {
   const getTagUi = (tag) => TAG_UI[String(tag || '').toUpperCase()] || TAG_UI.DEFAULT
 
   const getPrimaryTagUi = (pod) => getTagUi(getSafeTags(pod)[0])
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user')
+    const hasCompleted = localStorage.getItem('topicsOnboardingComplete')
+    if (!storedUser || hasCompleted) return
+
+    let parsedUser
+    try {
+      parsedUser = JSON.parse(storedUser)
+    } catch {
+      return
+    }
+
+    if (!parsedUser?.id) return
+
+    let isActive = true
+    const token = localStorage.getItem('token')
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
+
+    fetch(`${API_BASE_URL}/users`, { headers })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((users) => {
+        if (!isActive || !Array.isArray(users)) return
+        const fullUser = users.find((candidate) => String(candidate.id) === String(parsedUser.id))
+        const topics = Array.isArray(fullUser?.topics) ? fullUser.topics : []
+        if (topics.length >= 3) {
+          localStorage.setItem('topicsOnboardingComplete', 'true')
+          return
+        }
+        navigate('/topics', { state: { from: '/home' }, replace: true })
+      })
+      .catch(() => {})
+
+    return () => {
+      isActive = false
+    }
+  }, [navigate])
 
   // Sidebar Functions
   const openSidebar = (podcast) => {
