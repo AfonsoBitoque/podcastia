@@ -53,11 +53,15 @@ function HomePage() {
   const filterContainerRef = useRef(null)
   const filterScrollRef = useRef(null)
   
-  // Simulated Player State
+  // Player State
   const [playingPodcast, setPlayingPodcast] = useState(null)
   const [progressSecs, setProgressSecs] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
+  const timelineRef = useRef(null)
+  const timelinePointerIdRef = useRef(null)
+  const audioRef = useRef(null)
+  const [durationSecs, setDurationSecs] = useState(0)
   const [playbackSpeed, setPlaybackSpeed] = useState(() => {
     // Load saved playback speed from localStorage on mount
     const saved = localStorage.getItem('playbackSpeed')
@@ -354,23 +358,39 @@ function HomePage() {
     }
   }, [isFilterOpen])
 
-  // Simulated player timer - incrementa com base na velocidade
-  useEffect(() => {
-    let interval;
-    if (isPlaying && playingPodcast) {
-      interval = setInterval(() => {
-        setProgressSecs(prev => {
-          const newValue = prev + playbackSpeed;
-          if (newValue >= playingPodcast.duracao * 60) {
-            setIsPlaying(false);
-            return playingPodcast.duracao * 60;
-          }
-          return newValue;
-        });
-      }, 1000);
+  const getAudioSrcById = (podcastId) => `${API_BASE_URL}/api/podcasts/${podcastId}/audio`
+
+  const ensureAudioReady = (targetSeconds) => {
+    if (!audioRef.current || !playingPodcast) return Promise.resolve(false)
+    const audioEl = audioRef.current
+    const actualId = playingPodcast.id || playingPodcast.podcastId
+    const desiredSrc = getAudioSrcById(actualId)
+
+    if (!audioEl.src || !audioEl.src.includes(desiredSrc)) {
+      audioEl.src = desiredSrc
     }
-    return () => clearInterval(interval);
-  }, [isPlaying, playingPodcast, playbackSpeed]);
+
+    const setTime = () => {
+      if (Number.isFinite(targetSeconds)) {
+        audioEl.currentTime = targetSeconds
+      }
+    }
+
+    if (audioEl.readyState >= 1) {
+      setTime()
+      return Promise.resolve(true)
+    }
+
+    return new Promise((resolve) => {
+      const handleLoaded = () => {
+        audioEl.removeEventListener('loadedmetadata', handleLoaded)
+        setTime()
+        resolve(true)
+      }
+      audioEl.addEventListener('loadedmetadata', handleLoaded)
+      audioEl.load()
+    })
+  }
 
   const handleListen = async (pod, isResume) => {
     try {
@@ -380,7 +400,17 @@ function HomePage() {
       setPlayingPodcast(pod)
       const startingSecs = isResume && pod.progressSeconds ? pod.progressSeconds : 0;
       setProgressSecs(startingSecs)
+      setDurationSecs(0)
       setIsPlaying(true)
+
+      if (audioRef.current) {
+        await ensureAudioReady(startingSecs)
+        audioRef.current.playbackRate = playbackSpeed
+        const playPromise = audioRef.current.play()
+        if (playPromise?.catch) {
+          playPromise.catch(() => setIsPlaying(false))
+        }
+      }
       
       const token = localStorage.getItem('token')
       const headers = token ? { Authorization: `Bearer ${token}` } : {}
@@ -408,21 +438,19 @@ function HomePage() {
   }
 
   const togglePlayPause = async () => {
-    const isNowPlaying = !isPlaying;
-    setIsPlaying(isNowPlaying);
-    
-    // If we just clicked pause, save the progress so the "Continue Listening" row updates instantly!
-    if (!isNowPlaying && playingPodcast) {
-      try {
-        const actualId = playingPodcast.id || playingPodcast.podcastId;
-        const token = localStorage.getItem('token');
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
-        await fetch(`${API_BASE_URL}/podcasts/${actualId}/progress?seconds=${progressSecs}`, { method: 'POST', headers });
-        fetchHomeData(); // Update row
-      } catch(err) {
-        console.error(err);
+    if (!audioRef.current) return
+    if (audioRef.current.paused) {
+      await ensureAudioReady(progressSecs)
+      audioRef.current.playbackRate = playbackSpeed
+      const playPromise = audioRef.current.play()
+      if (playPromise?.catch) {
+        playPromise.catch(() => setIsPlaying(false))
       }
+      setIsPlaying(true)
+      return
     }
+    audioRef.current.pause()
+    setIsPlaying(false)
   }
 
   const formatTime = (seconds) => {
@@ -447,8 +475,12 @@ function HomePage() {
 
   const forwardSeconds = () => {
     if (playingPodcast) {
-      const newTime = Math.min(progressSecs + 15, playingPodcast.duracao * 60);
-      setProgressSecs(newTime);
+      const maxDuration = durationSecs || playingPodcast.duracao * 60
+      const newTime = Math.min(progressSecs + 15, maxDuration);
+      if (audioRef.current) {
+        audioRef.current.currentTime = newTime
+      }
+      setProgressSecs(newTime)
       saveProgressToBackend(newTime);
       console.log('Forward 15s: ', formatTime(newTime));
     }
@@ -457,11 +489,27 @@ function HomePage() {
   const rewindSeconds = () => {
     if (playingPodcast) {
       const newTime = Math.max(progressSecs - 15, 0);
-      setProgressSecs(newTime);
+      if (audioRef.current) {
+        audioRef.current.currentTime = newTime
+      }
+      setProgressSecs(newTime)
       saveProgressToBackend(newTime);
       console.log('Rewind 15s: ', formatTime(newTime));
     }
   };
+
+  useEffect(() => {
+    if (!isPlaying) return
+    let rafId
+    const tick = () => {
+      if (audioRef.current && !audioRef.current.paused && !isDragging) {
+        setProgressSecs(audioRef.current.currentTime)
+      }
+      rafId = window.requestAnimationFrame(tick)
+    }
+    rafId = window.requestAnimationFrame(tick)
+    return () => window.cancelAnimationFrame(rafId)
+  }, [isPlaying, isDragging])
 
   const nextPodcast = () => {
     const allPodcasts = [...(data.continueListening || []), ...(data.recommended || []), ...(data.newReleases || [])];
@@ -484,73 +532,104 @@ function HomePage() {
   const handleSpeedChange = (speed) => {
     setPlaybackSpeed(speed);
     localStorage.setItem('playbackSpeed', speed.toString());
-    
-    // TODO: Quando integrar com elemento <audio> real:
-    // if (audioRef.current) {
-    //   audioRef.current.playbackRate = speed;
-    //   // Preservar pitch (evita efeito "esquilo")
-    //   if (audioRef.current.preservesPitch !== undefined) {
-    //     audioRef.current.preservesPitch = true;
-    //   }
-    // }
-    
+
+    if (audioRef.current) {
+      audioRef.current.playbackRate = speed
+      if (audioRef.current.preservesPitch !== undefined) {
+        audioRef.current.preservesPitch = true
+      }
+    }
+
     console.log(`Velocidade de reprodução alterada para: ${speed}x`);
   };
 
   const seekTo = (seconds) => {
     if (playingPodcast) {
-      const clampedSeconds = Math.max(0, Math.min(seconds, playingPodcast.duracao * 60));
-      setProgressSecs(clampedSeconds);
+      const maxDuration = durationSecs || playingPodcast.duracao * 60
+      const clampedSeconds = Math.max(0, Math.min(seconds, maxDuration));
+      if (audioRef.current) {
+        audioRef.current.currentTime = clampedSeconds
+      }
+      setProgressSecs(clampedSeconds)
     }
   };
 
-  const handleProgressClick = (e) => {
-    const timeline = e.currentTarget;
-    const rect = timeline.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
+  const getTimelineSeconds = (clientX) => {
+    if (!playingPodcast || !timelineRef.current) return 0;
+    const rect = timelineRef.current.getBoundingClientRect();
+    const clickX = clientX - rect.left;
     const percent = Math.max(0, Math.min(1, clickX / rect.width));
-    const newSeconds = percent * (playingPodcast.duracao * 60);
+    const maxDuration = durationSecs || playingPodcast.duracao * 60
+    return percent * maxDuration;
+  };
+
+  const handleTimelinePointerDown = (e) => {
+    if (!playingPodcast) return;
+    timelinePointerIdRef.current = e.pointerId;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setIsDragging(true);
+    const newSeconds = getTimelineSeconds(e.clientX);
     seekTo(newSeconds);
     saveProgressToBackend(newSeconds);
   };
 
-  const handleProgressMouseDown = (e) => {
-    setIsDragging(true);
+  const handleTimelinePointerMove = (e) => {
+    if (!isDragging || timelinePointerIdRef.current !== e.pointerId) return;
+    const newSeconds = getTimelineSeconds(e.clientX);
+    seekTo(newSeconds);
   };
 
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (isDragging && playingPodcast) {
-        const timeline = document.querySelector('.player-timeline');
-        if (timeline) {
-          const rect = timeline.getBoundingClientRect();
-          const clickX = e.clientX - rect.left;
-          const percent = Math.max(0, Math.min(1, clickX / rect.width));
-          const newSeconds = percent * (playingPodcast.duracao * 60);
-          seekTo(newSeconds);
-        }
-      }
-    };
+  const handleTimelinePointerUp = (e) => {
+    if (timelinePointerIdRef.current !== e.pointerId) return;
+    const newSeconds = getTimelineSeconds(e.clientX);
+    seekTo(newSeconds);
+    saveProgressToBackend(newSeconds);
+    timelinePointerIdRef.current = null;
+    setIsDragging(false);
+  };
 
-    const handleMouseUp = () => {
-      if (isDragging && playingPodcast) {
-        setIsDragging(false);
-        const actualId = playingPodcast.id || playingPodcast.podcastId;
-        const token = localStorage.getItem('token');
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
-        fetch(`${API_BASE_URL}/podcasts/${actualId}/progress?seconds=${progressSecs}`, { method: 'POST', headers });
-      }
-    };
-
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-      };
+  const handleAudioLoaded = () => {
+    if (!audioRef.current) return
+    const safeDuration = Number.isFinite(audioRef.current.duration) ? audioRef.current.duration : 0
+    setDurationSecs(safeDuration)
+    if (progressSecs > 0) {
+      audioRef.current.currentTime = Math.min(progressSecs, safeDuration || progressSecs)
     }
-  }, [isDragging, playingPodcast, progressSecs]);
+    audioRef.current.playbackRate = playbackSpeed
+    if (audioRef.current.preservesPitch !== undefined) {
+      audioRef.current.preservesPitch = true
+    }
+  }
+
+  const handleAudioTimeUpdate = () => {
+    if (!audioRef.current || isDragging) return
+    setProgressSecs(audioRef.current.currentTime)
+  }
+
+  const handleAudioPause = async () => {
+    setIsPlaying(false)
+    if (!playingPodcast) return
+    try {
+      const actualId = playingPodcast.id || playingPodcast.podcastId
+      const token = localStorage.getItem('token')
+      const headers = token ? { Authorization: `Bearer ${token}` } : {}
+      await fetch(`${API_BASE_URL}/podcasts/${actualId}/progress?seconds=${Math.floor(progressSecs)}`, { method: 'POST', headers })
+      fetchHomeData()
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleAudioPlay = () => {
+    if (audioRef.current) {
+      setProgressSecs(audioRef.current.currentTime)
+    }
+    setIsPlaying(true)
+  }
+
+  const handleAudioEnded = () => {
+    setIsPlaying(false)
+  }
 
   const getTopInterest = () => {
     const counts = {}
@@ -654,8 +733,25 @@ function HomePage() {
     )
   }
 
+  const playingPodcastId = playingPodcast?.id || playingPodcast?.podcastId
+  const audioSrc = playingPodcastId ? getAudioSrcById(playingPodcastId) : ''
+  const maxDurationSecs = durationSecs || (playingPodcast ? playingPodcast.duracao * 60 : 0)
+  const progressPercent = maxDurationSecs ? Math.min(100, (progressSecs / maxDurationSecs) * 100) : 0
+  const timelineAnimationSpeed = isDragging ? '0s' : `${1 / playbackSpeed}s`
+  const durationLabel = maxDurationSecs ? formatTime(maxDurationSecs) : (playingPodcast ? `${playingPodcast.duracao}:00` : '0:00')
+
   return (
     <>
+      <audio
+        ref={audioRef}
+        src={audioSrc}
+        preload="metadata"
+        onLoadedMetadata={handleAudioLoaded}
+        onTimeUpdate={handleAudioTimeUpdate}
+        onPause={handleAudioPause}
+        onPlay={handleAudioPlay}
+        onEnded={handleAudioEnded}
+      />
       <main className="home-page" aria-labelledby="home-title">
         <section className="home-banner">
           <h2 id="home-title">Bem-vindo à Podcastia!</h2>
@@ -905,28 +1001,31 @@ function HomePage() {
               <span className="time-display">{formatTime(progressSecs)}</span>
               <div 
                 className="player-timeline"
-                onClick={handleProgressClick}
-                onMouseDown={handleProgressMouseDown}
+                ref={timelineRef}
+                onPointerDown={handleTimelinePointerDown}
+                onPointerMove={handleTimelinePointerMove}
+                onPointerUp={handleTimelinePointerUp}
+                onPointerCancel={handleTimelinePointerUp}
                 role="slider"
                 aria-label="Barra de progresso"
                 aria-valuemin="0"
-                aria-valuemax={playingPodcast.duracao * 60}
+                aria-valuemax={maxDurationSecs}
                 aria-valuenow={progressSecs}
-                style={{ '--animation-speed': `${1 / playbackSpeed}s` }}
+                style={{ '--animation-speed': timelineAnimationSpeed }}
               >
                 <div 
                   className="player-timeline-fill" 
                   style={{ 
-                    width: `${Math.min(100, (progressSecs / (playingPodcast.duracao * 60)) * 100)}%`,
-                    '--animation-speed': `${1 / playbackSpeed}s`
+                    width: `${progressPercent}%`,
+                    '--animation-speed': timelineAnimationSpeed
                   }}
                 ></div>
                 <div 
                   className="player-timeline-thumb" 
-                  style={{ left: `${Math.min(100, (progressSecs / (playingPodcast.duracao * 60)) * 100)}%` }}
+                  style={{ left: `${progressPercent}%` }}
                 ></div>
               </div>
-              <span className="time-display">{playingPodcast.duracao}:00</span>
+              <span className="time-display">{durationLabel}</span>
             </div>
           </div>
         </div>
