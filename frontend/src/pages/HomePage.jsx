@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import '../styles/home-page.css'
 import PodcastSidebar from '../components/PodcastSidebar'
 import PlaybackSpeedControl from '../components/PlaybackSpeedControl'
+import { useBackgroundAudio } from '../hooks/useBackgroundAudio'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
 
@@ -53,20 +54,33 @@ function HomePage() {
   const filterContainerRef = useRef(null)
   const filterScrollRef = useRef(null)
   
-  // Player State
-  const [playingPodcast, setPlayingPodcast] = useState(null)
-  const [progressSecs, setProgressSecs] = useState(0)
-  const [isPlaying, setIsPlaying] = useState(false)
+  // Background Audio Hook
+  const {
+    isPlaying,
+    currentTime: progressSecs,
+    duration: durationSecs,
+    playbackSpeed,
+    currentPodcast: playingPodcast,
+    isLoading: audioLoading,
+    error: audioError,
+    play,
+    pause,
+    togglePlayPause,
+    seek,
+    setSpeed,
+    skipForward,
+    skipBackward,
+    handlePodcastSelect,
+    handlePodcastResume,
+    progressPercent,
+    formattedCurrentTime,
+    formattedDuration
+  } = useBackgroundAudio()
+
+  // Local UI State
   const [isDragging, setIsDragging] = useState(false)
   const timelineRef = useRef(null)
   const timelinePointerIdRef = useRef(null)
-  const audioRef = useRef(null)
-  const [durationSecs, setDurationSecs] = useState(0)
-  const [playbackSpeed, setPlaybackSpeed] = useState(() => {
-    // Load saved playback speed from localStorage on mount
-    const saved = localStorage.getItem('playbackSpeed')
-    return saved ? parseFloat(saved) : 1
-  })
 
   // Sidebar State
   const [selectedPodcast, setSelectedPodcast] = useState(null)
@@ -360,66 +374,28 @@ function HomePage() {
 
   const getAudioSrcById = (podcastId) => `${API_BASE_URL}/api/podcasts/${podcastId}/audio`
 
-  const ensureAudioReady = (targetSeconds) => {
-    if (!audioRef.current || !playingPodcast) return Promise.resolve(false)
-    const audioEl = audioRef.current
-    const actualId = playingPodcast.id || playingPodcast.podcastId
-    const desiredSrc = getAudioSrcById(actualId)
-
-    if (!audioEl.src || !audioEl.src.includes(desiredSrc)) {
-      audioEl.src = desiredSrc
-    }
-
-    const setTime = () => {
-      if (Number.isFinite(targetSeconds)) {
-        audioEl.currentTime = targetSeconds
-      }
-    }
-
-    if (audioEl.readyState >= 1) {
-      setTime()
-      return Promise.resolve(true)
-    }
-
-    return new Promise((resolve) => {
-      const handleLoaded = () => {
-        audioEl.removeEventListener('loadedmetadata', handleLoaded)
-        setTime()
-        resolve(true)
-      }
-      audioEl.addEventListener('loadedmetadata', handleLoaded)
-      audioEl.load()
-    })
-  }
-
+  
   const handleListen = async (pod, isResume) => {
     try {
-      const actualId = pod.id || pod.podcastId;
-      setActivePodcastId(actualId)
+      const startingSecs = isResume && pod.progressSeconds ? pod.progressSeconds : 0
+      const actualId = pod.id || pod.podcastId
       
-      setPlayingPodcast(pod)
-      const startingSecs = isResume && pod.progressSeconds ? pod.progressSeconds : 0;
-      setProgressSecs(startingSecs)
-      setDurationSecs(0)
-      setIsPlaying(true)
-
-      if (audioRef.current) {
-        await ensureAudioReady(startingSecs)
-        audioRef.current.playbackRate = playbackSpeed
-        const playPromise = audioRef.current.play()
-        if (playPromise?.catch) {
-          playPromise.catch(() => setIsPlaying(false))
-        }
+      if (isResume) {
+        await handlePodcastResume(pod, startingSecs)
+      } else {
+        await handlePodcastSelect(pod, true)
       }
       
+      setActivePodcastId(actualId)
+      
+      // Save progress to backend
       const token = localStorage.getItem('token')
-      const headers = token ? { Authorization: `Bearer ${token}` } : {}
+      const headers = token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' }
       
-      // Update recommendation points
-      const response = await fetch(`${API_BASE_URL}/podcasts/${actualId}/listen`, { method: 'POST', headers })
-      
-      // Save backend initial progress sync
-      await fetch(`${API_BASE_URL}/podcasts/${actualId}/progress?seconds=${startingSecs}`, { method: 'POST', headers })
+      const response = await fetch(`${API_BASE_URL}/podcasts/${actualId}/progress?seconds=${startingSecs}`, { 
+        method: 'POST', 
+        headers 
+      })
       
       if (response.ok) {
         setMessage(isResume ? `A retomar "${pod.titulo}"...` : `A reproduzir "${pod.titulo}"!`)
@@ -437,22 +413,7 @@ function HomePage() {
     }
   }
 
-  const togglePlayPause = async () => {
-    if (!audioRef.current) return
-    if (audioRef.current.paused) {
-      await ensureAudioReady(progressSecs)
-      audioRef.current.playbackRate = playbackSpeed
-      const playPromise = audioRef.current.play()
-      if (playPromise?.catch) {
-        playPromise.catch(() => setIsPlaying(false))
-      }
-      setIsPlaying(true)
-      return
-    }
-    audioRef.current.pause()
-    setIsPlaying(false)
-  }
-
+  
   const formatTime = (seconds) => {
     const floorSecs = Math.floor(seconds);
     const mins = Math.floor(floorSecs / 60);
@@ -474,42 +435,18 @@ function HomePage() {
   };
 
   const forwardSeconds = () => {
+    skipForward()
     if (playingPodcast) {
-      const maxDuration = durationSecs || playingPodcast.duracao * 60
-      const newTime = Math.min(progressSecs + 15, maxDuration);
-      if (audioRef.current) {
-        audioRef.current.currentTime = newTime
-      }
-      setProgressSecs(newTime)
-      saveProgressToBackend(newTime);
-      console.log('Forward 15s: ', formatTime(newTime));
+      saveProgressToBackend(progressSecs + 15);
     }
-  };
+  }
 
   const rewindSeconds = () => {
+    skipBackward()
     if (playingPodcast) {
-      const newTime = Math.max(progressSecs - 15, 0);
-      if (audioRef.current) {
-        audioRef.current.currentTime = newTime
-      }
-      setProgressSecs(newTime)
-      saveProgressToBackend(newTime);
-      console.log('Rewind 15s: ', formatTime(newTime));
+      saveProgressToBackend(Math.max(0, progressSecs - 15));
     }
-  };
-
-  useEffect(() => {
-    if (!isPlaying) return
-    let rafId
-    const tick = () => {
-      if (audioRef.current && !audioRef.current.paused && !isDragging) {
-        setProgressSecs(audioRef.current.currentTime)
-      }
-      rafId = window.requestAnimationFrame(tick)
-    }
-    rafId = window.requestAnimationFrame(tick)
-    return () => window.cancelAnimationFrame(rafId)
-  }, [isPlaying, isDragging])
+  }
 
   const nextPodcast = () => {
     const allPodcasts = [...(data.continueListening || []), ...(data.recommended || []), ...(data.newReleases || [])];
@@ -530,28 +467,13 @@ function HomePage() {
   };
 
   const handleSpeedChange = (speed) => {
-    setPlaybackSpeed(speed);
+    setSpeed(speed);
     localStorage.setItem('playbackSpeed', speed.toString());
-
-    if (audioRef.current) {
-      audioRef.current.playbackRate = speed
-      if (audioRef.current.preservesPitch !== undefined) {
-        audioRef.current.preservesPitch = true
-      }
-    }
-
     console.log(`Velocidade de reprodução alterada para: ${speed}x`);
   };
 
   const seekTo = (seconds) => {
-    if (playingPodcast) {
-      const maxDuration = durationSecs || playingPodcast.duracao * 60
-      const clampedSeconds = Math.max(0, Math.min(seconds, maxDuration));
-      if (audioRef.current) {
-        audioRef.current.currentTime = clampedSeconds
-      }
-      setProgressSecs(clampedSeconds)
-    }
+    seek(seconds)
   };
 
   const getTimelineSeconds = (clientX) => {
@@ -588,49 +510,11 @@ function HomePage() {
     setIsDragging(false);
   };
 
-  const handleAudioLoaded = () => {
-    if (!audioRef.current) return
-    const safeDuration = Number.isFinite(audioRef.current.duration) ? audioRef.current.duration : 0
-    setDurationSecs(safeDuration)
-    if (progressSecs > 0) {
-      audioRef.current.currentTime = Math.min(progressSecs, safeDuration || progressSecs)
-    }
-    audioRef.current.playbackRate = playbackSpeed
-    if (audioRef.current.preservesPitch !== undefined) {
-      audioRef.current.preservesPitch = true
-    }
-  }
-
-  const handleAudioTimeUpdate = () => {
-    if (!audioRef.current || isDragging) return
-    setProgressSecs(audioRef.current.currentTime)
-  }
-
-  const handleAudioPause = async () => {
-    setIsPlaying(false)
-    if (!playingPodcast) return
-    try {
-      const actualId = playingPodcast.id || playingPodcast.podcastId
-      const token = localStorage.getItem('token')
-      const headers = token ? { Authorization: `Bearer ${token}` } : {}
-      await fetch(`${API_BASE_URL}/podcasts/${actualId}/progress?seconds=${Math.floor(progressSecs)}`, { method: 'POST', headers })
-      fetchHomeData()
-    } catch (err) {
-      console.error(err)
-    }
-  }
-
-  const handleAudioPlay = () => {
-    if (audioRef.current) {
-      setProgressSecs(audioRef.current.currentTime)
-    }
-    setIsPlaying(true)
-  }
-
-  const handleAudioEnded = () => {
-    setIsPlaying(false)
-  }
-
+  
+  
+  
+  
+  
   const getTopInterest = () => {
     const counts = {}
     data.recommended.forEach((pod) => {
@@ -734,25 +618,13 @@ function HomePage() {
   }
 
   const playingPodcastId = playingPodcast?.id || playingPodcast?.podcastId
-  const audioSrc = playingPodcastId ? getAudioSrcById(playingPodcastId) : ''
   const maxDurationSecs = durationSecs || (playingPodcast ? playingPodcast.duracao * 60 : 0)
-  const progressPercent = maxDurationSecs ? Math.min(100, (progressSecs / maxDurationSecs) * 100) : 0
   const timelineAnimationSpeed = isDragging ? '0s' : `${1 / playbackSpeed}s`
-  const durationLabel = maxDurationSecs ? formatTime(maxDurationSecs) : (playingPodcast ? `${playingPodcast.duracao}:00` : '0:00')
+  const durationLabel = maxDurationSecs ? formattedDuration : (playingPodcast ? `${playingPodcast.duracao}:00` : '0:00')
 
   return (
     <>
-      <audio
-        ref={audioRef}
-        src={audioSrc}
-        preload="metadata"
-        onLoadedMetadata={handleAudioLoaded}
-        onTimeUpdate={handleAudioTimeUpdate}
-        onPause={handleAudioPause}
-        onPlay={handleAudioPlay}
-        onEnded={handleAudioEnded}
-      />
-      <main className="home-page" aria-labelledby="home-title">
+            <main className="home-page" aria-labelledby="home-title">
         <section className="home-banner">
           <h2 id="home-title">Bem-vindo à Podcastia!</h2>
           <p>Descobre os melhores podcasts baseados nos teus interesses</p>
