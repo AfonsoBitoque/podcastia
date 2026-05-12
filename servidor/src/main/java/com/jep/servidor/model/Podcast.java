@@ -51,6 +51,19 @@ public class Podcast {
   @Column(nullable = false)
   private boolean available = true;
 
+  // Admin fields
+  @Column(nullable = false)
+  private boolean explicitContent = false;
+
+  @Column(nullable = false)
+  private boolean hidden = false;
+
+  @Column(nullable = false)
+  private boolean featured = false;
+
+  @Column(name = "last_modified")
+  private LocalDateTime lastModified;
+
   @Column(nullable = false, updatable = false)
   private LocalDateTime createdAt;
 
@@ -162,5 +175,37 @@ public class Podcast {
 
   public void setAvailable(boolean available) {
     this.available = available;
+  }
+
+  public boolean isExplicitContent() {
+    return explicitContent;
+  }
+
+  public void setExplicitContent(boolean explicitContent) {
+    this.explicitContent = explicitContent;
+  }
+
+  public boolean isHidden() {
+    return hidden;
+  }
+
+  public void setHidden(boolean hidden) {
+    this.hidden = hidden;
+  }
+
+  public boolean isFeatured() {
+    return featured;
+  }
+
+  public void setFeatured(boolean featured) {
+    this.featured = featured;
+  }
+
+  public LocalDateTime getLastModified() {
+    return lastModified;
+  }
+
+  public void setLastModified(LocalDateTime lastModified) {
+    this.lastModified = lastModified;
   }
 }

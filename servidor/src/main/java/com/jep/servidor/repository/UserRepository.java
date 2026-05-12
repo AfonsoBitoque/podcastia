@@ -2,6 +2,7 @@ package com.jep.servidor.repository;
 
 import com.jep.servidor.model.User;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,4 +31,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
   @Query("SELECT COUNT(r) FROM UserRelation r "
       + "WHERE (r.user.id = :userId OR r.friend.id = :userId) AND r.type = 'AMIGO'")
   long countFriendships(@RequestParam("userId") Long userId);
+
+  // Admin analytics methods
+  long countByLastActiveAtAfter(LocalDateTime dateTime);
+  
+  long countByCreatedAtAfter(LocalDateTime dateTime);
+  
+  long countByLastActiveAtBetween(LocalDateTime start, LocalDateTime end);
+  
+  long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
 }

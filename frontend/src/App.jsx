@@ -10,6 +10,7 @@ import TopicsPage from './pages/TopicsPage'
 import SearchPageTest from './pages/SearchPageTest'
 import GeneratePage from './pages/GeneratePage'
 import MessagesPage from './pages/MessagesPage'
+import AdminPage from './pages/AdminPage'
 import './styles/layout.css'
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
           <Route path="/topics" element={<TopicsPage />} />
           <Route path="/search-test" element={<SearchPageTest />} />
           <Route path="/generate" element={<GeneratePage />} />
+          <Route path="/admin" element={<AdminPage />} />
         </Routes>
       </div>
       <Footer />
