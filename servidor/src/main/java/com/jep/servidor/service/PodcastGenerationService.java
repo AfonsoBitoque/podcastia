@@ -6,6 +6,7 @@ import com.jep.servidor.model.User;
 import com.jep.servidor.repository.PodcastRepository;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -37,6 +38,10 @@ public class PodcastGenerationService {
 
     public PodcastGenerationService(PodcastRepository podcastRepository) {
         this.podcastRepository = podcastRepository;
+    }
+
+    public void setGeminiApiKey(String geminiApiKey) {
+        this.geminiApiKey = geminiApiKey;
     }
 
     public Podcast generatePodcast(User user, String tema, List<PodcastTag> tags) throws Exception {
@@ -87,7 +92,7 @@ public class PodcastGenerationService {
     }
 
     private String callGemini(String prompt) throws IOException, InterruptedException {
-        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + geminiApiKey;
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" + geminiApiKey;
 
         JSONObject contentPart = new JSONObject().put("text", prompt);
         JSONObject content = new JSONObject().put("parts", new JSONArray().put(contentPart));
