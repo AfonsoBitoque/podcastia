@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+﻿import { useEffect, useRef, useState } from 'react'
 import '../styles/home-page.css'
 import PodcastSidebar from '../components/PodcastSidebar'
-import PlaybackSpeedControl from '../components/PlaybackSpeedControl'
+import { usePlayer } from '../context/PlayerContext'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
 
@@ -40,7 +39,6 @@ function HomePage() {
   const [data, setData] = useState({ continueListening: [], recommended: [], newReleases: [] })
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
-  const [activePodcastId, setActivePodcastId] = useState(null)
   const [viewerName, setViewerName] = useState('')
 
   const [feedFilters, setFeedFilters] = useState(DEFAULT_FEED_FILTERS)
@@ -53,24 +51,16 @@ function HomePage() {
   const filterContainerRef = useRef(null)
   const filterScrollRef = useRef(null)
   
-  // Player State
-  const [playingPodcast, setPlayingPodcast] = useState(null)
-  const [progressSecs, setProgressSecs] = useState(0)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [isDragging, setIsDragging] = useState(false)
-  const timelineRef = useRef(null)
-  const timelinePointerIdRef = useRef(null)
-  const audioRef = useRef(null)
-  const [durationSecs, setDurationSecs] = useState(0)
-  const [playbackSpeed, setPlaybackSpeed] = useState(() => {
-    // Load saved playback speed from localStorage on mount
-    const saved = localStorage.getItem('playbackSpeed')
-    return saved ? parseFloat(saved) : 1
-  })
-
   // Sidebar State
   const [selectedPodcast, setSelectedPodcast] = useState(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const {
+    activePodcastId,
+    handleListen: playPodcast,
+    isPlaying,
+    playingPodcast,
+    togglePlayPause,
+  } = usePlayer()
 
   const getSafeTags = (pod) => (Array.isArray(pod?.tags) ? pod.tags : [])
 
@@ -132,7 +122,7 @@ function HomePage() {
     const selectedId = selectedPodcast.id || selectedPodcast.podcastId
     const playingId = playingPodcast?.id || playingPodcast?.podcastId
 
-    // Se é o mesmo podcast que está a tocar
+    // Se Ã© o mesmo podcast que estÃ¡ a tocar
     if (selectedId === playingId) {
       // Toggle play/pause
       togglePlayPause()
@@ -155,7 +145,7 @@ function HomePage() {
           headers,
         }).then(() => {
           // Show success message
-          setMessage(`"${selectedPodcast.titulo}" foi adicionado à tua biblioteca!`)
+          setMessage(`"${selectedPodcast.titulo}" foi adicionado Ã  tua biblioteca!`)
           setTimeout(() => setMessage(''), 3000)
         }).catch(err => {
           console.error('Erro ao guardar podcast:', err)
@@ -318,6 +308,17 @@ function HomePage() {
   }, [])
 
   useEffect(() => {
+    const handleOpenPodcastFromSearch = (event) => {
+      if (event.detail) {
+        openSidebar(event.detail)
+      }
+    }
+
+    window.addEventListener('podcastia-open-podcast', handleOpenPodcastFromSearch)
+    return () => window.removeEventListener('podcastia-open-podcast', handleOpenPodcastFromSearch)
+  }, [])
+
+  useEffect(() => {
     localStorage.setItem('homeFeedFilters', JSON.stringify(feedFilters))
     fetchFilteredFeed()
   }, [feedFilters])
@@ -358,96 +359,16 @@ function HomePage() {
     }
   }, [isFilterOpen])
 
-  const getAudioSrcById = (podcastId) => `${API_BASE_URL}/api/podcasts/${podcastId}/audio`
-
-  const ensureAudioReady = (targetSeconds) => {
-    if (!audioRef.current || !playingPodcast) return Promise.resolve(false)
-    const audioEl = audioRef.current
-    const actualId = playingPodcast.id || playingPodcast.podcastId
-    const desiredSrc = getAudioSrcById(actualId)
-
-    if (!audioEl.src || !audioEl.src.includes(desiredSrc)) {
-      audioEl.src = desiredSrc
-    }
-
-    const setTime = () => {
-      if (Number.isFinite(targetSeconds)) {
-        audioEl.currentTime = targetSeconds
-      }
-    }
-
-    if (audioEl.readyState >= 1) {
-      setTime()
-      return Promise.resolve(true)
-    }
-
-    return new Promise((resolve) => {
-      const handleLoaded = () => {
-        audioEl.removeEventListener('loadedmetadata', handleLoaded)
-        setTime()
-        resolve(true)
-      }
-      audioEl.addEventListener('loadedmetadata', handleLoaded)
-      audioEl.load()
-    })
-  }
-
   const handleListen = async (pod, isResume) => {
-    try {
-      const actualId = pod.id || pod.podcastId;
-      setActivePodcastId(actualId)
-      
-      setPlayingPodcast(pod)
-      const startingSecs = isResume && pod.progressSeconds ? pod.progressSeconds : 0;
-      setProgressSecs(startingSecs)
-      setDurationSecs(0)
-      setIsPlaying(true)
+    const queue = [...(data.continueListening || []), ...(data.recommended || []), ...(data.newReleases || [])]
+    const didStart = await playPodcast(pod, isResume, queue)
+    if (didStart) {
+      setMessage(isResume ? `A retomar "${pod.titulo}"...` : `A reproduzir "${pod.titulo}"!`)
 
-      if (audioRef.current) {
-        await ensureAudioReady(startingSecs)
-        audioRef.current.playbackRate = playbackSpeed
-        const playPromise = audioRef.current.play()
-        if (playPromise?.catch) {
-          playPromise.catch(() => setIsPlaying(false))
-        }
-      }
-      
-      const token = localStorage.getItem('token')
-      const headers = token ? { Authorization: `Bearer ${token}` } : {}
-      
-      // Update recommendation points
-      const response = await fetch(`${API_BASE_URL}/podcasts/${actualId}/listen`, { method: 'POST', headers })
-      
-      // Save backend initial progress sync
-      await fetch(`${API_BASE_URL}/podcasts/${actualId}/progress?seconds=${startingSecs}`, { method: 'POST', headers })
-      
-      if (response.ok) {
-        setMessage(isResume ? `A retomar "${pod.titulo}"...` : `A reproduzir "${pod.titulo}"!`)
-        
-        const storedUserRaw = localStorage.getItem('user')
-        if (storedUserRaw) window.dispatchEvent(new Event('auth-change'))
-        
-        setTimeout(() => {
-          setMessage('')
-          fetchHomeData() // Auto-refresh to update the "Continue listening"
-        }, 3000)
-      }
-    } catch (err) {
-      console.error(err)
-    }
-  }
-
-  const togglePlayPause = async () => {
-    if (!audioRef.current) return
-    if (audioRef.current.paused) {
-      await ensureAudioReady(progressSecs)
-      audioRef.current.playbackRate = playbackSpeed
-      const playPromise = audioRef.current.play()
-      if (playPromise?.catch) {
-        playPromise.catch(() => setIsPlaying(false))
-      }
-      setIsPlaying(true)
-      return
+      setTimeout(() => {
+        setMessage('')
+        fetchHomeData()
+      }, 3000)
     }
     audioRef.current.pause()
     setIsPlaying(false)
@@ -458,177 +379,6 @@ function HomePage() {
     const mins = Math.floor(floorSecs / 60);
     const secs = String(floorSecs % 60).padStart(2, '0');
     return `${mins}:${secs}`;
-  }
-
-  const saveProgressToBackend = async (seconds) => {
-    if (playingPodcast) {
-      try {
-        const actualId = playingPodcast.id || playingPodcast.podcastId;
-        const token = localStorage.getItem('token');
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
-        await fetch(`${API_BASE_URL}/podcasts/${actualId}/progress?seconds=${Math.floor(seconds)}`, { method: 'POST', headers });
-      } catch (err) {
-        console.error('Erro ao guardar progresso:', err);
-      }
-    }
-  };
-
-  const forwardSeconds = () => {
-    if (playingPodcast) {
-      const maxDuration = durationSecs || playingPodcast.duracao * 60
-      const newTime = Math.min(progressSecs + 15, maxDuration);
-      if (audioRef.current) {
-        audioRef.current.currentTime = newTime
-      }
-      setProgressSecs(newTime)
-      saveProgressToBackend(newTime);
-      console.log('Forward 15s: ', formatTime(newTime));
-    }
-  };
-
-  const rewindSeconds = () => {
-    if (playingPodcast) {
-      const newTime = Math.max(progressSecs - 15, 0);
-      if (audioRef.current) {
-        audioRef.current.currentTime = newTime
-      }
-      setProgressSecs(newTime)
-      saveProgressToBackend(newTime);
-      console.log('Rewind 15s: ', formatTime(newTime));
-    }
-  };
-
-  useEffect(() => {
-    if (!isPlaying) return
-    let rafId
-    const tick = () => {
-      if (audioRef.current && !audioRef.current.paused && !isDragging) {
-        setProgressSecs(audioRef.current.currentTime)
-      }
-      rafId = window.requestAnimationFrame(tick)
-    }
-    rafId = window.requestAnimationFrame(tick)
-    return () => window.cancelAnimationFrame(rafId)
-  }, [isPlaying, isDragging])
-
-  const nextPodcast = () => {
-    const allPodcasts = [...(data.continueListening || []), ...(data.recommended || []), ...(data.newReleases || [])];
-    if (allPodcasts.length === 0) return;
-    const currentId = playingPodcast?.id || playingPodcast?.podcastId;
-    const currentIndex = allPodcasts.findIndex(p => (p.id || p.podcastId) === currentId);
-    const nextIndex = (currentIndex + 1) % allPodcasts.length;
-    handleListen(allPodcasts[nextIndex], false);
-  };
-
-  const previousPodcast = () => {
-    const allPodcasts = [...(data.continueListening || []), ...(data.recommended || []), ...(data.newReleases || [])];
-    if (allPodcasts.length === 0) return;
-    const currentId = playingPodcast?.id || playingPodcast?.podcastId;
-    const currentIndex = allPodcasts.findIndex(p => (p.id || p.podcastId) === currentId);
-    const prevIndex = currentIndex === 0 ? allPodcasts.length - 1 : currentIndex - 1;
-    handleListen(allPodcasts[prevIndex], false);
-  };
-
-  const handleSpeedChange = (speed) => {
-    setPlaybackSpeed(speed);
-    localStorage.setItem('playbackSpeed', speed.toString());
-
-    if (audioRef.current) {
-      audioRef.current.playbackRate = speed
-      if (audioRef.current.preservesPitch !== undefined) {
-        audioRef.current.preservesPitch = true
-      }
-    }
-
-    console.log(`Velocidade de reprodução alterada para: ${speed}x`);
-  };
-
-  const seekTo = (seconds) => {
-    if (playingPodcast) {
-      const maxDuration = durationSecs || playingPodcast.duracao * 60
-      const clampedSeconds = Math.max(0, Math.min(seconds, maxDuration));
-      if (audioRef.current) {
-        audioRef.current.currentTime = clampedSeconds
-      }
-      setProgressSecs(clampedSeconds)
-    }
-  };
-
-  const getTimelineSeconds = (clientX) => {
-    if (!playingPodcast || !timelineRef.current) return 0;
-    const rect = timelineRef.current.getBoundingClientRect();
-    const clickX = clientX - rect.left;
-    const percent = Math.max(0, Math.min(1, clickX / rect.width));
-    const maxDuration = durationSecs || playingPodcast.duracao * 60
-    return percent * maxDuration;
-  };
-
-  const handleTimelinePointerDown = (e) => {
-    if (!playingPodcast) return;
-    timelinePointerIdRef.current = e.pointerId;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    setIsDragging(true);
-    const newSeconds = getTimelineSeconds(e.clientX);
-    seekTo(newSeconds);
-    saveProgressToBackend(newSeconds);
-  };
-
-  const handleTimelinePointerMove = (e) => {
-    if (!isDragging || timelinePointerIdRef.current !== e.pointerId) return;
-    const newSeconds = getTimelineSeconds(e.clientX);
-    seekTo(newSeconds);
-  };
-
-  const handleTimelinePointerUp = (e) => {
-    if (timelinePointerIdRef.current !== e.pointerId) return;
-    const newSeconds = getTimelineSeconds(e.clientX);
-    seekTo(newSeconds);
-    saveProgressToBackend(newSeconds);
-    timelinePointerIdRef.current = null;
-    setIsDragging(false);
-  };
-
-  const handleAudioLoaded = () => {
-    if (!audioRef.current) return
-    const safeDuration = Number.isFinite(audioRef.current.duration) ? audioRef.current.duration : 0
-    setDurationSecs(safeDuration)
-    if (progressSecs > 0) {
-      audioRef.current.currentTime = Math.min(progressSecs, safeDuration || progressSecs)
-    }
-    audioRef.current.playbackRate = playbackSpeed
-    if (audioRef.current.preservesPitch !== undefined) {
-      audioRef.current.preservesPitch = true
-    }
-  }
-
-  const handleAudioTimeUpdate = () => {
-    if (!audioRef.current || isDragging) return
-    setProgressSecs(audioRef.current.currentTime)
-  }
-
-  const handleAudioPause = async () => {
-    setIsPlaying(false)
-    if (!playingPodcast) return
-    try {
-      const actualId = playingPodcast.id || playingPodcast.podcastId
-      const token = localStorage.getItem('token')
-      const headers = token ? { Authorization: `Bearer ${token}` } : {}
-      await fetch(`${API_BASE_URL}/podcasts/${actualId}/progress?seconds=${Math.floor(progressSecs)}`, { method: 'POST', headers })
-      fetchHomeData()
-    } catch (err) {
-      console.error(err)
-    }
-  }
-
-  const handleAudioPlay = () => {
-    if (audioRef.current) {
-      setProgressSecs(audioRef.current.currentTime)
-    }
-    setIsPlaying(true)
-  }
-
-  const handleAudioEnded = () => {
-    setIsPlaying(false)
   }
 
   const getTopInterest = () => {
@@ -657,7 +407,7 @@ function HomePage() {
   }
 
   const renderCarousel = (podcasts, isContinueListening = false) => {
-    if (!podcasts || podcasts.length === 0) return <p className="empty-state">Nenhum podcast disponível nesta secção.</p>
+    if (!podcasts || podcasts.length === 0) return <p className="empty-state">Nenhum podcast disponÃ­vel nesta secÃ§Ã£o.</p>
     
     return (
       <div className={`podcast-carousel ${isContinueListening ? 'carousel-continue' : 'carousel-discover'}`} role="list" aria-label="Lista horizontal de podcasts">
@@ -687,7 +437,7 @@ function HomePage() {
                       togglePlayPause()
                     }}
                   >
-                    {isPlaying ? '⏸' : '▶'}
+                    {isPlaying ? 'â¸' : 'â–¶'}
                   </button>
                 ) : (
                   <button 
@@ -698,7 +448,7 @@ function HomePage() {
                       handleListen(pod, isContinueListening)
                     }}
                   >
-                    ▶
+                    â–¶
                   </button>
                 )}
               </div>
@@ -754,7 +504,7 @@ function HomePage() {
       />
       <main className="home-page" aria-labelledby="home-title">
         <section className="home-banner">
-          <h2 id="home-title">Bem-vindo à Podcastia!</h2>
+          <h2 id="home-title">Bem-vindo Ã  Podcastia!</h2>
           <p>Descobre os melhores podcasts baseados nos teus interesses</p>
           <div className="visual-ring ring-a" aria-hidden="true" />
           <div className="visual-ring ring-b" aria-hidden="true" />
@@ -922,115 +672,12 @@ function HomePage() {
             </section>
 
             <section className="feed-section">
-              <h2>Acabados de Lançar</h2>
+              <h2>Acabados de LanÃ§ar</h2>
               {renderCarousel(data.newReleases)}
             </section>
           </div>
         )}
       </main>
-
-      {/* Persistent Bottom Player */}
-      {playingPodcast && (
-        <div className={`player-bar ${isSidebarOpen ? 'sidebar-open' : ''}`}>
-          <div className="player-info">
-            {playingPodcast.coverImagePath ? (
-              <img 
-                src={`${API_BASE_URL}${playingPodcast.coverImagePath}`} 
-                alt={playingPodcast.titulo}
-                className="player-cover"
-                onError={(e) => { 
-                  console.error('Erro ao carregar imagem:', e.target.src);
-                  e.target.style.display = 'none'; 
-                }}
-                onLoad={() => console.log('Imagem carregada:', playingPodcast.coverImagePath)}
-              />
-            ) : (
-              <div className="player-cover-placeholder">🎙</div>
-            )}
-            <div className="player-text">
-              <p className="player-title">{playingPodcast.titulo}</p>
-              <p className="player-host">{playingPodcast.host || playingPodcast.user?.username}</p>
-            </div>
-          </div>
-          
-          <div className="player-controls">
-            <div className="player-buttons-wrapper">
-              <div className="player-buttons">
-                <button 
-                  className="btn-icon btn-skip" 
-                  onClick={previousPodcast}
-                  title="Podcast anterior"
-                  aria-label="Podcast anterior"
-                >
-                  ⏮
-                </button>
-                <button 
-                  className="btn-icon" 
-                  onClick={rewindSeconds}
-                  title="Recuar 15 segundos"
-                  aria-label="Recuar 15 segundos"
-                >
-                  ⏪
-                </button>
-                <button className="btn-circular" onClick={togglePlayPause}>
-                  {isPlaying ? '⏸' : '▶'}
-                </button>
-                <button 
-                  className="btn-icon" 
-                  onClick={forwardSeconds}
-                  title="Avançar 15 segundos"
-                  aria-label="Avançar 15 segundos"
-                >
-                  ⏩
-                </button>
-                <button 
-                  className="btn-icon btn-skip" 
-                  onClick={nextPodcast}
-                  title="Próximo podcast"
-                  aria-label="Próximo podcast"
-                >
-                  ⏭
-                </button>
-              </div>
-              <PlaybackSpeedControl 
-                currentSpeed={playbackSpeed} 
-                onSpeedChange={handleSpeedChange}
-              />
-            </div>
-            <div className="player-progress-container">
-              <span className="time-display">{formatTime(progressSecs)}</span>
-              <div 
-                className="player-timeline"
-                ref={timelineRef}
-                onPointerDown={handleTimelinePointerDown}
-                onPointerMove={handleTimelinePointerMove}
-                onPointerUp={handleTimelinePointerUp}
-                onPointerCancel={handleTimelinePointerUp}
-                role="slider"
-                aria-label="Barra de progresso"
-                aria-valuemin="0"
-                aria-valuemax={maxDurationSecs}
-                aria-valuenow={progressSecs}
-                style={{ '--animation-speed': timelineAnimationSpeed }}
-              >
-                <div 
-                  className="player-timeline-fill" 
-                  style={{ 
-                    width: `${progressPercent}%`,
-                    '--animation-speed': timelineAnimationSpeed
-                  }}
-                ></div>
-                <div 
-                  className="player-timeline-thumb" 
-                  style={{ left: `${progressPercent}%` }}
-                ></div>
-              </div>
-              <span className="time-display">{durationLabel}</span>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Podcast Sidebar */}
       <PodcastSidebar
         podcast={selectedPodcast}
@@ -1046,3 +693,4 @@ function HomePage() {
 }
 
 export default HomePage
+

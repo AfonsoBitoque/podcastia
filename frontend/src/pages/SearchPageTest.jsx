@@ -1,144 +1,353 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import '../styles/search-page.css';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { usePlayer } from '../context/PlayerContext'
+import '../styles/search-page.css'
 
-const SearchPageTest = () => {
-    const [searchParams] = useSearchParams();
-    const [query, setQuery] = useState('');
-    const [results, setResults] = useState([]);
-    const [page, setPage] = useState(0);
-    const [loading, setLoading] = useState(false);
-    const [hasMore, setHasMore] = useState(true);
-    const [typingTimeout, setTypingTimeout] = useState(null);
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
+const PAGE_SIZE = 8
 
-    const observer = useRef();
-    const size = 5;
+const SEARCH_TABS = [
+  { value: 'all', label: 'Tudo' },
+  { value: 'podcasts', label: 'Podcasts' },
+  { value: 'users', label: 'Criadores' },
+  { value: 'playlists', label: 'Playlists' },
+]
 
-    // Função de fetch
-    const fetchResults = async (searchQuery, pageNum, reset = false) => {
-        if (!searchQuery.trim()) {
-            setResults([]);
-            setHasMore(false);
-            return;
-        }
+const TAG_UI = {
+  DESPORTO: { label: 'Desporto', className: 'tag-desporto', thumbClass: 'thumb-desporto', short: 'DSP' },
+  FINANCAS: { label: 'Financas', className: 'tag-financas', thumbClass: 'thumb-financas', short: 'FIN' },
+  POLITICA: { label: 'Politica', className: 'tag-politica', thumbClass: 'thumb-politica', short: 'POL' },
+  GERAL: { label: 'Geral', className: 'tag-geral', thumbClass: 'thumb-geral', short: 'GER' },
+  DEFAULT: { label: 'Podcast', className: 'tag-geral', thumbClass: 'thumb-geral', short: 'POD' },
+}
 
-        setLoading(true);
-        try {
-            // Nota: Configura a porta correta se o servidor Java não estiver na 8080.
-            const response = await fetch(`http://localhost:8080/api/search?q=${encodeURIComponent(searchQuery)}&page=${pageNum}&size=${size}`);
-            const data = await response.json();
+const getAssetUrl = (path) => {
+  if (!path) return ''
+  if (/^https?:\/\//i.test(path)) return path
+  return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`
+}
 
-            setResults(prev => reset ? data : [...prev, ...data]);
-            
-            // Se vieram menos que 5 resultados, significa que não há mais. Total max 15-20 era o critério.
-            setHasMore(data.length === size);
-        } catch (error) {
-            console.error("Erro na pesquisa:", error);
-            if (reset) setResults([]);
-        } finally {
-            setLoading(false);
-        }
-    };
+const getTagUi = (tag) => TAG_UI[String(tag || '').toUpperCase()] || TAG_UI.DEFAULT
 
-    // Lidar com o input (Debounce)
-    const handleInputChange = (e) => {
-        const value = e.target.value;
-        setQuery(value);
-        setPage(0);
-        setHasMore(true);
+const getInitials = (value) => {
+  const clean = String(value || '').replace(/^@/, '').trim()
+  if (!clean) return '@'
+  return clean.slice(0, 2).toUpperCase()
+}
 
-        // Limpa o timeout anterior se o utilizador continuar a digitar (Debounce associado à digitação dinâmica)
-        if (typingTimeout) {
-            clearTimeout(typingTimeout);
-        }
+function SearchPageTest() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const routeQuery = searchParams.get('q') || ''
+  const [query, setQuery] = useState(routeQuery)
+  const [results, setResults] = useState([])
+  const [page, setPage] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [hasMore, setHasMore] = useState(false)
+  const [error, setError] = useState('')
+  const [activeTab, setActiveTab] = useState('all')
+  const {
+    activePodcastId,
+    handleListen,
+    isPlaying,
+    playingPodcast,
+    togglePlayPause,
+  } = usePlayer()
+  const typingTimeoutRef = useRef(null)
+  const observerRef = useRef(null)
+  const latestRequestRef = useRef(0)
 
-        // Aguarda 400ms após o utilizador deixar de digitar antes de disparar a pesquisa
-        setTypingTimeout(
-            setTimeout(() => {
-                fetchResults(value, 0, true);
-            }, 400)
-        );
-    };
+  const fetchResults = useCallback(async (searchQuery, pageNumber = 0, reset = false) => {
+    const term = searchQuery.trim()
+    const requestId = latestRequestRef.current + 1
+    latestRequestRef.current = requestId
 
-    useEffect(() => {
-        const routeQuery = searchParams.get('q') || '';
-        setQuery(routeQuery);
-        setPage(0);
-        setHasMore(Boolean(routeQuery.trim()));
-        fetchResults(routeQuery, 0, true);
-    }, [searchParams]);
+    if (!term) {
+      setResults([])
+      setHasMore(false)
+      setLoading(false)
+      setError('')
+      return
+    }
 
-    // Lidar com Scroll infinito (Intersect Observer na ultima div)
-    const lastElementRef = useCallback(node => {
-        if (loading) return;
-        if (observer.current) observer.current.disconnect();
+    setLoading(true)
+    setError('')
 
-        observer.current = new IntersectionObserver(entries => {
-            if (entries[0].isIntersecting && hasMore) {
-                // Ao bater no fim da bottom, carrega a próxima página
-                const nextPage = page + 1;
-                setPage(nextPage);
-                fetchResults(query, nextPage, false);
-            }
-        });
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/search?q=${encodeURIComponent(term)}&page=${pageNumber}&size=${PAGE_SIZE}`
+      )
 
-        if (node) observer.current.observe(node);
-    }, [loading, hasMore, query, page]);
+      if (!response.ok) {
+        throw new Error('Falha ao pesquisar')
+      }
+
+      const data = await response.json()
+      const nextResults = Array.isArray(data) ? data : []
+      if (latestRequestRef.current !== requestId) return
+
+      setResults((prev) => (reset ? nextResults : [...prev, ...nextResults]))
+      setHasMore(nextResults.length === PAGE_SIZE)
+    } catch (searchError) {
+      if (latestRequestRef.current !== requestId) return
+      console.error('Erro na pesquisa:', searchError)
+      setError('Nao foi possivel carregar a pesquisa.')
+      if (reset) setResults([])
+      setHasMore(false)
+    } finally {
+      if (latestRequestRef.current === requestId) {
+        setLoading(false)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    setQuery(routeQuery)
+    setPage(0)
+    setHasMore(Boolean(routeQuery.trim()))
+    fetchResults(routeQuery, 0, true)
+  }, [routeQuery, fetchResults])
+
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) window.clearTimeout(typingTimeoutRef.current)
+      observerRef.current?.disconnect()
+    }
+  }, [])
+
+  const handleInputChange = (event) => {
+    const value = event.target.value
+    setQuery(value)
+    setPage(0)
+    setHasMore(Boolean(value.trim()))
+
+    if (typingTimeoutRef.current) {
+      window.clearTimeout(typingTimeoutRef.current)
+    }
+
+    typingTimeoutRef.current = window.setTimeout(() => {
+      fetchResults(value, 0, true)
+    }, 400)
+  }
+
+  const handleSubmit = (event) => {
+    event.preventDefault()
+    const term = query.trim()
+
+    if (typingTimeoutRef.current) {
+      window.clearTimeout(typingTimeoutRef.current)
+    }
+
+    setPage(0)
+    if (term) {
+      setSearchParams({ q: term })
+      if (term === routeQuery.trim()) {
+        fetchResults(term, 0, true)
+      }
+    } else {
+      setSearchParams({})
+      fetchResults('', 0, true)
+    }
+  }
+
+  const podcastResults = useMemo(
+    () => results.filter((item) => item.type === 'PODCAST'),
+    [results]
+  )
+  const userResults = useMemo(
+    () => results.filter((item) => item.type === 'USER'),
+    [results]
+  )
+
+  const visibleResultCount = useMemo(() => {
+    if (activeTab === 'podcasts') return podcastResults.length
+    if (activeTab === 'users') return userResults.length
+    if (activeTab === 'playlists') return 0
+    return podcastResults.length + userResults.length
+  }, [activeTab, podcastResults.length, userResults.length])
+
+  const lastElementRef = useCallback((node) => {
+    if (loading || activeTab === 'playlists') return
+    if (observerRef.current) observerRef.current.disconnect()
+
+    observerRef.current = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && hasMore) {
+        const nextPage = page + 1
+        setPage(nextPage)
+        fetchResults(query, nextPage, false)
+      }
+    })
+
+    if (node) observerRef.current.observe(node)
+  }, [activeTab, fetchResults, hasMore, loading, page, query])
+
+  const renderPodcastCard = (podcast, index = 0) => {
+    const id = podcast.id || podcast.podcastId || podcast.title || podcast.titulo
+    const actualId = podcast.id || podcast.podcastId
+    const title = podcast.titulo || podcast.title || 'Podcast'
+    const host = podcast.host || podcast.user?.username || podcast.subtitle?.replace('Criador: ', '') || 'Podcastia'
+    const tags = Array.isArray(podcast.tags) && podcast.tags.length > 0 ? podcast.tags : ['GERAL']
+    const primaryTag = getTagUi(tags[0])
+    const duration = podcast.duracao ? `${podcast.duracao} min` : 'Podcast'
+    const progressPercent = Math.max(8, Math.min(100, Number(podcast.progressPercent) || ((index + 2) * 13) % 74))
+    const currentPodcastId = playingPodcast?.id || playingPodcast?.podcastId
+    const isCurrentPodcast = Boolean(actualId && currentPodcastId === actualId)
+    const playablePodcast = {
+      ...podcast,
+      id: actualId,
+      titulo: title,
+      host,
+      duracao: Number(podcast.duracao) || 0,
+    }
 
     return (
-        <div className="search-container">
-            <div className="search-header">
-                <h1>Pesquisa de Utilizadores & Podcasts</h1>
-                <input 
-                    type="text" 
-                    className="search-input" 
-                    placeholder="Pesquise por autor ou título (ex: João)..." 
-                    value={query}
-                    onChange={handleInputChange}
-                />
-            </div>
-
-            <div className="search-content">
-                {query.trim() === '' ? (
-                    <div className="search-empty">Comece a digitar para pesquisar...</div>
-                ) : (
-                    <div className="search-results">
-                        {results.length > 0 ? (
-                            results.map((item, index) => {
-                                // Aplicar a ref ao último elemento para ativar a paginação
-                                const isLastParams = results.length === index + 1;
-                                
-                                // Diferenciação visual da imagem
-                                const imageClass = item.type === 'USER' ? 'image-user' : 'image-podcast';
-                                
-                                // Fallback para imagens
-                                const imgSrc = item.imageUrl ? `http://localhost:8080${item.imageUrl}` : 'https://via.placeholder.com/50';
-
-                                return (
-                                    <div 
-                                        className="search-item" 
-                                        key={`${item.type}-${item.id}`} 
-                                        ref={isLastParams ? lastElementRef : null}
-                                    >
-                                        <img src={imgSrc} alt="Capa/Perfil" className={`search-item-image ${imageClass}`} />
-                                        <div className="search-item-info">
-                                            <span className="search-item-title">{item.title}</span>
-                                            <span className="search-item-subtitle">{item.subtitle}</span>
-                                        </div>
-                                    </div>
-                                );
-                            })
-                        ) : !loading && (
-                            <div className="search-empty">Não há resultados para "{query}".</div>
-                        )}
-
-                        {loading && <div className="search-loading">A carregar {page > 0 ? 'mais' : ''}...</div>}
-                        {!hasMore && results.length > 0 && <div className="search-end">Fim dos resultados.</div>}
-                    </div>
-                )}
-            </div>
+      <article key={`${id}-${index}`} className={`explore-podcast-card ${activePodcastId === actualId ? 'active-play' : ''}`}>
+        <div className={`explore-podcast-cover ${primaryTag.thumbClass}`}>
+          {isCurrentPodcast ? (
+            <button
+              className={`thumb-play ${isPlaying ? 'is-playing' : ''}`}
+              type="button"
+              aria-label={isPlaying ? `Pausar ${title}` : `Retomar ${title}`}
+              onClick={(event) => {
+                event.stopPropagation()
+                togglePlayPause()
+              }}
+            >
+              <span className="thumb-play-symbol" aria-hidden="true" />
+            </button>
+          ) : (
+            <button
+              className="thumb-play"
+              type="button"
+              aria-label={`Ouvir ${title}`}
+              onClick={(event) => {
+                event.stopPropagation()
+                handleListen(playablePodcast, false, podcastResults)
+              }}
+            >
+              <span className="thumb-play-symbol" aria-hidden="true" />
+            </button>
+          )}
         </div>
-    );
-};
 
-export default SearchPageTest;
+        <div className="explore-podcast-body">
+          <h3>{title}</h3>
+          <div className="explore-chip-list" aria-label="Categorias">
+            {tags.slice(0, 2).map((tag) => {
+              const tagUi = getTagUi(tag)
+              return <span key={`${id}-${tag}`} className={`explore-chip ${tagUi.className}`}>{tagUi.label}</span>
+            })}
+          </div>
+          <p>{duration} | Host: {host}</p>
+          <div className="explore-progress" aria-hidden="true">
+            <span style={{ width: `${progressPercent}%` }} />
+          </div>
+        </div>
+      </article>
+    )
+  }
+
+  const renderUserCard = (user) => {
+    const avatar = getAssetUrl(user.imageUrl)
+
+    return (
+      <article key={`user-${user.id}`} className="explore-user-card">
+        <div className="explore-user-avatar">
+          {avatar ? <img src={avatar} alt="" /> : <span>{getInitials(user.title)}</span>}
+        </div>
+        <div className="explore-user-info">
+          <h3>{user.title}</h3>
+          <p>{user.subtitle}</p>
+        </div>
+      </article>
+    )
+  }
+
+  const hasQuery = query.trim().length > 0
+
+  return (
+    <main className="search-page" aria-labelledby="search-title">
+      <div className="search-shell">
+        <section className="search-hero">
+          <div className="search-hero-copy">
+            <span>Explorar</span>
+            <h1 id="search-title">Pesquisa na Podcastia</h1>
+          </div>
+
+          <form className="explore-search-bar" role="search" onSubmit={handleSubmit}>
+            <span className="explore-search-icon" aria-hidden="true" />
+            <input
+              type="search"
+              value={query}
+              onChange={handleInputChange}
+              placeholder="Pesquisar podcasts, temas ou pessoas"
+              aria-label="Pesquisar podcasts, temas ou pessoas"
+            />
+          </form>
+
+          <div className="explore-tabs" aria-label="Filtros de pesquisa">
+            {SEARCH_TABS.map((tab) => (
+              <button
+                key={tab.value}
+                type="button"
+                className={activeTab === tab.value ? 'active' : ''}
+                aria-pressed={activeTab === tab.value}
+                onClick={() => setActiveTab(tab.value)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {hasQuery && (
+          <section className="search-results-area" aria-live="polite">
+            <div className="search-section-heading">
+              <span>{loading && page === 0 ? 'A pesquisar' : `${visibleResultCount} resultado${visibleResultCount === 1 ? '' : 's'}`}</span>
+              <h2>Resultados para "{query.trim()}"</h2>
+            </div>
+
+            {error && <p className="search-status error">{error}</p>}
+
+            {!error && (activeTab === 'all' || activeTab === 'podcasts') && podcastResults.length > 0 && (
+              <section className="search-result-section" aria-labelledby="podcast-results-title">
+                <h3 id="podcast-results-title">Podcasts</h3>
+                <div className="explore-podcast-grid">
+                  {podcastResults.map((podcast, index) => renderPodcastCard(podcast, index))}
+                </div>
+              </section>
+            )}
+
+            {!error && (activeTab === 'all' || activeTab === 'users') && userResults.length > 0 && (
+              <section className="search-result-section" aria-labelledby="user-results-title">
+                <h3 id="user-results-title">Hosts</h3>
+                <div className="explore-user-grid">
+                  {userResults.map(renderUserCard)}
+                </div>
+              </section>
+            )}
+
+            {!error && activeTab === 'playlists' && (
+              <div className="search-empty-panel">
+                <h3>Ainda nao ha playlists para "{query.trim()}".</h3>
+                <p>Tenta outro termo ou explora podcasts e criadores por agora.</p>
+              </div>
+            )}
+
+            {!loading && !error && visibleResultCount === 0 && activeTab !== 'playlists' && (
+              <div className="search-empty-panel">
+                <h3>Nao encontramos nada para "{query.trim()}".</h3>
+                <p>Tenta procurar por um tema, criador ou categoria diferente.</p>
+              </div>
+            )}
+
+            {loading && <p className="search-status">A carregar{page > 0 ? ' mais' : ''}...</p>}
+            {hasMore && activeTab !== 'playlists' && <div ref={lastElementRef} className="search-load-sentinel" />}
+            {!hasMore && visibleResultCount > 0 && <p className="search-status">Fim dos resultados.</p>}
+          </section>
+        )}
+      </div>
+    </main>
+  )
+}
+
+export default SearchPageTest
