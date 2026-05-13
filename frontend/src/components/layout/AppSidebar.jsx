@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom'
 
 const mainItems = [
   { to: '/home', label: 'Home', icon: 'home' },
-  { to: '/search-test', label: 'Explorar', icon: 'compass' },
+  { to: '/explorar', label: 'Explorar', icon: 'compass' },
   { to: '/trending', label: 'Tendencias', icon: 'trend' },
 ]
 

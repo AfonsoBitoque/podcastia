@@ -20,6 +20,7 @@ function Header() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const isAuthPage = pathname === '/login' || pathname === '/register'
+  const isExplorePage = pathname === '/explorar' || pathname === '/search-test'
   const [user, setUser] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
@@ -140,8 +141,8 @@ function Header() {
       window.clearTimeout(typingTimeoutRef.current)
     }
     saveRecentSearch(query)
-    fetchSearchResults(query, 0, true)
-    setSearchFocused(true)
+    setSearchFocused(false)
+    navigate(`/explorar?q=${encodeURIComponent(query)}`)
   }
 
   const handleChipClick = (chip) => {
@@ -247,7 +248,7 @@ function Header() {
           <span>Podcastia</span>
         </Link>
 
-        {!isAuthPage && (
+        {!isAuthPage && !isExplorePage && (
           <form
           ref={searchRootRef}
           className={`site-search ${searchFocused ? 'is-active' : ''}`}
