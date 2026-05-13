@@ -9,13 +9,14 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class RecommendationService {
@@ -35,6 +36,7 @@ public class RecommendationService {
         public LocalDateTime getGeneratedAt() { return generatedAt; }
     }
     private final Map<Long, CachedFeed> feedCache = new ConcurrentHashMap<>();
+    private static final int TOPIC_BOOST = 5;
 
     public RecommendationService(UserRepository userRepository, PodcastRepository podcastRepository) {
         this.userRepository = userRepository;
@@ -70,8 +72,9 @@ public class RecommendationService {
                 return cached.getFeed().stream().limit(limit).collect(Collectors.toList());
             }
         }
-    
-        int totalPoints = user.getPontosDesporto() + user.getPontosPolitica() + user.getPontosFinancas() + user.getPontosGeral();
+
+        Map<PodcastTag, Integer> preferences = buildPreferences(user);
+        int totalPoints = preferences.values().stream().mapToInt(Integer::intValue).sum();
         List<Podcast> feed = new ArrayList<>();
         
         List<Podcast> allPodcasts = podcastRepository.findAll();
@@ -87,9 +90,9 @@ public class RecommendationService {
         allPodcasts.removeAll(feed);
         
         if (totalPoints > 0 && !allPodcasts.isEmpty()) {
-            int despCount = (int) Math.round(profileCount * ((double) user.getPontosDesporto() / totalPoints));
-            int polCount = (int) Math.round(profileCount * ((double) user.getPontosPolitica() / totalPoints));
-            int finCount = (int) Math.round(profileCount * ((double) user.getPontosFinancas() / totalPoints));
+            int despCount = (int) Math.round(profileCount * ((double) preferences.get(PodcastTag.DESPORTO) / totalPoints));
+            int polCount = (int) Math.round(profileCount * ((double) preferences.get(PodcastTag.POLITICA) / totalPoints));
+            int finCount = (int) Math.round(profileCount * ((double) preferences.get(PodcastTag.FINANCAS) / totalPoints));
             int geralCount = profileCount - despCount - polCount - finCount;
             
             feed.addAll(pickByTag(allPodcasts, PodcastTag.DESPORTO, despCount));
@@ -110,6 +113,28 @@ public class RecommendationService {
             feedCache.put(user.getId(), new CachedFeed(new ArrayList<>(feed), LocalDateTime.now()));
         }
         return feed;
+    }
+
+    public void invalidateFeedCache(Long userId) {
+        if (userId != null) {
+            feedCache.remove(userId);
+        }
+    }
+
+    private Map<PodcastTag, Integer> buildPreferences(User user) {
+        Map<PodcastTag, Integer> preferences = new EnumMap<>(PodcastTag.class);
+        preferences.put(PodcastTag.DESPORTO, user.getPontosDesporto());
+        preferences.put(PodcastTag.POLITICA, user.getPontosPolitica());
+        preferences.put(PodcastTag.FINANCAS, user.getPontosFinancas());
+        preferences.put(PodcastTag.GERAL, user.getPontosGeral());
+
+        if (user.getTopics() != null && !user.getTopics().isEmpty()) {
+            for (PodcastTag tag : user.getTopics()) {
+                preferences.put(tag, preferences.getOrDefault(tag, 0) + TOPIC_BOOST);
+            }
+        }
+
+        return preferences;
     }
     
     private List<Podcast> pickByTag(List<Podcast> source, PodcastTag tag, int count) {

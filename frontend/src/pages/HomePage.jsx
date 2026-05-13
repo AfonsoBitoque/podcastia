@@ -35,6 +35,7 @@ const CATEGORY_FILTERS = [
 ]
 
 function HomePage() {
+  const navigate = useNavigate()
   const [data, setData] = useState({ continueListening: [], recommended: [], newReleases: [] })
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
@@ -66,6 +67,43 @@ function HomePage() {
   const getTagUi = (tag) => TAG_UI[String(tag || '').toUpperCase()] || TAG_UI.DEFAULT
 
   const getPrimaryTagUi = (pod) => getTagUi(getSafeTags(pod)[0])
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user')
+    const hasCompleted = localStorage.getItem('topicsOnboardingComplete')
+    if (!storedUser || hasCompleted) return
+
+    let parsedUser
+    try {
+      parsedUser = JSON.parse(storedUser)
+    } catch {
+      return
+    }
+
+    if (!parsedUser?.id) return
+
+    let isActive = true
+    const token = localStorage.getItem('token')
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
+
+    fetch(`${API_BASE_URL}/users`, { headers })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((users) => {
+        if (!isActive || !Array.isArray(users)) return
+        const fullUser = users.find((candidate) => String(candidate.id) === String(parsedUser.id))
+        const topics = Array.isArray(fullUser?.topics) ? fullUser.topics : []
+        if (topics.length >= 3) {
+          localStorage.setItem('topicsOnboardingComplete', 'true')
+          return
+        }
+        navigate('/topics', { state: { from: '/home' }, replace: true })
+      })
+      .catch(() => {})
+
+    return () => {
+      isActive = false
+    }
+  }, [navigate])
 
   // Sidebar Functions
   const openSidebar = (podcast) => {
@@ -332,6 +370,8 @@ function HomePage() {
         fetchHomeData()
       }, 3000)
     }
+    audioRef.current.pause()
+    setIsPlaying(false)
   }
 
   const formatTime = (seconds) => {
@@ -443,8 +483,25 @@ function HomePage() {
     )
   }
 
+  const playingPodcastId = playingPodcast?.id || playingPodcast?.podcastId
+  const audioSrc = playingPodcastId ? getAudioSrcById(playingPodcastId) : ''
+  const maxDurationSecs = durationSecs || (playingPodcast ? playingPodcast.duracao * 60 : 0)
+  const progressPercent = maxDurationSecs ? Math.min(100, (progressSecs / maxDurationSecs) * 100) : 0
+  const timelineAnimationSpeed = isDragging ? '0s' : `${1 / playbackSpeed}s`
+  const durationLabel = maxDurationSecs ? formatTime(maxDurationSecs) : (playingPodcast ? `${playingPodcast.duracao}:00` : '0:00')
+
   return (
     <>
+      <audio
+        ref={audioRef}
+        src={audioSrc}
+        preload="metadata"
+        onLoadedMetadata={handleAudioLoaded}
+        onTimeUpdate={handleAudioTimeUpdate}
+        onPause={handleAudioPause}
+        onPlay={handleAudioPlay}
+        onEnded={handleAudioEnded}
+      />
       <main className="home-page" aria-labelledby="home-title">
         <section className="home-banner">
           <h2 id="home-title">Bem-vindo Ã  Podcastia!</h2>

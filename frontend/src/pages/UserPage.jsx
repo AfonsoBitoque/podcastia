@@ -69,6 +69,15 @@ const resolveProfilePicture = (path) => {
   return `${API_BASE_URL}/${normalizedPath}`
 }
 
+const TOPIC_LABELS = {
+  DESPORTO: 'Desporto',
+  POLITICA: 'Politica',
+  FINANCAS: 'Financas',
+  GERAL: 'Geral',
+}
+
+const formatTopicLabel = (topic) => TOPIC_LABELS[String(topic || '').toUpperCase()] || topic
+
 function UserPage() {
   const navigate = useNavigate()
   const usernameInputRef = useRef(null)
@@ -660,6 +669,7 @@ function UserPage() {
   }, [])
 
   const currentProfile = user || sessionUser;
+  const currentTopics = Array.isArray(currentProfile?.topics) ? currentProfile.topics : []
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -1070,6 +1080,35 @@ function UserPage() {
                     <button type="button" className="text-link-btn" onClick={openBioEditor}>
                       Adicionar biografia
                     </button>
+                  </p>
+                )}
+              </div>
+
+              <div className="info-block">
+                <div className="info-block-header">
+                  <p className="info-title">
+                    <span className="icon-dot" aria-hidden="true" />
+                    Temas de Interesse
+                  </p>
+                  <Link to="/topics?return=/user" className="user-inline-edit-btn">
+                    Gerir temas
+                  </Link>
+                </div>
+
+                {currentTopics.length > 0 ? (
+                  <div className="user-topic-list" aria-label="Temas selecionados">
+                    {currentTopics.map((topic) => (
+                      <span key={topic} className="user-topic-chip">
+                        {formatTopicLabel(topic)}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="user-bio-empty">
+                    Ainda nao escolheste temas.{' '}
+                    <Link to="/topics?return=/user" className="text-link-btn">
+                      Escolher agora
+                    </Link>
                   </p>
                 )}
               </div>

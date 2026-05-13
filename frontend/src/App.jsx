@@ -8,8 +8,10 @@ import RegisterPage from './pages/RegisterPage'
 import LoginPage from './pages/LoginPage'
 import HomePage from './pages/HomePage'
 import UserPage from './pages/UserPage'
+import TopicsPage from './pages/TopicsPage'
 import SearchPageTest from './pages/SearchPageTest'
 import GeneratePage from './pages/GeneratePage'
+import MessagesPage from './pages/MessagesPage'
 import './styles/layout.css'
 
 function App() {

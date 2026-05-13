@@ -1,194 +1,265 @@
 package com.jep.servidor.service.impl;
 
-import com.jep.servidor.dto.RelationStatusDto;
+import com.jep.servidor.dto.FriendDto;
 import com.jep.servidor.dto.PendingRequestDto;
+import com.jep.servidor.dto.RelationStatusDto;
+import com.jep.servidor.exceptions.BusinessException;
+import com.jep.servidor.exceptions.FriendshipNotFoundException;
 import com.jep.servidor.model.User;
 import com.jep.servidor.model.UserRelation;
 import com.jep.servidor.model.UserRelation.RelationType;
 import com.jep.servidor.repository.UserRelationRepository;
 import com.jep.servidor.repository.UserRepository;
-import com.jep.servidor.service.UserRelationshipService;
 import com.jep.servidor.service.NotificationService;
-import com.jep.servidor.exceptions.BusinessException;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
+import com.jep.servidor.service.UserRelationshipService;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UserRelationshipServiceImpl implements UserRelationshipService {
 
-    private static final int COOLDOWN_DAYS = 7;
+  private static final int COOLDOWN_DAYS = 7;
 
-    private final UserRelationRepository userRelationRepository;
-    private final UserRepository userRepository;
-    private final NotificationService notificationService;
+  private final UserRelationRepository userRelationRepository;
+  private final UserRepository userRepository;
+  private final NotificationService notificationService;
 
-    public UserRelationshipServiceImpl(UserRelationRepository userRelationRepository,
-                                       UserRepository userRepository,
-                                       NotificationService notificationService) {
-        this.userRelationRepository = userRelationRepository;
-        this.userRepository = userRepository;
-        this.notificationService = notificationService;
+  public UserRelationshipServiceImpl(
+      UserRelationRepository userRelationRepository,
+      UserRepository userRepository,
+      NotificationService notificationService) {
+    this.userRelationRepository = userRelationRepository;
+    this.userRepository = userRepository;
+    this.notificationService = notificationService;
+  }
+
+  @Override
+  @Transactional
+  public void sendFriendRequest(Long senderId, Long receiverId) {
+    if (senderId.equals(receiverId)) {
+      throw new BusinessException("Não pode enviar um pedido de amizade a si mesmo.");
     }
 
-    @Override
-    @Transactional
-    public void sendFriendRequest(Long senderId, Long receiverId) {
-        if (senderId.equals(receiverId)) {
-            throw new BusinessException("Não pode enviar um pedido de amizade a si mesmo.");
-        }
+    User sender =
+        userRepository
+            .findById(senderId)
+            .orElseThrow(() -> new BusinessException("Remetente não encontrado."));
 
-        User sender = userRepository.findById(senderId)
-                .orElseThrow(() -> new BusinessException("Remetente não encontrado."));
-
-        if (userRelationRepository.findRelationship(receiverId, senderId)
-                .filter(r -> r.getType() == RelationType.BLOQUEADO)
-                .isPresent()) {
-            throw new BusinessException("Não pode enviar um pedido de amizade a um utilizador que o bloqueou.");
-        }
-
-        Optional<UserRelation> existingRelationOpt = userRelationRepository.findRelationship(senderId, receiverId);
-
-        if (existingRelationOpt.isPresent()) {
-            UserRelation relation = existingRelationOpt.get();
-            switch (relation.getType()) {
-                case AMIGO:
-                case PEDIDO:
-                    throw new BusinessException("Já existe um pedido de amizade pendente ou uma amizade estabelecida.");
-                case PEDIDO_REJEITADO:
-                    if (relation.getUpdatedAt().plusDays(COOLDOWN_DAYS).isAfter(LocalDateTime.now())) {
-                        throw new BusinessException("Ainda não pode enviar um novo pedido de amizade a este utilizador.");
-                    }
-                    relation.setType(RelationType.PEDIDO);
-                    userRelationRepository.save(relation);
-                    break;
-                default:
-                    throw new BusinessException("Não é possível enviar um pedido de amizade devido a uma relação existente.");
-            }
-        } else {
-            UserRelation newRequest = new UserRelation();
-            newRequest.setSender(sender);
-            newRequest.setReceiver(userRepository.findById(receiverId).orElseThrow(() -> new BusinessException("Destinatário não encontrado.")));
-            newRequest.setType(RelationType.PEDIDO);
-            userRelationRepository.save(newRequest);
-        }
-
-        String notificationMessage = String.format("%s enviou-lhe um pedido de amizade.", sender.getUsername());
-        notificationService.sendNotification(receiverId.toString(), notificationMessage);
+    if (userRelationRepository
+        .findRelationship(receiverId, senderId)
+        .filter(r -> r.getType() == RelationType.BLOQUEADO)
+        .isPresent()) {
+      throw new BusinessException(
+          "Não pode enviar um pedido de amizade a um utilizador que o bloqueou.");
     }
 
-    @Override
-    @Transactional
-    public void acceptFriendRequest(Long senderId, Long receiverId) {
-        UserRelation relation = userRelationRepository.findRelationship(senderId, receiverId)
+    Optional<UserRelation> existingRelationOpt =
+        userRelationRepository.findRelationship(senderId, receiverId);
+
+    if (existingRelationOpt.isPresent()) {
+      UserRelation relation = existingRelationOpt.get();
+      switch (relation.getType()) {
+        case AMIGO:
+        case PEDIDO:
+          throw new BusinessException(
+              "Já existe um pedido de amizade pendente ou uma amizade estabelecida.");
+        case PEDIDO_REJEITADO:
+          if (relation.getUpdatedAt().plusDays(COOLDOWN_DAYS).isAfter(LocalDateTime.now())) {
+            throw new BusinessException(
+                "Ainda não pode enviar um novo pedido de amizade a este utilizador.");
+          }
+          relation.setType(RelationType.PEDIDO);
+          userRelationRepository.save(relation);
+          break;
+        default:
+          throw new BusinessException(
+              "Não é possível enviar um pedido de amizade devido a uma relação existente.");
+      }
+    } else {
+      UserRelation newRequest = new UserRelation();
+      newRequest.setSender(sender);
+      newRequest.setReceiver(
+          userRepository
+              .findById(receiverId)
+              .orElseThrow(() -> new BusinessException("Destinatário não encontrado.")));
+      newRequest.setType(RelationType.PEDIDO);
+      userRelationRepository.save(newRequest);
+    }
+
+    String notificationMessage =
+        String.format("%s enviou-lhe um pedido de amizade.", sender.getUsername());
+    notificationService.sendNotification(receiverId.toString(), notificationMessage);
+  }
+
+  @Override
+  @Transactional
+  public void acceptFriendRequest(Long senderId, Long receiverId) {
+    UserRelation relation =
+        userRelationRepository
+            .findRelationship(senderId, receiverId)
             .filter(r -> r.getType() == RelationType.PEDIDO)
             .orElseThrow(() -> new BusinessException("Este pedido já não está disponível."));
 
-        relation.setType(RelationType.AMIGO);
-        relation.setUpdatedAt(LocalDateTime.now());
-        userRelationRepository.save(relation);
+    relation.setType(RelationType.AMIGO);
+    relation.setUpdatedAt(LocalDateTime.now());
+    userRelationRepository.save(relation);
 
-        User sender = userRepository.findById(senderId)
-                .orElseThrow(() -> new BusinessException("Utilizador remetente não encontrado."));
-        User receiver = userRepository.findById(receiverId)
-                .orElseThrow(() -> new BusinessException("Utilizador destinatário não encontrado."));
+    User sender =
+        userRepository
+            .findById(senderId)
+            .orElseThrow(() -> new BusinessException("Utilizador remetente não encontrado."));
+    User receiver =
+        userRepository
+            .findById(receiverId)
+            .orElseThrow(() -> new BusinessException("Utilizador destinatário não encontrado."));
 
-        UserRelation inverseRelation = userRelationRepository.findRelationship(receiverId, senderId)
-                .orElse(new UserRelation());
+    UserRelation inverseRelation =
+        userRelationRepository.findRelationship(receiverId, senderId).orElse(new UserRelation());
 
-        inverseRelation.setSender(receiver);
-        inverseRelation.setReceiver(sender);
-        inverseRelation.setType(RelationType.AMIGO);
-        inverseRelation.setUpdatedAt(LocalDateTime.now());
-        userRelationRepository.save(inverseRelation);
+    inverseRelation.setSender(receiver);
+    inverseRelation.setReceiver(sender);
+    inverseRelation.setType(RelationType.AMIGO);
+    inverseRelation.setUpdatedAt(LocalDateTime.now());
+    userRelationRepository.save(inverseRelation);
 
-        String notificationMessage = String.format("%s aceitou o seu pedido de amizade.", receiver.getUsername());
-        notificationService.sendNotification(senderId.toString(), notificationMessage);
+    String notificationMessage =
+        String.format("%s aceitou o seu pedido de amizade.", receiver.getUsername());
+    notificationService.sendNotification(senderId.toString(), notificationMessage);
+  }
+
+  @Override
+  @Transactional
+  public void rejectFriendRequest(Long senderId, Long receiverId) {
+    UserRelation relation =
+        userRelationRepository
+            .findRelationship(senderId, receiverId)
+            .filter(r -> r.getType() == RelationType.PEDIDO)
+            .orElseThrow(() -> new BusinessException("Este pedido já não está disponível."));
+
+    relation.setType(RelationType.PEDIDO_REJEITADO);
+    relation.setUpdatedAt(LocalDateTime.now());
+    userRelationRepository.save(relation);
+  }
+
+  @Override
+  @Transactional
+  public void blockUser(Long blockerId, Long blockedId) {
+    User blocker =
+        userRepository
+            .findById(blockerId)
+            .orElseThrow(() -> new BusinessException("Utilizador bloqueador não encontrado."));
+    User blocked =
+        userRepository
+            .findById(blockedId)
+            .orElseThrow(() -> new BusinessException("Utilizador a ser bloqueado não encontrado."));
+
+    UserRelation relation =
+        userRelationRepository.findRelationship(blockerId, blockedId).orElse(new UserRelation());
+
+    relation.setSender(blocker);
+    relation.setReceiver(blocked);
+    relation.setType(RelationType.BLOQUEADO);
+    userRelationRepository.save(relation);
+  }
+
+  @Override
+  @Transactional
+  public void cancelFriendRequest(Long senderId, Long receiverId) {
+    UserRelation relation =
+        userRelationRepository
+            .findRelationship(senderId, receiverId)
+            .filter(r -> r.getType() == RelationType.PEDIDO)
+            .orElseThrow(
+                () -> new BusinessException("Não existe um pedido de amizade para cancelar."));
+
+    relation.setType(RelationType.CANCELADO);
+    userRelationRepository.save(relation);
+  }
+
+  @Override
+  public RelationStatusDto getRelationStatus(Long userId, Long targetUserId) {
+    Optional<UserRelation> relationOpt = userRelationRepository.findRelationship(userId, targetUserId);
+
+    if (!relationOpt.isPresent()) {
+      return new RelationStatusDto("NONE", true);
     }
 
-    @Override
-    @Transactional
-    public void rejectFriendRequest(Long senderId, Long receiverId) {
-        UserRelation relation = userRelationRepository.findRelationship(senderId, receiverId)
-                .filter(r -> r.getType() == RelationType.PEDIDO)
-                .orElseThrow(() -> new BusinessException("Este pedido já não está disponível."));
+    UserRelation relation = relationOpt.get();
+    boolean isSender = relation.getSender().getId().equals(userId);
 
-        relation.setType(RelationType.PEDIDO_REJEITADO);
-        relation.setUpdatedAt(LocalDateTime.now());
-        userRelationRepository.save(relation);
-    }
-
-    @Override
-    @Transactional
-    public void blockUser(Long blockerId, Long blockedId) {
-        User blocker = userRepository.findById(blockerId).orElseThrow(() -> new BusinessException("Utilizador bloqueador não encontrado."));
-        User blocked = userRepository.findById(blockedId).orElseThrow(() -> new BusinessException("Utilizador a ser bloqueado não encontrado."));
-
-        UserRelation relation = userRelationRepository.findRelationship(blockerId, blockedId)
-                .orElse(new UserRelation());
-
-        relation.setSender(blocker);
-        relation.setReceiver(blocked);
-        relation.setType(RelationType.BLOQUEADO);
-        userRelationRepository.save(relation);
-    }
-
-    @Override
-    @Transactional
-    public void cancelFriendRequest(Long senderId, Long receiverId) {
-        UserRelation relation = userRelationRepository.findRelationship(senderId, receiverId)
-                .filter(r -> r.getType() == RelationType.PEDIDO)
-                .orElseThrow(() -> new BusinessException("Não existe um pedido de amizade para cancelar."));
-
-        relation.setType(RelationType.CANCELADO);
-        userRelationRepository.save(relation);
-    }
-
-    @Override
-    public RelationStatusDto getRelationStatus(Long userId, Long targetUserId) {
-        Optional<UserRelation> relationOpt = userRelationRepository.findRelationship(userId, targetUserId);
-
-        if (!relationOpt.isPresent()) {
-            return new RelationStatusDto("NONE", true);
+    switch (relation.getType()) {
+      case AMIGO:
+        return new RelationStatusDto("FRIENDS", false);
+      case BLOQUEADO:
+        return new RelationStatusDto(isSender ? "BLOCKED_BY_YOU" : "BLOCKED_BY_OTHER", false);
+      case PEDIDO:
+        return new RelationStatusDto(isSender ? "PENDING_SENT" : "PENDING_RECEIVED", false);
+      case PEDIDO_REJEITADO:
+        if (isSender) {
+          return new RelationStatusDto("NONE", true);
         }
+        boolean canRequest =
+            relation.getUpdatedAt().plusDays(COOLDOWN_DAYS).isBefore(LocalDateTime.now());
+        return new RelationStatusDto("REJECTED", canRequest);
+      case CANCELADO:
+        return new RelationStatusDto("CANCELLED", true);
+      default:
+        return new RelationStatusDto("NONE", true);
+    }
+  }
 
-        UserRelation relation = relationOpt.get();
-        boolean isSender = relation.getSender().getId().equals(userId);
+  @Override
+  public List<PendingRequestDto> getPendingFriendRequests(Long userId) {
+    List<UserRelation> relations =
+        userRelationRepository.findByFriendIdAndType(userId, RelationType.PEDIDO);
+    return relations.stream()
+        .map(
+            r ->
+                new PendingRequestDto(
+                    r.getId(),
+                    r.getSender().getId(),
+                    r.getSender().getUsername(),
+                    r.getSender().getProfilePicturePath()))
+        .collect(Collectors.toList());
+  }
 
-        switch (relation.getType()) {
-            case AMIGO:
-                return new RelationStatusDto("FRIENDS", false);
-            case BLOQUEADO:
-                return new RelationStatusDto(isSender ? "BLOCKED_BY_YOU" : "BLOCKED_BY_OTHER", false);
-            case PEDIDO:
-                return new RelationStatusDto(isSender ? "PENDING_SENT" : "PENDING_RECEIVED", false);
-            case PEDIDO_REJEITADO:
-                if (isSender) {
-                     return new RelationStatusDto("NONE", true);
-                }
-                boolean canRequest = relation.getUpdatedAt().plusDays(COOLDOWN_DAYS).isBefore(LocalDateTime.now());
-                return new RelationStatusDto("REJECTED", canRequest);
-            case CANCELADO:
-                return new RelationStatusDto("CANCELLED", true);
-            default:
-                return new RelationStatusDto("NONE", true);
-        }
+  @Override
+  @Transactional
+  public void removeFriendship(Long userId, Long friendId) {
+    if (userId.equals(friendId)) {
+      throw new IllegalArgumentException("Não se pode remover a si mesmo da lista de amigos.");
     }
 
-    @Override
-    public List<PendingRequestDto> getPendingFriendRequests(Long userId) {
-         List<UserRelation> relations = userRelationRepository.findByFriendIdAndType(userId, RelationType.PEDIDO);
-         return relations.stream()
-                 .map(r -> new PendingRequestDto(
-                         r.getId(),
-                         r.getSender().getId(),
-                         r.getSender().getUsername(),
-                         r.getSender().getProfilePicturePath()
-                 ))
-                 .collect(Collectors.toList());
-    }
+    UserRelation relation1 =
+        userRelationRepository
+            .findRelationship(userId, friendId)
+            .filter(r -> r.getType() == RelationType.AMIGO)
+            .orElseThrow(() -> new FriendshipNotFoundException("Amizade não encontrada."));
+
+    UserRelation relation2 =
+        userRelationRepository
+            .findRelationship(friendId, userId)
+            .filter(r -> r.getType() == RelationType.AMIGO)
+            .orElseThrow(() -> new FriendshipNotFoundException("Amizade não encontrada."));
+
+    userRelationRepository.delete(relation1);
+    userRelationRepository.delete(relation2);
+  }
+
+  @Override
+  public List<FriendDto> getFriends(Long userId) {
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new BusinessException("Utilizador não encontrado."));
+    List<UserRelation> relations = userRelationRepository.findByUserAndType(user, RelationType.AMIGO);
+    return relations.stream()
+        .map(r -> new FriendDto(
+            r.getReceiver().getId(),
+            r.getReceiver().getUsername(),
+            r.getReceiver().getProfilePicturePath()))
+        .collect(Collectors.toList());
+  }
 }

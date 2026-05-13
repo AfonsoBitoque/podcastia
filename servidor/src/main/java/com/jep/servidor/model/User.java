@@ -1,12 +1,16 @@
 package com.jep.servidor.model;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
@@ -14,6 +18,8 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.time.LocalDateTime;
 
 /**
@@ -95,6 +101,12 @@ public class User {
 
   private String profilePicturePath;
 
+  @ElementCollection(fetch = FetchType.EAGER)
+  @CollectionTable(name = "user_topics", joinColumns = @JoinColumn(name = "user_id"))
+  @Column(name = "topic")
+  @Enumerated(EnumType.STRING)
+  private List<PodcastTag> topics = new ArrayList<>();
+
   /**
    * Construtor padrão.
    */
@@ -172,6 +184,14 @@ public class User {
 
   public void setProfilePicturePath(String profilePicturePath) {
     this.profilePicturePath = profilePicturePath;
+  }
+
+  public List<PodcastTag> getTopics() {
+    return topics;
+  }
+
+  public void setTopics(List<PodcastTag> topics) {
+    this.topics = topics;
   }
 
   public LocalDateTime getCreatedAt() {
