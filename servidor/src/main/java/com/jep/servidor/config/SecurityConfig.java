@@ -52,15 +52,12 @@ public class SecurityConfig {
             .requestMatchers("/api/register/**").permitAll() // Gerar/Verificar Tag REST
             .requestMatchers("/api/search/**").permitAll() // Pesquisa publica
             .requestMatchers(HttpMethod.GET, "/api/podcasts", "/api/podcasts/**").permitAll() // Listar e aceder a podcasts publicos
-            .requestMatchers(HttpMethod.GET, "/**").permitAll() // TEMPORARIO: Permitir todos os GET
+            .requestMatchers(HttpMethod.GET, "/podcasts", "/podcasts/**").permitAll() // PodcastController endpoints publicos
             .requestMatchers("/images/**").permitAll() // Imagens estáticas
             .requestMatchers("/audio/**").permitAll() // Ficheiros de áudio
             .requestMatchers("/ws/**").permitAll() // Handshake WebSocket autenticado por token
             .requestMatchers("/h2-console/**").permitAll() // H2 Console
             .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll() // Swagger OpenAPI
-            
-            // TEMPORARIO: Permitir todos os POST para debug
-            .requestMatchers(HttpMethod.POST, "/**").permitAll()
             
             // Tudo o resto exige estar autenticado com um JWT válido
             .anyRequest().authenticated()

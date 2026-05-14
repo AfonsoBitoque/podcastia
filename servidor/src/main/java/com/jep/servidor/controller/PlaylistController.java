@@ -251,17 +251,13 @@ public class PlaylistController {
 
   @GetMapping("/{playlistId}/download")
   public ResponseEntity<?> downloadPlaylistZip(@PathVariable("playlistId") Long playlistId) {
-    System.out.println("=== Download ZIP === Playlist ID: " + playlistId);
     Optional<User> authUser = getAuthenticatedUser();
     if (authUser.isEmpty()) {
-      System.out.println("=== Download ZIP === User not authenticated");
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
           .body(Map.of("error", "Utilizador não autenticado"));
     }
-    System.out.println("=== Download ZIP === User: " + authUser.get().getEmail());
 
     Optional<Playlist> playlistOpt = playlistService.findVisibleById(authUser.get(), playlistId);
-    System.out.println("=== Download ZIP === Playlist found: " + playlistOpt.isPresent());
     if (playlistOpt.isEmpty()) {
       return ResponseEntity.status(HttpStatus.NOT_FOUND)
           .body(Map.of("error", "Playlist não encontrada"));
