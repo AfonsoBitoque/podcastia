@@ -1,9 +1,9 @@
 package com.jep.servidor.controller;
 
 import com.jep.servidor.dto.ChangePasswordRequest;
+import com.jep.servidor.dto.UserUpdateRequest;
 import com.jep.servidor.model.User;
 import com.jep.servidor.repository.UserRepository;
-import com.jep.servidor.dto.UserUpdateRequest;
 import jakarta.validation.Valid;
 
 import java.util.List;

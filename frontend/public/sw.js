@@ -13,16 +13,26 @@ const STATIC_CACHE = [
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
-  console.log('Service Worker: Installing...');
-  
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Service Worker: Caching static assets');
-        return cache.addAll(STATIC_CACHE);
+        // Cache assets individually to handle failures gracefully
+        return Promise.all(
+          STATIC_CACHE.map(url => {
+            return fetch(url)
+              .then(response => {
+                if (response.ok) {
+                  return cache.put(url, response);
+                }
+                console.warn('Service Worker: Failed to cache', url);
+              })
+              .catch(err => {
+                console.warn('Service Worker: Error caching', url, err.message);
+              });
+          })
+        );
       })
       .then(() => {
-        console.log('Service Worker: Installation complete');
         return self.skipWaiting();
       })
   );
@@ -30,22 +40,18 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker: Activating...');
-  
   event.waitUntil(
     caches.keys()
       .then((cacheNames) => {
         return Promise.all(
           cacheNames.map((cacheName) => {
             if (cacheName !== CACHE_NAME) {
-              console.log('Service Worker: Deleting old cache:', cacheName);
               return caches.delete(cacheName);
             }
           })
         );
       })
       .then(() => {
-        console.log('Service Worker: Activation complete');
         return self.clients.claim();
       })
   );
@@ -137,7 +143,6 @@ self.addEventListener('message', (event) => {
       
     case 'AUDIO_STATE':
       // Handle audio state updates
-      console.log('Service Worker: Audio state updated', data.state);
       break;
       
     case 'SKIP_WAITING':
@@ -146,7 +151,7 @@ self.addEventListener('message', (event) => {
       break;
       
     default:
-      console.log('Service Worker: Unknown message type', data.type);
+      // Unknown message type - ignore
   }
 });
 
@@ -154,7 +159,6 @@ self.addEventListener('message', (event) => {
 self.addEventListener('push', (event) => {
   if (event.data) {
     const data = event.data.json();
-    console.log('Service Worker: Push received', data);
     
     // Show notification for new podcast updates (future feature)
     if (data.type === 'NEW_PODCAST') {
@@ -216,12 +220,10 @@ self.addEventListener('periodicsync', (event) => {
 
 // Helper functions
 async function doBackgroundSync() {
-  console.log('Service Worker: Performing background sync');
   // Sync playback progress, download queue, etc.
 }
 
 async function doPeriodicSync() {
-  console.log('Service Worker: Performing periodic sync');
   // Download new podcasts, update recommendations, etc.
 }
 
@@ -243,7 +245,6 @@ self.addEventListener('message', (event) => {
       });
     }, 20000); // Every 20 seconds
     
-    console.log('Service Worker: Heartbeat started');
   } else if (event.data && event.data.type === 'STOP_HEARTBEAT') {
     // Stop heartbeat
     if (heartbeatInterval) {
@@ -251,7 +252,6 @@ self.addEventListener('message', (event) => {
       heartbeatInterval = null;
     }
     
-    console.log('Service Worker: Heartbeat stopped');
   }
 });
 
@@ -273,8 +273,6 @@ self.addEventListener('message', (event) => {
 });
 
 function startKeepAlive() {
-  console.log('Service Worker: Starting keep-alive for audio playback');
-  
   // Use various techniques to keep the service worker alive
   if (heartbeatInterval) {
     clearInterval(heartbeatInterval);
@@ -282,13 +280,10 @@ function startKeepAlive() {
   
   heartbeatInterval = setInterval(() => {
     // Perform a minimal operation to keep the worker alive
-    console.log('Service Worker: Keep-alive ping');
   }, 30000); // Every 30 seconds
 }
 
 function stopKeepAlive() {
-  console.log('Service Worker: Stopping keep-alive');
-  
   if (heartbeatInterval) {
     clearInterval(heartbeatInterval);
     heartbeatInterval = null;
@@ -297,6 +292,5 @@ function stopKeepAlive() {
 
 // Handle service worker termination
 self.addEventListener('beforeunload', () => {
-  console.log('Service Worker: Terminating...');
   stopKeepAlive();
 });

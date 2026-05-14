@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <rect width="200" height="200" fill="#6366f1"/>
+  <circle cx="100" cy="80" r="40" fill="#818cf8"/>
+  <rect x="60" y="130" width="80" height="10" rx="5" fill="#c7d2fe"/>
+  <rect x="70" y="150" width="60" height="10" rx="5" fill="#c7d2fe"/>
+  <text x="100" y="85" text-anchor="middle" fill="#fff" font-size="14" font-family="Arial">PODCAST</text>
+</svg>

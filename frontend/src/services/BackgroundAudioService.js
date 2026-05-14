@@ -107,30 +107,43 @@ class BackgroundAudioService {
   }
 
   async loadPodcast(podcast, startTime = 0) {
+    console.log('[AudioService] loadPodcast called:', podcast?.titulo, 'URL:', podcast?.audioUrl);
+    
     this.currentPodcast = podcast;
     this.currentTime = startTime;
 
     if (!this.audioElement) {
+      console.log('[AudioService] Creating audio element...');
       this.createAudioElement();
     }
 
     try {
+      console.log('[AudioService] Setting src to:', podcast.audioUrl);
       this.audioElement.src = podcast.audioUrl;
+      
+      console.log('[AudioService] Calling load()...');
       await this.audioElement.load();
+      
+      console.log('[AudioService] Audio loaded successfully');
       
       // Update media session metadata
       this.updateMediaSessionMetadata(podcast);
       
-      this.emit('loaded', { podcast, duration: this.audioElement.duration });
+      const duration = this.audioElement ? this.audioElement.duration : 0;
+      console.log('[AudioService] Duration:', duration);
+      
+      this.emit('loaded', { podcast, duration });
       return true;
     } catch (error) {
-      console.error('Error loading podcast:', error);
+      console.error('[AudioService] Error loading podcast:', error);
       this.emit('error', error);
       return false;
     }
   }
 
   async play() {
+    console.log('[AudioService] play() called, audioElement:', !!this.audioElement, 'currentPodcast:', !!this.currentPodcast);
+    
     if (!this.audioElement || !this.currentPodcast) {
       throw new Error('No podcast loaded');
     }
@@ -143,7 +156,9 @@ class BackgroundAudioService {
       }
 
       // Play the audio
+      console.log('[AudioService] Calling audioElement.play()...');
       await this.audioElement.play();
+      console.log('[AudioService] Audio playing successfully');
       this.isPlaying = true;
       
       // Update notification
@@ -220,15 +235,7 @@ class BackgroundAudioService {
     const metadata = {
       title: podcast.titulo,
       artist: podcast.user?.username || 'Podcastia',
-      album: podcast.tags?.join(', ') || 'Podcast',
-      artwork: podcast.coverImagePath ? [
-        { src: podcast.coverImagePath, sizes: '96x96', type: 'image/png' },
-        { src: podcast.coverImagePath, sizes: '128x128', type: 'image/png' },
-        { src: podcast.coverImagePath, sizes: '192x192', type: 'image/png' },
-        { src: podcast.coverImagePath, sizes: '256x256', type: 'image/png' },
-        { src: podcast.coverImagePath, sizes: '384x384', type: 'image/png' },
-        { src: podcast.coverImagePath, sizes: '512x512', type: 'image/png' }
-      ] : []
+      album: podcast.tags?.join(', ') || 'Podcast'
     };
 
     this.mediaSession.metadata = new MediaMetadata(metadata);
@@ -257,12 +264,14 @@ class BackgroundAudioService {
   }
 
   onLoadedMetadata() {
-    this.duration = this.audioElement.duration;
+    if (!this.audioElement) return;
+    this.duration = this.audioElement.duration || 0;
     this.emit('loadedmetadata', { duration: this.duration });
   }
 
   onTimeUpdate() {
-    this.currentTime = this.audioElement.currentTime;
+    if (!this.audioElement) return;
+    this.currentTime = this.audioElement.currentTime || 0;
     this.emit('timeupdate', { currentTime: this.currentTime, duration: this.duration });
     
     // Save state periodically
@@ -296,8 +305,12 @@ class BackgroundAudioService {
   }
 
   onError(error) {
-    console.error('Audio error:', error);
-    this.emit('error', error);
+    const errorCode = this.audioElement?.error?.code || 'unknown';
+    const errorMessage = this.audioElement?.error?.message || 'Unknown error';
+    console.error(`[AudioService] Audio error (code ${errorCode}):`, errorMessage, error);
+    
+    // Error codes: 1=MEDIA_ERR_ABORTED, 2=MEDIA_ERR_NETWORK, 3=MEDIA_ERR_DECODE, 4=MEDIA_ERR_SRC_NOT_SUPPORTED
+    this.emit('error', { code: errorCode, message: errorMessage, originalError: error });
   }
 
   saveState() {
@@ -497,10 +510,8 @@ class NotificationManager {
       return;
     }
 
-    // Request permission
-    if (Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
+    // Don't request permission automatically - only when user interacts
+    // Permission will be requested when user plays audio for the first time
   }
 
   updatePlaybackState(state, podcast) {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import '../admin-page.css'
+import '../../styles/admin-page.css'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
 
@@ -411,17 +411,6 @@ function EditPodcastModal({ podcast, onSave, onClose }) {
                 tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag)
               }))}
               placeholder="e.g., politics, technology, entertainment"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="coverImagePath">Cover Image Path</label>
-            <input
-              type="text"
-              id="coverImagePath"
-              name="coverImagePath"
-              value={formData.coverImagePath || ''}
-              onChange={handleChange}
             />
           </div>
 

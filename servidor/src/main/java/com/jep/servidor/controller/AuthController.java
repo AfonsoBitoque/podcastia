@@ -81,7 +81,9 @@ public class AuthController {
                         "userId", user.getId(),
                         "username", user.getUsername(),
                         "userType", user.getUserType().name(),
-                        "playbackSpeed", user.getPlaybackSpeed()
+                        "playbackSpeed", user.getPlaybackSpeed(),
+                        "hasCompletedOnboarding", user.isHasCompletedOnboarding(),
+                        "topics", user.getTopics() != null ? user.getTopics().stream().map(Enum::name).toList() : java.util.Collections.emptyList()
                 ));
             }
         }

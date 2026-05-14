@@ -63,7 +63,7 @@ public class PodcastGenerationService {
         podcast.setTitulo(tema);
         podcast.setDuracao(estimatedDurationMinutes);
         podcast.setConteudoPath(outputPath);
-        podcast.setCoverImagePath("/images/default-podcast-cover.png");
+        podcast.setCoverImagePath("/images/default-podcast-cover.svg");
         podcast.setTags(tags != null && !tags.isEmpty() ? tags : List.of(PodcastTag.GERAL));
         podcast.setPublico(false);
 

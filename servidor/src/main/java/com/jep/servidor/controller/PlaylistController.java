@@ -32,7 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
  * Controlador REST para gestão de playlists de utilizadores.
  */
 @RestController
-@RequestMapping("/playlists")
+@RequestMapping("/api/playlists")
 public class PlaylistController {
 
   private final PlaylistService playlistService;
@@ -249,12 +249,103 @@ public class PlaylistController {
     return ResponseEntity.ok(playlists);
   }
 
+  @GetMapping("/{playlistId}/download")
+  public ResponseEntity<?> downloadPlaylistZip(@PathVariable("playlistId") Long playlistId) {
+    System.out.println("=== Download ZIP === Playlist ID: " + playlistId);
+    Optional<User> authUser = getAuthenticatedUser();
+    if (authUser.isEmpty()) {
+      System.out.println("=== Download ZIP === User not authenticated");
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+          .body(Map.of("error", "Utilizador não autenticado"));
+    }
+    System.out.println("=== Download ZIP === User: " + authUser.get().getEmail());
+
+    Optional<Playlist> playlistOpt = playlistService.findVisibleById(authUser.get(), playlistId);
+    System.out.println("=== Download ZIP === Playlist found: " + playlistOpt.isPresent());
+    if (playlistOpt.isEmpty()) {
+      return ResponseEntity.status(HttpStatus.NOT_FOUND)
+          .body(Map.of("error", "Playlist não encontrada"));
+    }
+
+    Playlist playlist = playlistOpt.get();
+    if (playlist.getItems().isEmpty()) {
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+          .body(Map.of("error", "Playlist vazia"));
+    }
+
+    try {
+      java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+      java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(baos);
+
+      int index = 1;
+      for (PlaylistItem item : playlist.getItems()) {
+        Podcast podcast = item.getPodcast();
+        java.io.File audioFile = findAudioFile(podcast);
+        if (audioFile == null || !audioFile.exists()) continue;
+
+        String fileName = String.format("%02d_", index)
+            + podcast.getTitulo().replaceAll("[^a-zA-Z0-9\\s\\-_]", "")
+                .trim().replaceAll("\\s+", "_") + ".mp3";
+
+        zos.putNextEntry(new java.util.zip.ZipEntry(fileName));
+        java.nio.file.Files.copy(audioFile.toPath(), zos);
+        zos.closeEntry();
+        index++;
+      }
+
+      zos.close();
+
+      String zipName = playlist.getTitle().replaceAll("[^a-zA-Z0-9\\s\\-_]", "")
+          .trim().replaceAll("\\s+", "_") + ".zip";
+
+      return ResponseEntity.ok()
+          .header("Content-Disposition", "attachment; filename=\"" + zipName + "\"")
+          .header("Content-Type", "application/zip")
+          .body(baos.toByteArray());
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body(Map.of("error", "Erro ao criar ZIP: " + e.getMessage()));
+    }
+  }
+
   private Optional<User> getAuthenticatedUser() {
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     if (authentication == null || authentication.getName() == null) {
       return Optional.empty();
     }
     return userRepository.findByEmail(authentication.getName());
+  }
+
+  private java.io.File findAudioFile(Podcast podcast) {
+    String conteudoPath = podcast.getConteudoPath();
+    if (conteudoPath == null || conteudoPath.isEmpty()) return null;
+
+    java.io.File audioFile = new java.io.File(conteudoPath);
+    if (audioFile.exists()) return audioFile;
+
+    try {
+      java.nio.file.Path path = java.nio.file.Paths.get(conteudoPath);
+      if (java.nio.file.Files.exists(path)) return path.toFile();
+
+      java.io.File podcastsDir = new java.io.File("generated-podcasts");
+      if (podcastsDir.exists() && podcastsDir.isDirectory()) {
+        java.io.File[] files = podcastsDir.listFiles((dir, name) ->
+            name.endsWith(".mp3") && name.contains("user" + podcast.getUser().getId() + "_"));
+        if (files != null && files.length > 0) {
+          String podcastTitle = podcast.getTitulo().toLowerCase().replace(" ", "_");
+          for (java.io.File f : files) {
+            if (f.getName().toLowerCase().contains(
+                podcastTitle.substring(0, Math.min(10, podcastTitle.length())))) {
+              return f;
+            }
+          }
+          return files[0];
+        }
+      }
+    } catch (Exception e) {
+      System.err.println("Error finding audio file for ZIP: " + e.getMessage());
+    }
+    return null;
   }
 
   private Map<String, Object> toPlaylistResponse(Playlist playlist) {
