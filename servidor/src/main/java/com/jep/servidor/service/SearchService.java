@@ -65,7 +65,9 @@ public class SearchService {
                 p.getTitulo(),
                 "Criador: @" + p.getUser().getUsername() + "#" + p.getUser().getTag(),
                 p.getCoverImagePath(),
-                null
+                null,
+                p.getDuracao(),
+                p.getTags()
         )).collect(Collectors.toList()));
 
         // Total de resultados antes de paginar
