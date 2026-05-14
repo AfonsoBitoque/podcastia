@@ -85,7 +85,7 @@ class PlaylistIntegrationTest {
 
   @Test
   void shouldCreateAndUpdatePlaylistMetadata() throws Exception {
-    MvcResult createResult = mockMvc.perform(post("/playlists")
+    MvcResult createResult = mockMvc.perform(post("/api/playlists")
             .header("Authorization", "Bearer " + tokenBob)
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(Map.of(
@@ -101,7 +101,7 @@ class PlaylistIntegrationTest {
 
     Long playlistId = JsonPath.parse(createResult.getResponse().getContentAsString()).read("$.id", Long.class);
 
-    mockMvc.perform(put("/playlists/" + playlistId)
+    mockMvc.perform(put("/api/playlists/" + playlistId)
             .header("Authorization", "Bearer " + tokenBob)
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(Map.of(
@@ -118,7 +118,7 @@ class PlaylistIntegrationTest {
     Podcast first = createPodcast(bob, "Episódio A");
     Podcast second = createPodcast(bob, "Episódio B");
 
-    MvcResult createResult = mockMvc.perform(post("/playlists")
+    MvcResult createResult = mockMvc.perform(post("/api/playlists")
             .header("Authorization", "Bearer " + tokenBob)
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(Map.of("title", "Ordem Teste"))))
@@ -127,19 +127,19 @@ class PlaylistIntegrationTest {
 
     Long playlistId = JsonPath.parse(createResult.getResponse().getContentAsString()).read("$.id", Long.class);
 
-    mockMvc.perform(post("/playlists/" + playlistId + "/episodes")
+    mockMvc.perform(post("/api/playlists/" + playlistId + "/episodes")
             .header("Authorization", "Bearer " + tokenBob)
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(Map.of("podcastId", first.getId()))))
         .andExpect(status().isOk());
 
-    mockMvc.perform(post("/playlists/" + playlistId + "/episodes")
+    mockMvc.perform(post("/api/playlists/" + playlistId + "/episodes")
             .header("Authorization", "Bearer " + tokenBob)
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(Map.of("podcastId", second.getId()))))
         .andExpect(status().isOk());
 
-    mockMvc.perform(put("/playlists/" + playlistId + "/episodes/order")
+    mockMvc.perform(put("/api/playlists/" + playlistId + "/episodes/order")
             .header("Authorization", "Bearer " + tokenBob)
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(Map.of(
@@ -154,7 +154,7 @@ class PlaylistIntegrationTest {
 
   @Test
   void shouldRemovePlaylistFromFeedWhenChangedToPrivate() throws Exception {
-    MvcResult createResult = mockMvc.perform(post("/playlists")
+    MvcResult createResult = mockMvc.perform(post("/api/playlists")
             .header("Authorization", "Bearer " + tokenBob)
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(Map.of(
@@ -166,19 +166,19 @@ class PlaylistIntegrationTest {
 
     Long playlistId = JsonPath.parse(createResult.getResponse().getContentAsString()).read("$.id", Long.class);
 
-    mockMvc.perform(get("/playlists/feed")
+    mockMvc.perform(get("/api/playlists/feed")
             .header("Authorization", "Bearer " + tokenAlice))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].id").value(playlistId));
 
-    mockMvc.perform(put("/playlists/" + playlistId)
+    mockMvc.perform(put("/api/playlists/" + playlistId)
             .header("Authorization", "Bearer " + tokenBob)
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(Map.of("isPublic", false))))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.isPublic").value(false));
 
-    mockMvc.perform(get("/playlists/feed")
+    mockMvc.perform(get("/api/playlists/feed")
             .header("Authorization", "Bearer " + tokenAlice))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.length()").value(0));
@@ -186,7 +186,7 @@ class PlaylistIntegrationTest {
 
   @Test
   void shouldDeletePlaylist() throws Exception {
-    MvcResult createResult = mockMvc.perform(post("/playlists")
+    MvcResult createResult = mockMvc.perform(post("/api/playlists")
             .header("Authorization", "Bearer " + tokenBob)
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(Map.of("title", "Apagar Playlist"))))
@@ -195,11 +195,11 @@ class PlaylistIntegrationTest {
 
     Long playlistId = JsonPath.parse(createResult.getResponse().getContentAsString()).read("$.id", Long.class);
 
-    mockMvc.perform(delete("/playlists/" + playlistId)
+    mockMvc.perform(delete("/api/playlists/" + playlistId)
             .header("Authorization", "Bearer " + tokenBob))
         .andExpect(status().isNoContent());
 
-    mockMvc.perform(get("/playlists/" + playlistId)
+    mockMvc.perform(get("/api/playlists/" + playlistId)
             .header("Authorization", "Bearer " + tokenBob))
         .andExpect(status().isNotFound());
   }

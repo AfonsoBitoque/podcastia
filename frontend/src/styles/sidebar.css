@@ -229,6 +229,58 @@
   transform: scale(0.98);
 }
 
+.btn-save.saved {
+  background: #e05a2a;
+  color: white;
+  border-color: #e05a2a;
+}
+
+.btn-save.saved:hover {
+  background: #d04a1a;
+  box-shadow: 0 6px 16px rgba(224, 90, 42, 0.25);
+}
+
+.btn-download {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.5rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  background: rgba(33, 150, 243, 0.1);
+  color: #2196f3;
+  border: 2px solid rgba(33, 150, 243, 0.3);
+}
+
+.btn-download:hover {
+  background: rgba(33, 150, 243, 0.15);
+  border-color: #2196f3;
+  box-shadow: 0 6px 16px rgba(33, 150, 243, 0.15);
+}
+
+.btn-download:active {
+  transform: scale(0.98);
+}
+
+.download-icon {
+  font-size: 1.1rem;
+}
+
+.download-text {
+  display: none;
+}
+
+@media (min-width: 500px) {
+  .download-text {
+    display: inline;
+  }
+}
+
 .save-icon {
   font-size: 1.1rem;
 }
@@ -387,14 +439,16 @@
   }
 
   .btn-play-now,
-  .btn-save {
+  .btn-save,
+  .btn-download {
     flex: 1;
     padding: 0.65rem 1rem;
     font-size: 0.85rem;
   }
 
   .play-text,
-  .save-text {
+  .save-text,
+  .download-text {
     display: none;
   }
 

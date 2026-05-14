@@ -28,9 +28,13 @@ function LoginPage() {
       return
     }
 
-    try {
-      setStatus('submitting')
+    setStatus('submitting')
 
+    const timeoutMs = 10000
+    const controller = new AbortController()
+    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs)
+
+    try {
       const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
@@ -40,31 +44,51 @@ function LoginPage() {
           identifier: formData.email.trim(),
           password: formData.password,
         }),
+        signal: controller.signal,
       })
 
-      const data = await response.json()
+      let data
+      const contentType = response.headers.get('Content-Type') || ''
+      if (contentType.includes('application/json')) {
+        data = await response.json()
+      } else {
+        const text = await response.text()
+        data = { error: text || 'Resposta inesperada do servidor' }
+      }
 
-      if (response.ok && data.token) {
-        // Guarda o token e os dados do user no localStorage
+      if (response.ok && data?.token) {
         localStorage.setItem('token', data.token)
         localStorage.setItem('user', JSON.stringify({
           id: data.userId,
           username: data.username,
-          type: data.userType
+          type: data.userType,
+          hasCompletedOnboarding: data.hasCompletedOnboarding,
+          topics: data.topics || []
         }))
-        
-        // Dispara um evento para o Header saber que o utilizador fez login
+
         window.dispatchEvent(new Event('auth-change'))
         
-        navigate('/home')
+        // Redirecionar baseado no estado do onboarding
+        if (data.hasCompletedOnboarding !== true) {
+          navigate('/onboarding', { replace: true })
+        } else {
+          navigate('/home', { replace: true })
+        }
         return
       }
 
       setStatus('error')
-      setMessage(data.error || 'Credenciais invalidas ou sessao nao iniciada. Tenta novamente.')
-    } catch {
+      setMessage(data?.error || 'Credenciais invalidas ou sessao nao iniciada. Tenta novamente.')
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        setMessage('A ligação demorou demasiado. Tenta novamente em alguns segundos.')
+      } else {
+        console.error('Login request failed:', err)
+        setMessage('Nao foi possivel ligar ao servidor. Confirma se o backend esta a correr.')
+      }
       setStatus('error')
-      setMessage('Nao foi possivel ligar ao servidor. Confirma se o backend esta a correr.')
+    } finally {
+      window.clearTimeout(timeoutId)
     }
   }
 

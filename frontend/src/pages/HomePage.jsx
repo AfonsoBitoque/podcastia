@@ -1,7 +1,9 @@
-﻿import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import '../styles/home-page.css'
 import PodcastSidebar from '../components/PodcastSidebar'
-import { usePlayer } from '../context/PlayerContext'
+import PlaybackSpeedControl from '../components/PlaybackSpeedControl'
+import { useBackgroundAudio } from '../hooks/useBackgroundAudio'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
 
@@ -14,497 +16,347 @@ const TAG_UI = {
 }
 
 const DEFAULT_FEED_FILTERS = {
-  type: 'all',
-  category: '',
-  isFavorite: false,
-  hidePlayed: false,
-  shorts: false,
+  topic: 'all',
 }
-
-const TYPE_FILTERS = [
-  { value: 'all', label: 'Tudo' },
-  { value: 'podcast', label: 'Podcasts' },
-  { value: 'news', label: 'Noticias' },
-]
-
-const CATEGORY_FILTERS = [
-  { value: 'desporto', label: 'Desporto', tone: 'desporto' },
-  { value: 'politica', label: 'Politica', tone: 'politica' },
-  { value: 'financas', label: 'Financas', tone: 'financas' },
-  { value: 'geral', label: 'Geral', tone: 'geral' },
-]
 
 function HomePage() {
   const navigate = useNavigate()
-  const [data, setData] = useState({ continueListening: [], recommended: [], newReleases: [] })
+  const [podcasts, setPodcasts] = useState([])
+  const [myPodcasts, setMyPodcasts] = useState([])
+  const [communityPodcasts, setCommunityPodcasts] = useState([])
+  const [currentUser, setCurrentUser] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [message, setMessage] = useState('')
-  const [viewerName, setViewerName] = useState('')
-
-  const [feedFilters, setFeedFilters] = useState(DEFAULT_FEED_FILTERS)
-  const [filteredFeed, setFilteredFeed] = useState([])
-  const [filteredMeta, setFilteredMeta] = useState(null)
-  const [feedLoading, setFeedLoading] = useState(false)
-  const [feedError, setFeedError] = useState('')
-  const [isFilterOpen, setIsFilterOpen] = useState(false)
-  const [filterScrollState, setFilterScrollState] = useState({ canScroll: false, thumbWidth: 100, thumbLeft: 0 })
-  const filterContainerRef = useRef(null)
-  const filterScrollRef = useRef(null)
-  
-  // Sidebar State
+  const [error, setError] = useState('')
   const [selectedPodcast, setSelectedPodcast] = useState(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [message, setMessage] = useState('')
+  const [savedPodcasts, setSavedPodcasts] = useState([])
+  const [filterOpen, setFilterOpen] = useState(false)
+  const [filters, setFilters] = useState(DEFAULT_FEED_FILTERS)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [filterContainerRef, setFilterContainerRef] = useState(null)
+  const [filterScrollRef, setFilterScrollRef] = useState(null)
+  const [podcastData, setPodcastData] = useState(null)
+  const [selectedTag, setSelectedTag] = useState('all')
+  const [isDragging, setIsDragging] = useState(false)
+  const timelineRef = useRef(null)
+  const [audioRef, setAudioRef] = useState(null)
+  const [volume, setVolume] = useState(1)
+  const [isMuted, setIsMuted] = useState(false)
+  const [playbackSpeed, setPlaybackSpeed] = useState(1.0)
+  const [showVolumeSlider, setShowVolumeSlider] = useState(false)
+  const [volumeSliderRef, setVolumeSliderRef] = useState(null)
+  
+  // Background audio hook
   const {
-    activePodcastId,
-    handleListen: playPodcast,
     isPlaying,
-    playingPodcast,
+    currentTime,
+    duration,
+    currentPodcast: playingPodcast,
+    loadPodcast,
+    play,
+    pause,
     togglePlayPause,
-  } = usePlayer()
+    seek,
+    setSpeed,
+    skipForward,
+    skipBackward,
+  } = useBackgroundAudio()
 
-  const getSafeTags = (pod) => (Array.isArray(pod?.tags) ? pod.tags : [])
-
-  const getTagUi = (tag) => TAG_UI[String(tag || '').toUpperCase()] || TAG_UI.DEFAULT
-
-  const getPrimaryTagUi = (pod) => getTagUi(getSafeTags(pod)[0])
+  const TOPIC_FILTERS = [
+    { value: 'all', label: 'Todos', icon: '🎵' },
+    { value: 'sports', label: 'Desporto', icon: '⚽' },
+    { value: 'finance', label: 'Finanças', icon: '�' },
+    { value: 'politics', label: 'Política', icon: '🗳️' },
+    { value: 'general', label: 'Geral', icon: '📢' },
+  ]
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user')
-    const hasCompleted = localStorage.getItem('topicsOnboardingComplete')
-    if (!storedUser || hasCompleted) return
-
-    let parsedUser
-    try {
-      parsedUser = JSON.parse(storedUser)
-    } catch {
-      return
+    // Get current user from localStorage
+    const userStr = localStorage.getItem('user')
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr)
+        setCurrentUser(user)
+      } catch (e) {
+        console.error('Error parsing user:', e)
+      }
     }
+    fetchPodcasts()
+    fetchSavedPodcasts()
+  }, [])
 
-    if (!parsedUser?.id) return
-
-    let isActive = true
-    const token = localStorage.getItem('token')
-    const headers = token ? { Authorization: `Bearer ${token}` } : {}
-
-    fetch(`${API_BASE_URL}/users`, { headers })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((users) => {
-        if (!isActive || !Array.isArray(users)) return
-        const fullUser = users.find((candidate) => String(candidate.id) === String(parsedUser.id))
-        const topics = Array.isArray(fullUser?.topics) ? fullUser.topics : []
-        if (topics.length >= 3) {
-          localStorage.setItem('topicsOnboardingComplete', 'true')
-          return
-        }
-        navigate('/topics', { state: { from: '/home' }, replace: true })
+  useEffect(() => {
+    if (podcastData && currentUser) {
+      setPodcasts(podcastData)
+      // Filter podcasts by current user
+      const userId = currentUser.id || currentUser.userId
+      const myPods = podcastData.filter(p => {
+        const podcastUserId = p.user?.id || p.userId || p.user_id
+        return podcastUserId && String(podcastUserId) === String(userId)
       })
-      .catch(() => {})
-
-    return () => {
-      isActive = false
+      const communityPods = podcastData.filter(p => {
+        const podcastUserId = p.user?.id || p.userId || p.user_id
+        return !podcastUserId || String(podcastUserId) !== String(userId)
+      })
+      setMyPodcasts(myPods)
+      setCommunityPodcasts(communityPods)
+      setLoading(false)
+    } else if (podcastData) {
+      setPodcasts(podcastData)
+      setCommunityPodcasts(podcastData)
+      setMyPodcasts([])
+      setLoading(false)
     }
-  }, [navigate])
+  }, [podcastData, currentUser])
 
-  // Sidebar Functions
+  const fetchPodcasts = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/podcasts`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch podcasts')
+      }
+      const data = await response.json()
+      setPodcastData(data)
+    } catch (err) {
+      console.error('Error fetching podcasts:', err)
+      setError('Failed to load podcasts')
+      setLoading(false)
+    }
+  }
+
+  const handlePlayNow = async (podcast) => {
+    try {
+      console.log('[HomePage] Playing podcast:', podcast.titulo)
+      const loaded = await loadPodcast(podcast, 0)
+      if (loaded) {
+        console.log('[HomePage] Podcast loaded, starting playback...')
+        await play()
+        console.log('[HomePage] Playback started')
+      }
+      setSelectedPodcast(podcast)
+      setIsSidebarOpen(false)
+    } catch (err) {
+      console.error('[HomePage] Error playing podcast:', err)
+      setError('Failed to play podcast: ' + err.message)
+    }
+  }
+
+  const fetchSavedPodcasts = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      console.log('[fetchSavedPodcasts] Token:', token ? 'present' : 'missing')
+      
+      const response = await fetch(`${API_BASE_URL}/api/favorites`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      console.log('[fetchSavedPodcasts] Response status:', response.status)
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('[fetchSavedPodcasts] Error response:', errorText)
+        throw new Error(`Failed to fetch saved podcasts: ${response.status} ${errorText}`)
+      }
+
+      const data = await response.json()
+      console.log('[fetchSavedPodcasts] Data:', data)
+      setSavedPodcasts(data)
+    } catch (err) {
+      console.error('[fetchSavedPodcasts] Error:', err)
+    }
+  }
+
+  const handleSaveToPodcasts = async (podcast) => {
+    try {
+      const token = localStorage.getItem('token')
+      const podcastId = podcast.id || podcast.podcastId
+      console.log('[handleSaveToPodcasts] Podcast:', podcast)
+      console.log('[handleSaveToPodcasts] Podcast ID:', podcastId)
+      console.log('[handleSaveToPodcasts] Token:', token ? 'present' : 'missing')
+      
+      if (!podcastId) {
+        throw new Error('Podcast ID is undefined')
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/api/favorites/${podcastId}/toggle`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      console.log('[handleSaveToPodcasts] Response status:', response.status)
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('[handleSaveToPodcasts] Error response:', errorText)
+        throw new Error(`Failed to save podcast: ${response.status} ${errorText}`)
+      }
+
+      const data = await response.json()
+      console.log('[handleSaveToPodcasts] Data:', data)
+      
+      if (data.isFavorite) {
+        setSavedPodcasts(prev => [...prev, podcast])
+        setMessage('Podcast guardado com sucesso!')
+      } else {
+        setSavedPodcasts(prev => prev.filter(p => p.id !== podcast.id))
+        setMessage('Podcast removido dos guardados!')
+      }
+      
+      // Refresh saved podcasts section
+      fetchSavedPodcasts()
+      
+      setTimeout(() => setMessage(''), 3000)
+    } catch (err) {
+      console.error('[handleSaveToPodcasts] Error:', err)
+      setError('Erro ao guardar podcast: ' + err.message)
+      setTimeout(() => setError(''), 3000)
+    }
+  }
+
+  const isPodcastSaved = (podcastId) => {
+    return savedPodcasts.some(p => (p.id || p.podcastId) === podcastId)
+  }
+
+  const closeSidebar = () => {
+    setIsSidebarOpen(false)
+  }
+
   const openSidebar = (podcast) => {
     setSelectedPodcast(podcast)
     setIsSidebarOpen(true)
   }
 
-  const closeSidebar = () => {
-    setIsSidebarOpen(false)
-    setTimeout(() => setSelectedPodcast(null), 300) // Wait for animation
+  const formatTime = (seconds) => {
+    if (!seconds || seconds < 0) return '0:00'
+    const mins = Math.floor(seconds / 60)
+    const secs = Math.floor(seconds % 60)
+    return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  const handlePlayFromSidebar = () => {
-    if (!selectedPodcast) return
+  const formattedDuration = duration ? formatTime(duration) : '0:00'
 
-    const selectedId = selectedPodcast.id || selectedPodcast.podcastId
-    const playingId = playingPodcast?.id || playingPodcast?.podcastId
+  const handlePlayFromSidebar = async (podcast) => {
+    await handlePlayNow(podcast)
+    closeSidebar()
+  }
 
-    // Se Ã© o mesmo podcast que estÃ¡ a tocar
-    if (selectedId === playingId) {
-      // Toggle play/pause
-      togglePlayPause()
-    } else {
-      // Diferente podcast - continuar de onde estava parado
-      handleListen(selectedPodcast, true)
+  
+  const nextPodcast = () => {
+    if (!podcasts || podcasts.length === 0) return
+    
+    const currentIndex = podcasts.findIndex(p => p.id === playingPodcast?.id)
+    const nextIndex = (currentIndex + 1) % podcasts.length
+    handlePlayNow(podcasts[nextIndex])
+  }
+
+  const previousPodcast = () => {
+    if (!podcasts || podcasts.length === 0) return
+    
+    const currentIndex = podcasts.findIndex(p => p.id === playingPodcast?.id)
+    const prevIndex = currentIndex === 0 ? podcasts.length - 1 : currentIndex - 1
+    handlePlayNow(podcasts[prevIndex])
+  }
+
+  const handleSpeedChange = (speed) => {
+    setPlaybackSpeed(speed)
+    setSpeed(speed)
+  }
+
+  const rewindSeconds = () => {
+    skipBackward()
+  }
+
+  const forwardSeconds = () => {
+    skipForward()
+  }
+
+  const handleTimelinePointerDown = (e) => {
+    setIsDragging(true)
+    updateTimelineProgress(e)
+  }
+
+  const handleTimelinePointerMove = (e) => {
+    if (isDragging) {
+      updateTimelineProgress(e)
     }
   }
 
-  const handleSaveToPodcasts = () => {
-    if (selectedPodcast) {
-      try {
-        const token = localStorage.getItem('token')
-        const headers = token ? { Authorization: `Bearer ${token}` } : {}
-        const actualId = selectedPodcast.id || selectedPodcast.podcastId
-
-        // API call to save to library
-        fetch(`${API_BASE_URL}/podcasts/${actualId}/favorite`, {
-          method: 'POST',
-          headers,
-        }).then(() => {
-          // Show success message
-          setMessage(`"${selectedPodcast.titulo}" foi adicionado Ã  tua biblioteca!`)
-          setTimeout(() => setMessage(''), 3000)
-        }).catch(err => {
-          console.error('Erro ao guardar podcast:', err)
-          setMessage('Erro ao guardar o podcast. Tenta novamente.')
-          setTimeout(() => setMessage(''), 3000)
-        })
-      } catch (err) {
-        console.error(err)
-      }
-    }
+  const handleTimelinePointerUp = () => {
+    setIsDragging(false)
   }
 
-  const fetchHomeData = async () => {
-    try {
-      const token = localStorage.getItem('token')
-      const headers = token ? { Authorization: `Bearer ${token}` } : {}
-      
-      const response = await fetch(`${API_BASE_URL}/podcasts/home`, { headers })
-      if (response.ok) {
-        const homeData = await response.json()
-        setData(homeData)
-      }
-    } catch (err) {
-      console.error("Failed to load home data", err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const hasActiveFilters = () => {
-    return (
-      feedFilters.type !== 'all' ||
-      Boolean(feedFilters.category) ||
-      feedFilters.isFavorite ||
-      feedFilters.hidePlayed ||
-      feedFilters.shorts
-    )
+  const updateTimelineProgress = (e) => {
+    if (!timelineRef.current || !duration) return
+    
+    const rect = timelineRef.current.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const percentage = Math.max(0, Math.min(1, x / rect.width))
+    const newTime = percentage * duration
+    
+    seek(newTime)
   }
 
   const getActiveFilterCount = () => {
-    return [
-      feedFilters.type !== 'all',
-      Boolean(feedFilters.category),
-      feedFilters.isFavorite,
-      feedFilters.hidePlayed,
-      feedFilters.shorts,
-    ].filter(Boolean).length
+    return filters.topic !== 'all' ? 1 : 0
   }
 
-  const resetFeedFilters = () => {
-    setFeedFilters(DEFAULT_FEED_FILTERS)
+  // Filter function by topic
+  const filterByTopic = (podcastList) => {
+    if (!podcastList) return []
+    if (!filters.topic || filters.topic === 'all') return podcastList
+
+    return podcastList.filter((podcast) => {
+      const tags = podcast.tags || []
+      const tagUpper = tags.map(t => t.toUpperCase())
+
+      switch (filters.topic) {
+        case 'sports':
+          return tagUpper.includes('DESPORTO') || tagUpper.includes('SPORTS') || tagUpper.includes('SPT')
+        case 'finance':
+          return tagUpper.includes('FINANCAS') || tagUpper.includes('FINANCE') || tagUpper.includes('FIN')
+        case 'politics':
+          return tagUpper.includes('POLITICA') || tagUpper.includes('POLITICS') || tagUpper.includes('POL')
+        case 'general':
+          return tagUpper.includes('GERAL') || tagUpper.includes('GENERAL') || tagUpper.includes('GEN')
+        default:
+          return true
+      }
+    })
   }
 
-  const setTypeFilter = (type) => {
-    if (type === 'all') {
-      resetFeedFilters()
-      return
-    }
-    setFeedFilters((prev) => ({ ...prev, type }))
-  }
-
-  const toggleCategoryFilter = (category) => {
-    setFeedFilters((prev) => ({
-      ...prev,
-      category: prev.category === category ? '' : category,
-    }))
-  }
+  // Filtered lists
+  const filteredMyPodcasts = useMemo(() => filterByTopic(myPodcasts), [myPodcasts, filters.topic])
+  const filteredSavedPodcasts = useMemo(() => filterByTopic(savedPodcasts), [savedPodcasts, filters.topic])
+  const filteredCommunityPodcasts = useMemo(() => filterByTopic(communityPodcasts), [communityPodcasts, filters.topic])
 
   const updateFilterScrollIndicator = () => {
-    const element = filterScrollRef.current
-    if (!element) return
-
-    const maxScroll = element.scrollWidth - element.clientWidth
-    if (maxScroll <= 0) {
-      setFilterScrollState({ canScroll: false, thumbWidth: 100, thumbLeft: 0 })
-      return
-    }
-
-    const thumbWidth = Math.max(18, (element.clientWidth / element.scrollWidth) * 100)
-    const thumbLeft = (element.scrollLeft / maxScroll) * (100 - thumbWidth)
-    setFilterScrollState({ canScroll: true, thumbWidth, thumbLeft })
-  }
-
-  const buildFeedQuery = () => {
-    const params = new URLSearchParams()
-    if (feedFilters.type && feedFilters.type !== 'all') {
-      params.set('type', feedFilters.type)
-    }
-    if (feedFilters.category) {
-      params.set('category', feedFilters.category)
-    }
-    if (feedFilters.isFavorite) {
-      params.set('is_favorite', 'true')
-    }
-    if (feedFilters.hidePlayed) {
-      params.set('hide_played', 'true')
-    }
-    if (feedFilters.shorts) {
-      params.set('shorts', 'true')
-    }
-    params.set('page', '0')
-    params.set('size', '20')
-    return params.toString()
-  }
-
-  const fetchFilteredFeed = async () => {
-    setFeedLoading(true)
-    setFeedError('')
-    try {
-      const token = localStorage.getItem('token')
-      const headers = token ? { Authorization: `Bearer ${token}` } : {}
-      const query = buildFeedQuery()
-      const url = query ? `${API_BASE_URL}/api/home?${query}` : `${API_BASE_URL}/api/home`
-      const response = await fetch(url, { headers })
-      if (!response.ok) {
-        setFeedError('Falha ao carregar o feed filtrado.')
-        setFilteredFeed([])
-        setFilteredMeta(null)
-        return
-      }
-      const payload = await response.json()
-      setFilteredFeed(Array.isArray(payload?.data) ? payload.data : [])
-      setFilteredMeta(payload?.meta || null)
-    } catch (err) {
-      console.error('Failed to load filtered feed', err)
-      setFeedError('Falha ao carregar o feed filtrado.')
-      setFilteredFeed([])
-      setFilteredMeta(null)
-    } finally {
-      setFeedLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    try {
-      const parsed = JSON.parse(localStorage.getItem('user') || '{}')
-      setViewerName(parsed?.username ? String(parsed.username) : '')
-    } catch {
-      setViewerName('')
-    }
-
-    const storedFilters = localStorage.getItem('homeFeedFilters')
-    if (storedFilters) {
-      try {
-        const parsedFilters = JSON.parse(storedFilters)
-        setFeedFilters((prev) => ({
-          ...prev,
-          type: parsedFilters.type || prev.type,
-          category: parsedFilters.category || prev.category,
-          isFavorite: Boolean(parsedFilters.isFavorite),
-          hidePlayed: Boolean(parsedFilters.hidePlayed),
-          shorts: Boolean(parsedFilters.shorts),
-        }))
-      } catch {
-        localStorage.removeItem('homeFeedFilters')
-      }
-    }
-
-    fetchHomeData()
-  }, [])
-
-  useEffect(() => {
-    const handleOpenPodcastFromSearch = (event) => {
-      if (event.detail) {
-        openSidebar(event.detail)
-      }
-    }
-
-    window.addEventListener('podcastia-open-podcast', handleOpenPodcastFromSearch)
-    return () => window.removeEventListener('podcastia-open-podcast', handleOpenPodcastFromSearch)
-  }, [])
-
-  useEffect(() => {
-    localStorage.setItem('homeFeedFilters', JSON.stringify(feedFilters))
-    fetchFilteredFeed()
-  }, [feedFilters])
-
-  useEffect(() => {
-    if (!isFilterOpen) return
-
-    const scrollElement = filterScrollRef.current
-    const animationFrame = window.requestAnimationFrame(updateFilterScrollIndicator)
-    const settledTimer = window.setTimeout(updateFilterScrollIndicator, 360)
-    const resizeObserver = scrollElement ? new ResizeObserver(updateFilterScrollIndicator) : null
-    if (scrollElement && resizeObserver) {
-      resizeObserver.observe(scrollElement)
-    }
-
-    const handlePointerDown = (event) => {
-      if (filterContainerRef.current && !filterContainerRef.current.contains(event.target)) {
-        setIsFilterOpen(false)
-      }
-    }
-
-    const handleEscape = (event) => {
-      if (event.key === 'Escape') {
-        setIsFilterOpen(false)
-      }
-    }
-
-    window.addEventListener('resize', updateFilterScrollIndicator)
-    document.addEventListener('pointerdown', handlePointerDown)
-    document.addEventListener('keydown', handleEscape)
-    return () => {
-      window.cancelAnimationFrame(animationFrame)
-      window.clearTimeout(settledTimer)
-      resizeObserver?.disconnect()
-      window.removeEventListener('resize', updateFilterScrollIndicator)
-      document.removeEventListener('pointerdown', handlePointerDown)
-      document.removeEventListener('keydown', handleEscape)
-    }
-  }, [isFilterOpen])
-
-  const handleListen = async (pod, isResume) => {
-    const queue = [...(data.continueListening || []), ...(data.recommended || []), ...(data.newReleases || [])]
-    const didStart = await playPodcast(pod, isResume, queue)
-    if (didStart) {
-      setMessage(isResume ? `A retomar "${pod.titulo}"...` : `A reproduzir "${pod.titulo}"!`)
-
-      setTimeout(() => {
-        setMessage('')
-        fetchHomeData()
-      }, 3000)
-    }
-    audioRef.current.pause()
-    setIsPlaying(false)
-  }
-
-  const formatTime = (seconds) => {
-    const floorSecs = Math.floor(seconds);
-    const mins = Math.floor(floorSecs / 60);
-    const secs = String(floorSecs % 60).padStart(2, '0');
-    return `${mins}:${secs}`;
-  }
-
-  const getTopInterest = () => {
-    const counts = {}
-    data.recommended.forEach((pod) => {
-      getSafeTags(pod).forEach((tag) => {
-        const normalized = String(tag).toUpperCase()
-        counts[normalized] = (counts[normalized] || 0) + 1
-      })
-    })
-
-    const [topTag = 'DEFAULT'] = Object.entries(counts).sort((a, b) => b[1] - a[1])[0] || []
-    return getTagUi(topTag).label
-  }
-
-  const getContinueMeta = (pod) => {
-    const totalSeconds = Math.max(0, (Number(pod?.duracao) || 0) * 60)
-    const progress = Math.max(0, Number(pod?.progressSeconds) || 0)
-    const remaining = Math.max(0, totalSeconds - progress)
-    const remainingMinutes = Math.ceil(remaining / 60)
-
-    return {
-      pausedAt: `Paraste aos ${formatTime(progress)}`,
-      remaining: remaining === 0 ? 'Quase a terminar' : `Faltam ${remainingMinutes} min`,
-    }
-  }
-
-  const renderCarousel = (podcasts, isContinueListening = false) => {
-    if (!podcasts || podcasts.length === 0) return <p className="empty-state">Nenhum podcast disponÃ­vel nesta secÃ§Ã£o.</p>
+    if (!filterScrollRef) return
     
-    return (
-      <div className={`podcast-carousel ${isContinueListening ? 'carousel-continue' : 'carousel-discover'}`} role="list" aria-label="Lista horizontal de podcasts">
-        {podcasts.map(pod => {
-          const actualId = pod.id || pod.podcastId;
-          const progressPercent = isContinueListening && pod.duracao ? Math.min(100, Math.round((pod.progressSeconds / (pod.duracao * 60)) * 100)) : 0;
-          const primaryTag = getPrimaryTagUi(pod)
-          const continueMeta = isContinueListening ? getContinueMeta(pod) : null
-          const safeTags = getSafeTags(pod)
-          
-          return (
-            <article 
-              key={actualId} 
-              role="listitem" 
-              className={`podcast-card ${isContinueListening ? 'podcast-card-continue' : 'podcast-card-discover'} ${activePodcastId === actualId ? 'active-play' : ''}`}
-              onClick={() => openSidebar(pod)}
-              style={{ cursor: 'pointer' }}
-            >
-              <div className={`pod-thumb ${primaryTag.thumbClass}`} aria-hidden="true">
-                <span className="thumb-label">{primaryTag.short}</span>
-                {playingPodcast && (playingPodcast.id || playingPodcast.podcastId) === actualId ? (
-                  <button 
-                    className="thumb-play" 
-                    aria-label={isPlaying ? `Pausar ${pod.titulo}` : `Retomar ${pod.titulo}`} 
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      togglePlayPause()
-                    }}
-                  >
-                    {isPlaying ? 'â¸' : 'â–¶'}
-                  </button>
-                ) : (
-                  <button 
-                    className="thumb-play" 
-                    aria-label={isContinueListening ? `Retomar ${pod.titulo}` : `Ouvir ${pod.titulo}`} 
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleListen(pod, isContinueListening)
-                    }}
-                  >
-                    â–¶
-                  </button>
-                )}
-              </div>
-
-              <div className="pod-content">
-                <h3>{pod.titulo}</h3>
-
-                <div className="pod-chip-list" aria-label="Categorias do podcast">
-                  {safeTags.length > 0
-                    ? safeTags.map((tag) => {
-                      const tagUi = getTagUi(tag)
-                      return <span key={`${actualId}-${tag}`} className={`pod-chip ${tagUi.className}`}>{tagUi.label}</span>
-                    })
-                    : <span className="pod-chip tag-geral">Podcast</span>}
-                </div>
-
-                <p className="pod-meta">{pod.duracao} min | Host: {pod.host || pod.user?.username}</p>
-
-                {isContinueListening && (
-                  <>
-                    <p className="continue-meta">{continueMeta?.remaining} | {continueMeta?.pausedAt}</p>
-                    <div className="progress-track" title={`${pod.progressSeconds}s ouvidos`}>
-                      <div className="progress-fill progress-fill-accent" style={{ width: `${progressPercent}%` }}></div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </article>
-          )
-        })}
-      </div>
-    )
+    const element = filterScrollRef
+    const hasOverflow = element.scrollWidth > element.clientWidth
+    
+    if (hasOverflow) {
+      element.classList.add('has-overflow')
+    } else {
+      element.classList.remove('has-overflow')
+    }
   }
 
   const playingPodcastId = playingPodcast?.id || playingPodcast?.podcastId
-  const audioSrc = playingPodcastId ? getAudioSrcById(playingPodcastId) : ''
-  const maxDurationSecs = durationSecs || (playingPodcast ? playingPodcast.duracao * 60 : 0)
-  const progressPercent = maxDurationSecs ? Math.min(100, (progressSecs / maxDurationSecs) * 100) : 0
   const timelineAnimationSpeed = isDragging ? '0s' : `${1 / playbackSpeed}s`
-  const durationLabel = maxDurationSecs ? formatTime(maxDurationSecs) : (playingPodcast ? `${playingPodcast.duracao}:00` : '0:00')
+  const durationLabel = duration ? formattedDuration : (playingPodcast ? `${playingPodcast.duracao}:00` : '0:00')
 
   return (
-    <>
-      <audio
-        ref={audioRef}
-        src={audioSrc}
-        preload="metadata"
-        onLoadedMetadata={handleAudioLoaded}
-        onTimeUpdate={handleAudioTimeUpdate}
-        onPause={handleAudioPause}
-        onPlay={handleAudioPlay}
-        onEnded={handleAudioEnded}
-      />
-      <main className="home-page" aria-labelledby="home-title">
+    <main className="home-page" aria-labelledby="home-title">
         <section className="home-banner">
-          <h2 id="home-title">Bem-vindo Ã  Podcastia!</h2>
+          <h2 id="home-title">Bem-vindo à Podcastia!</h2>
           <p>Descobre os melhores podcasts baseados nos teus interesses</p>
           <div className="visual-ring ring-a" aria-hidden="true" />
           <div className="visual-ring ring-b" aria-hidden="true" />
@@ -540,144 +392,371 @@ function HomePage() {
             className="filter-scroll"
             onScroll={updateFilterScrollIndicator}
           >
-            {TYPE_FILTERS.map((filter) => (
+            <div className="filter-chips scrollable-filters" ref={setFilterScrollRef}>
+            {TOPIC_FILTERS.map((filter) => (
               <button
                 key={filter.value}
                 type="button"
-                className={`filter-chip ${filter.value === 'all' ? (!hasActiveFilters() ? 'active' : '') : (feedFilters.type === filter.value ? 'active' : '')}`}
-                onClick={() => setTypeFilter(filter.value)}
-                aria-pressed={filter.value === 'all' ? !hasActiveFilters() : feedFilters.type === filter.value}
+                className={`filter-chip ${filters.topic === filter.value ? 'active' : ''}`}
+                onClick={() => setFilters(prev => ({ ...prev, topic: filter.value }))}
               >
-                {filter.label}
+                <span className="filter-chip-icon" aria-hidden="true">{filter.icon}</span>
+                <span>{filter.label}</span>
               </button>
             ))}
-
-            <span className="filter-divider" aria-hidden="true" />
-
-            {CATEGORY_FILTERS.map((filter) => (
-              <button
-                key={filter.value}
-                type="button"
-                className={`filter-chip filter-chip-${filter.tone} ${feedFilters.category === filter.value ? 'active' : ''}`}
-                onClick={() => toggleCategoryFilter(filter.value)}
-                aria-pressed={feedFilters.category === filter.value}
-              >
-                {filter.label}
-              </button>
-            ))}
-
-            <span className="filter-divider" aria-hidden="true" />
-
-            <button
-              type="button"
-              className={`filter-chip filter-chip-favorite ${feedFilters.isFavorite ? 'active' : ''}`}
-              onClick={() => setFeedFilters((prev) => ({ ...prev, isFavorite: !prev.isFavorite }))}
-              aria-pressed={feedFilters.isFavorite}
-            >
-              Favoritos
-            </button>
-            <button
-              type="button"
-              className={`filter-chip filter-chip-soft ${feedFilters.shorts ? 'active' : ''}`}
-              onClick={() => setFeedFilters((prev) => ({ ...prev, shorts: !prev.shorts }))}
-              aria-pressed={feedFilters.shorts}
-            >
-              Curtos
-            </button>
-            <button
-              type="button"
-              className={`filter-chip filter-chip-listened ${feedFilters.hidePlayed ? 'active' : ''}`}
-              onClick={() => setFeedFilters((prev) => ({ ...prev, hidePlayed: !prev.hidePlayed }))}
-              aria-pressed={feedFilters.hidePlayed}
-            >
-              <span className="filter-eye-icon" aria-hidden="true" />
-              Ocultar ouvidos
-            </button>
-
-            {hasActiveFilters() && (
-              <button type="button" className="filter-reset-inline" onClick={resetFeedFilters}>
-                Limpar
-              </button>
-            )}
-
-            <button
-              type="button"
-              className="filter-close"
-              onClick={() => setIsFilterOpen(false)}
-              aria-label="Fechar filtros"
-            >
-              X
-            </button>
           </div>
-
-          {isFilterOpen && filterScrollState.canScroll && (
-            <div
-              className="filter-scroll-indicator"
-              aria-hidden="true"
-              style={{
-                '--thumb-width': `${filterScrollState.thumbWidth}%`,
-                '--thumb-left': `${filterScrollState.thumbLeft}%`,
-              }}
-            >
-              <span />
-            </div>
-          )}
+          </div>
         </section>
 
-        {loading ? (
-          <p>A carregar o teu feed agregado...</p>
-        ) : hasActiveFilters() ? (
-          <section className="feed-section filtered-section">
-            <div className="filtered-section-header">
-              <h2>Feed filtrado</h2>
-              <span>{feedLoading ? 'A atualizar...' : `${filteredMeta?.total || filteredFeed.length} resultado${(filteredMeta?.total || filteredFeed.length) === 1 ? '' : 's'}`}</span>
+        {/* Teus Podcasts Section */}
+        <section className="home-section">
+          <div className="section-header">
+            <div className="section-title-group">
+              <h2 className="section-title">Teus Podcasts</h2>
+              <p className="section-subtitle">Os teus podcasts criados e guardados</p>
             </div>
-
-            {feedLoading && <p className="filter-status">A carregar feed filtrado...</p>}
-            {!feedLoading && feedError && <p className="filter-status error">{feedError}</p>}
-            {!feedLoading && !feedError && filteredFeed.length === 0 && (
-              <div className="filter-empty">
-                <div className="filter-empty-icon" aria-hidden="true">
-                  <span className="filter-empty-mark" />
-                </div>
-                <h3>Nao ha conteudos para esta combinacao.</h3>
-                {filteredMeta?.category && filteredMeta?.categoryHasContent && (
-                  <p className="filter-suggestion">
-                    Nao ha conteudos de {filteredMeta.category} aqui. Quer explorar a categoria geral?
-                  </p>
-                )}
-                <button type="button" className="filter-clear secondary" onClick={resetFeedFilters}>
-                  Limpar todos os filtros
+            <button className="section-action" onClick={() => navigate('/user')}>
+              Ver tudo
+            </button>
+          </div>
+          
+          <div className="podcast-grid fixed-width">
+            {loading ? (
+              <div className="loading-state">
+                <div className="loading-spinner" />
+                <p>A carregar...</p>
+              </div>
+            ) : filteredMyPodcasts && filteredMyPodcasts.length > 0 ? (
+              filteredMyPodcasts.map((podcast) => (
+                <article key={podcast.id} className="podcast-card">
+                  <div className="podcast-cover-container">
+                    <div className="podcast-cover-placeholder">
+                      <span>🎙</span>
+                    </div>
+                  </div>
+                  
+                  <div className="podcast-content">
+                    <h3 className="podcast-title">{podcast.titulo}</h3>
+                    <p className="podcast-author">por {podcast.user?.username || 'Unknown'}</p>
+                    
+                    <div className="podcast-meta">
+                      <span className="podcast-duration">{formatTime(podcast.duracao * 60)}</span>
+                      <span className="podcast-date">
+                        {new Date(podcast.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    
+                    {podcast.tags && podcast.tags.length > 0 && (
+                      <div className="podcast-tags">
+                        {podcast.tags.map((tag, index) => (
+                          <span
+                            key={index}
+                            className={`podcast-tag ${TAG_UI[tag]?.className || TAG_UI.DEFAULT.className}`}
+                          >
+                            {TAG_UI[tag]?.label || tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    
+                    <div className="podcast-actions">
+                      <button
+                        className="play-button"
+                        onClick={() => handlePlayNow(podcast)}
+                        aria-label={`Reproduzir ${podcast.titulo}`}
+                      >
+                        ▶️ Reproduzir
+                      </button>
+                      
+                      <button
+                        className="info-button"
+                        onClick={() => openSidebar(podcast)}
+                        aria-label={`Mais informações sobre ${podcast.titulo}`}
+                      >
+                        ℹ️
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <div className="empty-state my-podcasts-empty">
+                <p>Ainda não tens podcasts. Cria o teu primeiro!</p>
+                <button className="create-podcast-btn" onClick={() => navigate('/generate')}>
+                  Criar Podcast
                 </button>
               </div>
             )}
-            {!feedLoading && !feedError && filteredFeed.length > 0 && (
-              <div className="filter-carousel">
-                {renderCarousel(filteredFeed)}
+          </div>
+        </section>
+
+        {/* Podcasts Guardados Section */}
+        <section className="home-section">
+          <div className="section-header">
+            <div className="section-title-group">
+              <h2 className="section-title">Podcasts Guardados</h2>
+              <p className="section-subtitle">Os teus podcasts favoritos</p>
+            </div>
+          </div>
+          
+          <div className="podcast-grid fixed-width">
+            {filteredSavedPodcasts && filteredSavedPodcasts.length > 0 ? (
+              filteredSavedPodcasts.map((podcast) => (
+                <article key={podcast.id} className="podcast-card">
+                  <div className="podcast-cover-container">
+                    <div className="podcast-cover-placeholder">
+                      <span>🎙</span>
+                    </div>
+                  </div>
+                  
+                  <div className="podcast-content">
+                    <h3 className="podcast-title">{podcast.titulo}</h3>
+                    <p className="podcast-author">por {podcast.user?.username || 'Unknown'}</p>
+                    
+                    <div className="podcast-meta">
+                      <span className="podcast-duration">{formatTime(podcast.duracao * 60)}</span>
+                      <span className="podcast-date">
+                        {new Date(podcast.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    
+                    {podcast.tags && podcast.tags.length > 0 && (
+                      <div className="podcast-tags">
+                        {podcast.tags.map((tag, index) => (
+                          <span
+                            key={index}
+                            className={`podcast-tag ${TAG_UI[tag]?.className || TAG_UI.DEFAULT.className}`}
+                          >
+                            {TAG_UI[tag]?.label || tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    
+                    <div className="podcast-actions">
+                      <button
+                        className="play-button"
+                        onClick={() => handlePlayNow(podcast)}
+                        aria-label={`Reproduzir ${podcast.titulo}`}
+                      >
+                        ▶️ Reproduzir
+                      </button>
+                      
+                      <button
+                        className="info-button"
+                        onClick={() => openSidebar(podcast)}
+                        aria-label={`Mais informações sobre ${podcast.titulo}`}
+                      >
+                        ℹ️
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <div className="empty-state saved-podcasts-empty">
+                <p>Ainda não guardaste nenhum podcast.</p>
+                <button className="create-podcast-btn" onClick={() => navigate('/search-test')}>
+                  Explorar Podcasts
+                </button>
               </div>
             )}
-          </section>
-        ) : (
-          <div className="home-sections">
-            {data.continueListening && data.continueListening.length > 0 && (
-              <section className="feed-section">
-                <h2>Continuar a ouvir</h2>
-                {renderCarousel(data.continueListening, true)}
-              </section>
-            )}
-
-            <section className="feed-section">
-              <h2>Recomendados para ti</h2>
-              {renderCarousel(data.recommended)}
-            </section>
-
-            <section className="feed-section">
-              <h2>Acabados de LanÃ§ar</h2>
-              {renderCarousel(data.newReleases)}
-            </section>
           </div>
-        )}
-      </main>
+        </section>
+
+        {/* Podcasts da Comunidade Section */}
+        <section className="home-section">
+          <div className="section-header">
+            <div className="section-title-group">
+              <h2 className="section-title">Podcasts da Comunidade</h2>
+              <p className="section-subtitle">Descobre o que outros criadores partilham</p>
+            </div>
+            <button className="section-action" onClick={() => navigate('/search-test')}>
+              Explorar
+            </button>
+          </div>
+          
+          <div className="podcast-grid fixed-width">
+            {loading ? (
+              <div className="loading-state">
+                <div className="loading-spinner" />
+                <p>A carregar podcasts...</p>
+              </div>
+            ) : error ? (
+              <div className="error-state">
+                <p>{error}</p>
+                <button onClick={fetchPodcasts} className="retry-button">Tentar novamente</button>
+              </div>
+            ) : filteredCommunityPodcasts && filteredCommunityPodcasts.length > 0 ? (
+              filteredCommunityPodcasts.map((podcast) => (
+                <article key={podcast.id} className="podcast-card">
+                  <div className="podcast-cover-container">
+                    <div className="podcast-cover-placeholder">
+                      <span>🎙</span>
+                    </div>
+                  </div>
+                  
+                  <div className="podcast-content">
+                    <h3 className="podcast-title">{podcast.titulo}</h3>
+                    <p className="podcast-author">por {podcast.user?.username || 'Unknown'}</p>
+                    
+                    <div className="podcast-meta">
+                      <span className="podcast-duration">{formatTime(podcast.duracao * 60)}</span>
+                      <span className="podcast-date">
+                        {new Date(podcast.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    
+                    {podcast.tags && podcast.tags.length > 0 && (
+                      <div className="podcast-tags">
+                        {podcast.tags.map((tag, index) => (
+                          <span
+                            key={index}
+                            className={`podcast-tag ${TAG_UI[tag]?.className || TAG_UI.DEFAULT.className}`}
+                          >
+                            {TAG_UI[tag]?.label || tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    
+                    <div className="podcast-actions">
+                      <button
+                        className="play-button"
+                        onClick={() => handlePlayNow(podcast)}
+                        aria-label={`Reproduzir ${podcast.titulo}`}
+                      >
+                        ▶️ Reproduzir
+                      </button>
+                      
+                      <button
+                        className="info-button"
+                        onClick={() => openSidebar(podcast)}
+                        aria-label={`Mais informações sobre ${podcast.titulo}`}
+                      >
+                        ℹ️
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <div className="empty-state">
+                <p>Nenhum podcast encontrado</p>
+              </div>
+            )}
+          </div>
+        </section>
+
+      {/* Persistent Bottom Player */}
+      {playingPodcast && (
+        <div className={`player-bar ${isSidebarOpen ? 'sidebar-open' : ''}`}>
+          {/* Info Section */}
+          <div className="player-info">
+            <div className="player-cover-placeholder">🎙</div>
+            <div className="player-text">
+              <h4 className="player-title">{playingPodcast.titulo}</h4>
+              <p className="player-host">{playingPodcast.user?.username || 'Unknown'}</p>
+            </div>
+          </div>
+
+          {/* Controls Section */}
+          <div className="player-controls">
+            <div className="player-buttons-wrapper">
+              <div className="player-buttons">
+                <button
+                  className="btn-icon btn-skip"
+                  onClick={previousPodcast}
+                  title="Podcast anterior"
+                  aria-label="Podcast anterior"
+                >
+                  ⏮
+                </button>
+                <button
+                  className="btn-icon"
+                  onClick={rewindSeconds}
+                  title="Recuar 15 segundos"
+                  aria-label="Recuar 15 segundos"
+                >
+                  ⏪
+                </button>
+                <button className="btn-circular" onClick={togglePlayPause}>
+                  {isPlaying ? '⏸' : '▶'}
+                </button>
+                <button
+                  className="btn-icon"
+                  onClick={forwardSeconds}
+                  title="Avançar 15 segundos"
+                  aria-label="Avançar 15 segundos"
+                >
+                  ⏩
+                </button>
+                <button
+                  className="btn-icon btn-skip"
+                  onClick={nextPodcast}
+                  title="Próximo podcast"
+                  aria-label="Próximo podcast"
+                >
+                  ⏭
+                </button>
+              </div>
+              <PlaybackSpeedControl
+                currentSpeed={playbackSpeed}
+                onSpeedChange={handleSpeedChange}
+              />
+            </div>
+
+            {/* Progress Bar */}
+            <div className="player-progress-container">
+              <span className="time-display">{formatTime(currentTime)}</span>
+              <div
+                className="player-timeline"
+                ref={(el) => { timelineRef.current = el }}
+                onPointerDown={handleTimelinePointerDown}
+                onPointerMove={handleTimelinePointerMove}
+                onPointerUp={handleTimelinePointerUp}
+                onPointerCancel={handleTimelinePointerUp}
+                onMouseDown={handleTimelinePointerDown}
+                onMouseMove={handleTimelinePointerMove}
+                onMouseUp={handleTimelinePointerUp}
+                onMouseLeave={handleTimelinePointerUp}
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  handleTimelinePointerDown(e.touches[0]);
+                }}
+                onTouchMove={(e) => {
+                  e.preventDefault();
+                  handleTimelinePointerMove(e.touches[0]);
+                }}
+                onTouchEnd={handleTimelinePointerUp}
+                role="slider"
+                aria-label="Barra de progresso"
+                aria-valuemin="0"
+                aria-valuemax={duration}
+                aria-valuenow={currentTime}
+                style={{ '--animation-speed': timelineAnimationSpeed }}
+              >
+                <div
+                  className="player-timeline-fill"
+                  style={{
+                    width: `${(currentTime / duration) * 100}%`,
+                    '--animation-speed': timelineAnimationSpeed
+                  }}
+                />
+                <div
+                  className="player-timeline-thumb"
+                  style={{ left: `${(currentTime / duration) * 100}%` }}
+                />
+              </div>
+              <span className="time-display">{durationLabel}</span>
+            </div>
+          </div>
+
+          {/* Extra space for layout balance */}
+          <div className="player-extra"></div>
+        </div>
+      )}
+
       {/* Podcast Sidebar */}
       <PodcastSidebar
         podcast={selectedPodcast}
@@ -685,12 +764,12 @@ function HomePage() {
         onClose={closeSidebar}
         onPlayNow={handlePlayFromSidebar}
         onSave={handleSaveToPodcasts}
+        isSaved={selectedPodcast ? isPodcastSaved(selectedPodcast.id || selectedPodcast.podcastId) : false}
         isPlaying={playingPodcast && (playingPodcast.id || playingPodcast.podcastId) === (selectedPodcast?.id || selectedPodcast?.podcastId) ? isPlaying : false}
         API_BASE_URL={API_BASE_URL}
       />
-    </>
+    </main>
   )
 }
 
 export default HomePage
-

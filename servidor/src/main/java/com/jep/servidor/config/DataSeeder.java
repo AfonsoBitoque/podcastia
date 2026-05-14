@@ -98,7 +98,7 @@ public class DataSeeder implements CommandLineRunner {
         p.setTitulo(title);
         p.setDuracao(duration);
         p.setConteudoPath("test/" + title.replaceAll("\\s+", "").toLowerCase() + ".mp3");
-        p.setCoverImagePath("/images/default-podcast-cover.png");
+        p.setCoverImagePath("/images/default-podcast-cover.svg");
         p.setTags(tags);
         podcastRepository.save(p);
     }

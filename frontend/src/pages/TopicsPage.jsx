@@ -181,7 +181,6 @@ function TopicsPage() {
         throw new Error('Nao conseguimos guardar as suas escolhas. Tente novamente.')
       }
 
-      localStorage.setItem('topicsOnboardingComplete', 'true')
       persistUserTopics(topicIds)
       navigate(returnTarget, { replace: true })
     } catch (error) {

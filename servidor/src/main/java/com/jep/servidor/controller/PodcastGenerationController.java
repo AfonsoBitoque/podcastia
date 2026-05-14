@@ -42,8 +42,11 @@ public class PodcastGenerationController {
 
     @PostMapping("/generate")
     public ResponseEntity<?> generate(@RequestBody Map<String, Object> payload) {
+        System.out.println("=== GENERATE ENDPOINT CALLED ===");
         Optional<User> authUser = getAuthenticatedUser();
+        System.out.println("Auth user present: " + authUser.isPresent());
         if (authUser.isEmpty()) {
+            System.out.println("Returning 401 - User not authenticated");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "Utilizador não autenticado."));
         }
@@ -128,6 +131,12 @@ public class PodcastGenerationController {
         return ResponseEntity.ok(podcasts);
     }
 
+    @GetMapping
+    public ResponseEntity<List<Podcast>> getAllPublicPodcasts() {
+        List<Podcast> podcasts = podcastRepository.findAllByPublicoTrueAndAvailableTrue();
+        return ResponseEntity.ok(podcasts);
+    }
+
     @GetMapping("/{id}/audio")
     public ResponseEntity<?> streamAudio(@PathVariable("id") Long id) {
         Optional<Podcast> podcastOpt = podcastRepository.findById(id);
@@ -136,8 +145,51 @@ public class PodcastGenerationController {
         }
 
         Podcast podcast = podcastOpt.get();
-        java.io.File audioFile = new java.io.File(podcast.getConteudoPath());
+        String conteudoPath = podcast.getConteudoPath();
+        if (conteudoPath == null || conteudoPath.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        // Try to find the file with the exact path first
+        java.io.File audioFile = new java.io.File(conteudoPath);
+
+        // If not found, try with normalized path (handle UTF-8 encoding issues)
         if (!audioFile.exists()) {
+            try {
+                // Try to find file using Path which handles UTF-8 better
+                java.nio.file.Path path = java.nio.file.Paths.get(conteudoPath);
+                if (java.nio.file.Files.exists(path)) {
+                    audioFile = path.toFile();
+                } else {
+                    // Last resort: try to find any .mp3 file in generated-podcasts that matches the ID
+                    java.io.File podcastsDir = new java.io.File("generated-podcasts");
+                    if (podcastsDir.exists() && podcastsDir.isDirectory()) {
+                        java.io.File[] files = podcastsDir.listFiles((dir, name) ->
+                            name.endsWith(".mp3") && name.contains("user" + podcast.getUser().getId() + "_")
+                        );
+                        if (files != null && files.length > 0) {
+                            // Try to find best match by title similarity
+                            String podcastTitle = podcast.getTitulo().toLowerCase().replace(" ", "_");
+                            for (java.io.File f : files) {
+                                if (f.getName().toLowerCase().contains(podcastTitle.substring(0, Math.min(10, podcastTitle.length())))) {
+                                    audioFile = f;
+                                    break;
+                                }
+                            }
+                            // If no match found, use first file from same user
+                            if (!audioFile.exists() && files.length > 0) {
+                                audioFile = files[0];
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("Error finding audio file: " + e.getMessage());
+            }
+        }
+
+        if (!audioFile.exists()) {
+            System.err.println("Audio file not found: " + conteudoPath);
             return ResponseEntity.notFound().build();
         }
 
@@ -148,6 +200,73 @@ public class PodcastGenerationController {
                     .header("Content-Disposition", "inline; filename=\"" + audioFile.getName() + "\"")
                     .body(audioBytes);
         } catch (java.io.IOException e) {
+            System.err.println("Error reading audio file: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @GetMapping("/{id}/download")
+    public ResponseEntity<?> downloadAudio(@PathVariable("id") Long id) {
+        Optional<Podcast> podcastOpt = podcastRepository.findById(id);
+        if (podcastOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Podcast podcast = podcastOpt.get();
+        String conteudoPath = podcast.getConteudoPath();
+        if (conteudoPath == null || conteudoPath.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        // Try to find the file with the exact path first
+        java.io.File audioFile = new java.io.File(conteudoPath);
+
+        // If not found, try with normalized path (handle UTF-8 encoding issues)
+        if (!audioFile.exists()) {
+            try {
+                java.nio.file.Path path = java.nio.file.Paths.get(conteudoPath);
+                if (java.nio.file.Files.exists(path)) {
+                    audioFile = path.toFile();
+                } else {
+                    java.io.File podcastsDir = new java.io.File("generated-podcasts");
+                    if (podcastsDir.exists() && podcastsDir.isDirectory()) {
+                        java.io.File[] files = podcastsDir.listFiles((dir, name) ->
+                            name.endsWith(".mp3") && name.contains("user" + podcast.getUser().getId() + "_")
+                        );
+                        if (files != null && files.length > 0) {
+                            String podcastTitle = podcast.getTitulo().toLowerCase().replace(" ", "_");
+                            for (java.io.File f : files) {
+                                if (f.getName().toLowerCase().contains(podcastTitle.substring(0, Math.min(10, podcastTitle.length())))) {
+                                    audioFile = f;
+                                    break;
+                                }
+                            }
+                            if (!audioFile.exists() && files.length > 0) {
+                                audioFile = files[0];
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("Error finding audio file: " + e.getMessage());
+            }
+        }
+
+        if (!audioFile.exists()) {
+            System.err.println("Audio file not found: " + conteudoPath);
+            return ResponseEntity.notFound().build();
+        }
+
+        try {
+            byte[] audioBytes = java.nio.file.Files.readAllBytes(audioFile.toPath());
+            // Create a clean filename based on podcast title
+            String filename = podcast.getTitulo().replaceAll("[^a-zA-Z0-9\\s-]", "").replaceAll("\\s+", "_") + ".mp3";
+            return ResponseEntity.ok()
+                    .header("Content-Type", "audio/mpeg")
+                    .header("Content-Disposition", "attachment; filename=\"" + filename + "\"")
+                    .body(audioBytes);
+        } catch (java.io.IOException e) {
+            System.err.println("Error reading audio file: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

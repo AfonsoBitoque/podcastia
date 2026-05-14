@@ -22,7 +22,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.http.HttpStatus;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -60,7 +60,7 @@ class ChatReactionServiceTest {
   private NotificationService notificationService;
 
   @Mock
-  private SimpMessagingTemplate messagingTemplate;
+  private SimpMessageSendingOperations messagingTemplate;
 
   private User sender;
   private User recipient;

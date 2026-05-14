@@ -82,14 +82,25 @@ function GeneratePage() {
         }),
       })
 
-      const data = await response.json()
+      // Check content type to avoid JSON parse errors
+      const contentType = response.headers.get('content-type')
+      let data = {}
+      
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json()
+      } else {
+        const text = await response.text()
+        console.error('Non-JSON response:', text.substring(0, 200))
+        throw new Error(`Server error: ${response.status}. Please check server logs.`)
+      }
 
       if (!response.ok) {
-        throw new Error(data.error || 'Erro ao gerar podcast.')
+        throw new Error(data.error || data.message || `HTTP ${response.status}: Erro ao gerar podcast.`)
       }
 
       setGeneratedPodcast(data)
     } catch (err) {
+      console.error('Generate error:', err)
       setError(err.message || 'Erro ao gerar podcast. Tenta novamente.')
     } finally {
       setIsGenerating(false)

@@ -8,7 +8,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.web.util.matcher.RegexRequestMatcher;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -39,15 +41,20 @@ public class SecurityConfig {
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
     http
-        .cors(Customizer.withDefaults())
+        .cors(cors -> cors.configurationSource(corsConfigurationSource()))
         .csrf(AbstractHttpConfigurer::disable) // Desativar CSRF pois usamos JWT
         .authorizeHttpRequests(auth -> auth
+            // Allow preflight CORS requests without authentication
+            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
             // Endpoints públicos
             .requestMatchers("/api/auth/**").permitAll() // Login REST
             .requestMatchers("/users", "/users/**").permitAll() // Registo de conta
             .requestMatchers("/api/register/**").permitAll() // Gerar/Verificar Tag REST
             .requestMatchers("/api/search/**").permitAll() // Pesquisa publica
-            .requestMatchers("/api/podcasts/*/audio").permitAll() // Audio streaming publico
+            .requestMatchers(HttpMethod.GET, "/api/podcasts", "/api/podcasts/**").permitAll() // Listar e aceder a podcasts publicos
+            .requestMatchers(HttpMethod.GET, "/podcasts", "/podcasts/**").permitAll() // PodcastController endpoints publicos
+            .requestMatchers("/images/**").permitAll() // Imagens estáticas
+            .requestMatchers("/audio/**").permitAll() // Ficheiros de áudio
             .requestMatchers("/ws/**").permitAll() // Handshake WebSocket autenticado por token
             .requestMatchers("/h2-console/**").permitAll() // H2 Console
             .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll() // Swagger OpenAPI
@@ -82,10 +89,16 @@ public class SecurityConfig {
   @Bean
   public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration config = new CorsConfiguration();
-    config.setAllowedOrigins(List.of("http://localhost:5173", "http://127.0.0.1:5173"));
+    config.setAllowedOrigins(List.of(
+        "http://localhost:5173", 
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174"
+    ));
     config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
     config.setAllowedHeaders(List.of("*"));
     config.setAllowCredentials(true);
+    config.setMaxAge(3600L);
 
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/**", config);

@@ -189,8 +189,8 @@ class AuthIntegrationTest {
         String response = result.getResponse().getContentAsString();
         String token = JsonPath.parse(response).read("$.token");
 
-        // 2. Faz pedido a endpoint protegido (/podcasts) com o token
-        mockMvc.perform(get("/podcasts")
+        // 2. Faz pedido a endpoint protegido (/api/playlists/mine) com o token
+        mockMvc.perform(get("/api/playlists/mine")
                 .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
     }
@@ -200,7 +200,7 @@ class AuthIntegrationTest {
         // Token inválido/malformado
         String malformedToken = "eyMalformadoTokenAqui.abc.xyz";
 
-        mockMvc.perform(get("/podcasts")
+        mockMvc.perform(get("/api/playlists/mine")
                 .header("Authorization", "Bearer " + malformedToken))
                 .andExpect(status().isForbidden());
     }
@@ -219,7 +219,7 @@ class AuthIntegrationTest {
                 .compact();
 
         // O sistema deve rejeitar o token e possivelmente retornar 403 (ou 401 dependendo do config do spring security, por defeito 403 nas exceções)
-        mockMvc.perform(get("/podcasts")
+        mockMvc.perform(get("/api/playlists/mine")
                 .header("Authorization", "Bearer " + expiredToken))
                 .andExpect(status().isForbidden());
     }

@@ -9,7 +9,7 @@ const TAG_UI = {
   DEFAULT: { label: 'Podcast', className: 'tag-geral' },
 }
 
-function PodcastSidebar({ podcast, isOpen, onClose, onPlayNow, onSave, isPlaying, API_BASE_URL }) {
+function PodcastSidebar({ podcast, isOpen, onClose, onPlayNow, onSave, isSaved, isPlaying, API_BASE_URL }) {
   const getSafeTags = (pod) => (Array.isArray(pod?.tags) ? pod.tags : [])
 
   const getTagUi = (tag) => TAG_UI[String(tag || '').toUpperCase()] || TAG_UI.DEFAULT
@@ -47,7 +47,6 @@ function PodcastSidebar({ podcast, isOpen, onClose, onPlayNow, onSave, isPlaying
 
   const primaryTag = getPrimaryTagUi(podcast)
   const safeTags = getSafeTags(podcast)
-  const coverImage = podcast.coverImagePath ? `${API_BASE_URL}${podcast.coverImagePath}` : null
   const publicationDate = podcast.dataCriacao ? new Date(podcast.dataCriacao).toLocaleDateString('pt-PT') : 'Data desconhecida'
 
   return (
@@ -71,20 +70,6 @@ function PodcastSidebar({ podcast, isOpen, onClose, onPlayNow, onSave, isPlaying
 
         {/* Conteúdo Scrollável */}
         <div className="sidebar-content">
-          {/* Imagem de Capa */}
-          {coverImage ? (
-            <img
-              src={coverImage}
-              alt={podcast.titulo}
-              className="sidebar-cover-image"
-              onError={(e) => {
-                console.error('Erro ao carregar imagem:', e.target.src)
-                e.target.style.display = 'none'
-              }}
-            />
-          ) : (
-            <div className="sidebar-cover-placeholder">🎙</div>
-          )}
 
           {/* Título e Host */}
           <div className="sidebar-header-info">
@@ -105,14 +90,25 @@ function PodcastSidebar({ podcast, isOpen, onClose, onPlayNow, onSave, isPlaying
             </button>
 
             <button
-              className="btn-save"
-              onClick={onSave}
-              title="Guardar na biblioteca"
-              aria-label="Adicionar à biblioteca"
+              className={`btn-save ${isSaved ? 'saved' : ''}`}
+              onClick={() => onSave(podcast)}
+              title={isSaved ? 'Remover da biblioteca' : 'Guardar na biblioteca'}
+              aria-label={isSaved ? 'Remover da biblioteca' : 'Adicionar à biblioteca'}
             >
-              <span className="save-icon">♡</span>
-              <span className="save-text">Guardar</span>
+              <span className="save-icon">{isSaved ? '♥' : '♡'}</span>
+              <span className="save-text">{isSaved ? 'Guardado' : 'Guardar'}</span>
             </button>
+
+            <a
+              href={`${API_BASE_URL}/api/podcasts/${podcast.id || podcast.podcastId}/download`}
+              className="btn-download"
+              download
+              title="Download do podcast"
+              aria-label="Download do podcast"
+            >
+              <span className="download-icon">↓</span>
+              <span className="download-text">Download</span>
+            </a>
           </div>
 
           {/* Metadata - Duração e Categoria */}

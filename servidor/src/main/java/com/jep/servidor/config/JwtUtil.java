@@ -17,7 +17,9 @@ import org.springframework.stereotype.Component;
 public class JwtUtil {
 
     // Em produção, esta chave deve vir de variáveis de ambiente
-    private static final Key SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+    // Usando uma chave fixa para consistência entre reinícios do servidor
+    private static final String SECRET_STRING = "podcastia-secret-key-for-jwt-token-generation-must-be-at-least-256-bits-long";
+    private static final Key SECRET_KEY = Keys.hmacShaKeyFor(SECRET_STRING.getBytes());
     private static final long EXPIRATION_TIME = 86400000; // 24 horas
 
     /**

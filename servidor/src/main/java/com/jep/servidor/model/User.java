@@ -99,6 +99,9 @@ public class User {
   @Column(nullable = false)
   private float playbackSpeed = 1.0f;
 
+  @Column(nullable = false)
+  private boolean hasCompletedOnboarding = false;
+
   private String profilePicturePath;
 
   @ElementCollection(fetch = FetchType.EAGER)
@@ -252,5 +255,13 @@ public class User {
 
   public void setPlaybackSpeed(float playbackSpeed) {
     this.playbackSpeed = playbackSpeed;
+  }
+
+  public boolean isHasCompletedOnboarding() {
+    return hasCompletedOnboarding;
+  }
+
+  public void setHasCompletedOnboarding(boolean hasCompletedOnboarding) {
+    this.hasCompletedOnboarding = hasCompletedOnboarding;
   }
 }

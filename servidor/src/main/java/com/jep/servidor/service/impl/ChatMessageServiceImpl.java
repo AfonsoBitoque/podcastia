@@ -39,7 +39,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -83,7 +83,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
   private final UserRelationRepository userRelationRepository;
   private final PodcastRepository podcastRepository;
   private final NotificationService notificationService;
-  private final SimpMessagingTemplate messagingTemplate;
+  private final SimpMessageSendingOperations messagingTemplate;
 
   private final ConcurrentHashMap<Long, AtomicInteger> activeSessions = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<String, Long> sessionUsers = new ConcurrentHashMap<>();
@@ -98,7 +98,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
       UserRelationRepository userRelationRepository,
       PodcastRepository podcastRepository,
       NotificationService notificationService,
-      SimpMessagingTemplate messagingTemplate) {
+      SimpMessageSendingOperations messagingTemplate) {
     this.chatMessageRepository = chatMessageRepository;
     this.chatMessageReactionRepository = chatMessageReactionRepository;
     this.userRepository = userRepository;
