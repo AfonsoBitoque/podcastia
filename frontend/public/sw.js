@@ -108,7 +108,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  // Handle static assets - cache first, then network
+  // Handle static assets - cache first, then network (GET only)
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {

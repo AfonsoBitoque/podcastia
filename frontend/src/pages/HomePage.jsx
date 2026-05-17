@@ -35,7 +35,7 @@ function HomePage() {
   const [filters, setFilters] = useState(DEFAULT_FEED_FILTERS)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [filterContainerRef, setFilterContainerRef] = useState(null)
-  const [filterScrollRef, setFilterScrollRef] = useState(null)
+  const filterScrollRef = useRef(null)
   const [podcastData, setPodcastData] = useState(null)
   const [selectedTag, setSelectedTag] = useState('all')
   const [isDragging, setIsDragging] = useState(false)
@@ -146,6 +146,7 @@ function HomePage() {
     try {
       const token = localStorage.getItem('token')
       console.log('[fetchSavedPodcasts] Token:', token ? 'present' : 'missing')
+      if (!token) return
       
       const response = await fetch(`${API_BASE_URL}/api/favorites`, {
         headers: {
@@ -337,9 +338,9 @@ function HomePage() {
   const filteredCommunityPodcasts = useMemo(() => filterByTopic(communityPodcasts), [communityPodcasts, filters.topic])
 
   const updateFilterScrollIndicator = () => {
-    if (!filterScrollRef) return
+    if (!filterScrollRef.current) return
     
-    const element = filterScrollRef
+    const element = filterScrollRef.current
     const hasOverflow = element.scrollWidth > element.clientWidth
     
     if (hasOverflow) {
@@ -392,7 +393,7 @@ function HomePage() {
             className="filter-scroll"
             onScroll={updateFilterScrollIndicator}
           >
-            <div className="filter-chips scrollable-filters" ref={setFilterScrollRef}>
+            <div className="filter-chips scrollable-filters">
             {TOPIC_FILTERS.map((filter) => (
               <button
                 key={filter.value}
