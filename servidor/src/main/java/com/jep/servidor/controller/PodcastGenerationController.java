@@ -194,11 +194,10 @@ public class PodcastGenerationController {
         }
 
         try {
-            byte[] audioBytes = java.nio.file.Files.readAllBytes(audioFile.toPath());
-            return ResponseEntity.ok()
-                    .header("Content-Type", "audio/mpeg")
-                    .header("Content-Disposition", "inline; filename=\"" + audioFile.getName() + "\"")
-                    .body(audioBytes);
+            org.springframework.core.io.Resource resource = new org.springframework.core.io.UrlResource(audioFile.toURI());
+            return ResponseEntity.status(HttpStatus.OK)
+                    .contentType(org.springframework.http.MediaType.parseMediaType("audio/mpeg"))
+                    .body(resource);
         } catch (java.io.IOException e) {
             System.err.println("Error reading audio file: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();

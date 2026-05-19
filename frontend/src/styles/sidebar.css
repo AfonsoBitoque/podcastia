@@ -120,7 +120,7 @@
   display: grid;
   place-items: center;
   font-size: 4rem;
-  background: linear-gradient(135deg, #e05a2a 0%, #be3f14 100%);
+  background: linear-gradient(135deg, #b95a39 0%, #8b2f17 100%);
   color: white;
 }
 
@@ -156,6 +156,19 @@
   font-size: 0.95rem;
   color: #71584f;
   font-weight: 500;
+}
+
+.sidebar-host--link {
+  text-decoration: none;
+  color: #e05a2a;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  display: block;
+}
+
+.sidebar-host--link:hover {
+  color: #be3f14;
+  text-decoration: underline;
 }
 
 /* Painel de Ações */

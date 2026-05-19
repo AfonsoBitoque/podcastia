@@ -75,7 +75,7 @@ class ChangePasswordIntegrationTest {
         testUser.setUsername("testuser");
         testUser.setTag("1234");
         testUser.setEmail("test@example.com");
-        testUser.setPassword(passwordEncoder.encode("password123")); // Guardar a antiga hash
+        testUser.setPassword(passwordEncoder.encode("Password123")); // Guardar a antiga hash
         testUser.setUserType(User.UserType.USERNORMAL);
         testUser.setStatus(User.UserStatus.ACTIVE);
         testUser = userRepository.save(testUser);
@@ -85,7 +85,7 @@ class ChangePasswordIntegrationTest {
         // Faz login para obter o token para usar nos testes protegidos
         LoginRequest loginRequest = new LoginRequest();
         loginRequest.identifier = "test@example.com";
-        loginRequest.password = "password123";
+        loginRequest.password = "Password123";
 
         MvcResult result = mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -100,8 +100,8 @@ class ChangePasswordIntegrationTest {
     @Test
     void shouldReturn200AndChangePasswordWhenProvidingCorrectOldPassword() throws Exception {
         ChangePasswordRequest changeRequest = new ChangePasswordRequest();
-        changeRequest.setCurrentPassword("password123");
-        changeRequest.setNewPassword("newpassword456");
+        changeRequest.setCurrentPassword("Password123");
+        changeRequest.setNewPassword("NewPassword456");
 
         mockMvc.perform(put("/users/" + testUser.getId() + "/password")
                 .header("Authorization", "Bearer " + userToken)
@@ -114,15 +114,15 @@ class ChangePasswordIntegrationTest {
         User updatedUser = userRepository.findById(testUser.getId()).orElseThrow();
         
         assertFalse(updatedUser.getPassword().equals(oldHash), "O hash da password deve ser atualizado");
-        assertTrue(passwordEncoder.matches("newpassword456", updatedUser.getPassword()), "A nova password deve bater certo");
+        assertTrue(passwordEncoder.matches("NewPassword456", updatedUser.getPassword()), "A nova password deve bater certo");
     }
 
     @Test
     void shouldAllowLoginWithNewPasswordAfterChangeAndFailWithOld() throws Exception {
         // Altera a password
         ChangePasswordRequest changeRequest = new ChangePasswordRequest();
-        changeRequest.setCurrentPassword("password123");
-        changeRequest.setNewPassword("newpassword456");
+        changeRequest.setCurrentPassword("Password123");
+        changeRequest.setNewPassword("NewPassword456");
 
         mockMvc.perform(put("/users/" + testUser.getId() + "/password")
                 .header("Authorization", "Bearer " + userToken)
@@ -133,7 +133,7 @@ class ChangePasswordIntegrationTest {
         // Login com a nova deve funcionar
         LoginRequest loginRequestNew = new LoginRequest();
         loginRequestNew.identifier = "test@example.com";
-        loginRequestNew.password = "newpassword456";
+        loginRequestNew.password = "NewPassword456";
 
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -144,7 +144,7 @@ class ChangePasswordIntegrationTest {
         // Login com a antiga deve falhar (401)
         LoginRequest loginRequestOld = new LoginRequest();
         loginRequestOld.identifier = "test@example.com";
-        loginRequestOld.password = "password123";
+        loginRequestOld.password = "Password123";
 
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -157,7 +157,7 @@ class ChangePasswordIntegrationTest {
     void shouldReturn401WhenCurrentPasswordIsIncorrect() throws Exception {
         ChangePasswordRequest changeRequest = new ChangePasswordRequest();
         changeRequest.setCurrentPassword("wrongpassword");
-        changeRequest.setNewPassword("newpassword456");
+        changeRequest.setNewPassword("NewPassword456");
 
         mockMvc.perform(put("/users/" + testUser.getId() + "/password")
                 .header("Authorization", "Bearer " + userToken)

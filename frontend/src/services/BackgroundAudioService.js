@@ -2,9 +2,17 @@
  * Background Audio Service for Podcastia
  * Handles background playback, media session, audio focus, and state persistence
  */
-
 class BackgroundAudioService {
+  static instance = null;
+
   constructor() {
+    if (BackgroundAudioService.instance) {
+      console.log('[AudioService] Returning existing BackgroundAudioService instance ID:', BackgroundAudioService.instance.debugId);
+      return BackgroundAudioService.instance;
+    }
+    
+    this.debugId = Math.random().toString(36).substring(2, 9);
+    console.log('[AudioService] Instantiating new BackgroundAudioService with ID:', this.debugId);
     this.audioElement = null;
     this.mediaSession = null;
     this.isPlaying = false;
@@ -16,7 +24,14 @@ class BackgroundAudioService {
     this.audioFocusManager = new AudioFocusManager();
     this.stateManager = new AudioStateManager();
     this.notificationManager = new NotificationManager();
+
+    // Playlist/queue state
+    this.queue = [];
+    this.queueIndex = -1;
+    this.shuffleMode = false;
+    this.shufflePlayed = []; // indices already played in shuffle mode
     
+    BackgroundAudioService.instance = this;
     this.init();
   }
 
@@ -86,10 +101,11 @@ class BackgroundAudioService {
 
   createAudioElement() {
     if (this.audioElement) {
-      this.audioElement.pause();
-      this.audioElement = null;
+      console.log(`[AudioService ID:${this.debugId}] Reusing existing audio element`);
+      return;
     }
 
+    console.log(`[AudioService ID:${this.debugId}] Creating new HTML5 Audio element`);
     this.audioElement = new Audio();
     this.audioElement.preload = 'metadata';
     
@@ -107,45 +123,45 @@ class BackgroundAudioService {
   }
 
   async loadPodcast(podcast, startTime = 0) {
-    console.log('[AudioService] loadPodcast called:', podcast?.titulo, 'URL:', podcast?.audioUrl);
+    console.log(`[AudioService ID:${this.debugId}] loadPodcast called:`, podcast?.titulo, 'URL:', podcast?.audioUrl);
     
     this.currentPodcast = podcast;
     this.currentTime = startTime;
 
     if (!this.audioElement) {
-      console.log('[AudioService] Creating audio element...');
+      console.log(`[AudioService ID:${this.debugId}] Creating audio element...`);
       this.createAudioElement();
     }
 
     try {
-      console.log('[AudioService] Setting src to:', podcast.audioUrl);
+      console.log(`[AudioService ID:${this.debugId}] Setting src to:`, podcast.audioUrl);
       this.audioElement.src = podcast.audioUrl;
       
-      console.log('[AudioService] Calling load()...');
+      console.log(`[AudioService ID:${this.debugId}] Calling load()...`);
       await this.audioElement.load();
       
-      console.log('[AudioService] Audio loaded successfully');
+      console.log(`[AudioService ID:${this.debugId}] Audio loaded successfully`);
       
       // Update media session metadata
       this.updateMediaSessionMetadata(podcast);
       
       const duration = this.audioElement ? this.audioElement.duration : 0;
-      console.log('[AudioService] Duration:', duration);
+      console.log(`[AudioService ID:${this.debugId}] Duration:`, duration);
       
       this.emit('loaded', { podcast, duration });
       return true;
     } catch (error) {
-      console.error('[AudioService] Error loading podcast:', error);
+      console.error(`[AudioService ID:${this.debugId}] Error loading podcast:`, error);
       this.emit('error', error);
       return false;
     }
   }
 
   async play() {
-    console.log('[AudioService] play() called, audioElement:', !!this.audioElement, 'currentPodcast:', !!this.currentPodcast);
+    console.log(`[AudioService ID:${this.debugId}] play() called, audioElement:`, !!this.audioElement, 'currentPodcast:', !!this.currentPodcast);
     
     if (!this.audioElement || !this.currentPodcast) {
-      throw new Error('No podcast loaded');
+      throw new Error(`[AudioService ID:${this.debugId}] No podcast loaded`);
     }
 
     try {
@@ -156,9 +172,9 @@ class BackgroundAudioService {
       }
 
       // Play the audio
-      console.log('[AudioService] Calling audioElement.play()...');
+      console.log(`[AudioService ID:${this.debugId}] Calling audioElement.play()...`);
       await this.audioElement.play();
-      console.log('[AudioService] Audio playing successfully');
+      console.log(`[AudioService ID:${this.debugId}] Audio playing successfully`);
       this.isPlaying = true;
       
       // Update notification
@@ -219,14 +235,93 @@ class BackgroundAudioService {
     this.saveState();
   }
 
+  setQueue(podcasts, startIndex = 0) {
+    this.queue = Array.isArray(podcasts) ? podcasts : [];
+    this.queueIndex = startIndex;
+    this.shufflePlayed = this.queue.length > 0 ? [startIndex] : [];
+    this.emit('queueChanged', { queue: this.queue, index: this.queueIndex, shuffle: this.shuffleMode });
+  }
+
+  setShuffleMode(enabled) {
+    this.shuffleMode = !!enabled;
+    // Reset shuffle history, keeping current track as played
+    this.shufflePlayed = this.queueIndex >= 0 ? [this.queueIndex] : [];
+    this.emit('shuffleChanged', { shuffle: this.shuffleMode });
+  }
+
   skipPrevious() {
-    // Skip 15 seconds back
-    this.seek(Math.max(0, this.currentTime - 15));
+    if (this.queue.length === 0) {
+      // No queue — just rewind 15s
+      this.seek(Math.max(0, this.currentTime - 15));
+      return;
+    }
+
+    if (this.shuffleMode) {
+      // In shuffle, go back to the previously played track
+      const currentPosInHistory = this.shufflePlayed.indexOf(this.queueIndex);
+      if (currentPosInHistory > 0) {
+        const prevIndex = this.shufflePlayed[currentPosInHistory - 1];
+        this.queueIndex = prevIndex;
+        this._playQueueItem(prevIndex);
+      }
+      return;
+    }
+
+    // Sequential: go to previous
+    const prevIndex = (this.queueIndex - 1 + this.queue.length) % this.queue.length;
+    this.queueIndex = prevIndex;
+    this._playQueueItem(prevIndex);
   }
 
   skipNext() {
-    // Skip 15 seconds forward
-    this.seek(Math.min(this.duration, this.currentTime + 15));
+    if (this.queue.length === 0) {
+      // No queue — just skip 15s forward
+      this.seek(Math.min(this.duration, this.currentTime + 15));
+      return;
+    }
+
+    if (this.shuffleMode) {
+      // Find unplayed indices
+      const unplayed = this.queue
+        .map((_, i) => i)
+        .filter(i => !this.shufflePlayed.includes(i));
+
+      if (unplayed.length === 0) {
+        // All played — reset and pick random
+        this.shufflePlayed = [];
+        const randomIndex = Math.floor(Math.random() * this.queue.length);
+        this.queueIndex = randomIndex;
+        this.shufflePlayed.push(randomIndex);
+        this._playQueueItem(randomIndex);
+      } else {
+        const randomIndex = unplayed[Math.floor(Math.random() * unplayed.length)];
+        this.queueIndex = randomIndex;
+        this.shufflePlayed.push(randomIndex);
+        this._playQueueItem(randomIndex);
+      }
+      return;
+    }
+
+    // Sequential: go to next
+    const nextIndex = (this.queueIndex + 1) % this.queue.length;
+    this.queueIndex = nextIndex;
+    this._playQueueItem(nextIndex);
+  }
+
+  async _playQueueItem(index) {
+    const podcast = this.queue[index];
+    if (!podcast) return;
+
+    // Build audio URL if missing
+    const podcastWithUrl = {
+      ...podcast,
+      audioUrl: podcast.audioUrl || `${(typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || ''}/api/podcasts/${podcast.id || podcast.podcastId}/audio`
+    };
+
+    const success = await this.loadPodcast(podcastWithUrl, 0);
+    if (success) {
+      await this.play();
+    }
   }
 
   updateMediaSessionMetadata(podcast) {
@@ -294,6 +389,12 @@ class BackgroundAudioService {
     this.isPlaying = false;
     this.emit('ended', { podcast: this.currentPodcast });
     
+    // Auto-advance to next track if queue exists
+    if (this.queue.length > 0) {
+      this.skipNext();
+      return;
+    }
+
     // Clear notification
     this.notificationManager.clear();
     
@@ -380,6 +481,7 @@ class BackgroundAudioService {
 
   // Cleanup
   destroy() {
+    console.log(`[AudioService ID:${this.debugId}] destroy() called! Stack trace:`, new Error().stack);
     if (this.audioElement) {
       this.audioElement.pause();
       this.audioElement = null;

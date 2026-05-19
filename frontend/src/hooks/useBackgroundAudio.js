@@ -1,85 +1,107 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import BackgroundAudioService from '../services/BackgroundAudioService';
+
+// Create a single global instance of the audio service to survive page transitions
+const globalAudioService = new BackgroundAudioService();
+
+// Periodically restore saved state on initial module load
+globalAudioService.restoreState();
 
 /**
  * Custom hook for managing background audio playback
  * Integrates the BackgroundAudioService with React components
  */
 export function useBackgroundAudio() {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
-  const [currentPodcast, setCurrentPodcast] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(globalAudioService.isPlaying);
+  const [currentTime, setCurrentTime] = useState(globalAudioService.currentTime);
+  const [duration, setDuration] = useState(globalAudioService.duration);
+  const [playbackSpeed, setPlaybackSpeed] = useState(globalAudioService.playbackSpeed);
+  const [currentPodcast, setCurrentPodcast] = useState(globalAudioService.currentPodcast);
+  const [shuffleMode, setShuffleModeState] = useState(globalAudioService.shuffleMode || false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const serviceRef = useRef(null);
-
-  // Initialize the service
+  // Set up and synchronize event listeners
   useEffect(() => {
-    serviceRef.current = new BackgroundAudioService();
-    const service = serviceRef.current;
+    // Initial state sync when hook is mounted in a new page/component
+    setIsPlaying(globalAudioService.isPlaying);
+    setCurrentTime(globalAudioService.currentTime);
+    setDuration(globalAudioService.duration);
+    setPlaybackSpeed(globalAudioService.playbackSpeed);
+    setCurrentPodcast(globalAudioService.currentPodcast);
 
-    // Set up event listeners
-    service.on('play', (data) => {
+    const handlePlay = (data) => {
       setIsPlaying(true);
       setCurrentTime(data.currentTime);
       setCurrentPodcast(data.podcast);
       setError(null);
-    });
+    };
 
-    service.on('pause', (data) => {
+    const handlePause = (data) => {
       setIsPlaying(false);
       setCurrentTime(data.currentTime);
-    });
+    };
 
-    service.on('timeupdate', (data) => {
+    const handleTimeUpdate = (data) => {
       setCurrentTime(data.currentTime);
       setDuration(data.duration);
-    });
+    };
 
-    service.on('loadedmetadata', (data) => {
+    const handleLoadedMetadata = (data) => {
       setDuration(data.duration);
       setIsLoading(false);
-    });
+    };
 
-    service.on('loaded', (data) => {
+    const handleLoaded = (data) => {
       setIsLoading(false);
       setError(null);
-    });
+    };
 
-    service.on('ended', () => {
+    const handleEnded = () => {
       setIsPlaying(false);
       setCurrentTime(0);
-    });
+    };
 
-    service.on('speedChanged', (data) => {
+    const handleSpeedChanged = (data) => {
       setPlaybackSpeed(data.speed);
-    });
+    };
 
-    service.on('error', (err) => {
-      setError(err.message || 'An error occurred');
+    const handleServiceError = (err) => {
+      setError(err?.message || 'An error occurred');
       setIsLoading(false);
       setIsPlaying(false);
-    });
+    };
 
-    // Restore any saved state
-    service.restoreState();
+    const handleShuffleChanged = (data) => {
+      setShuffleModeState(data.shuffle);
+    };
 
-    // Cleanup on unmount
+    globalAudioService.on('play', handlePlay);
+    globalAudioService.on('pause', handlePause);
+    globalAudioService.on('timeupdate', handleTimeUpdate);
+    globalAudioService.on('loadedmetadata', handleLoadedMetadata);
+    globalAudioService.on('loaded', handleLoaded);
+    globalAudioService.on('ended', handleEnded);
+    globalAudioService.on('speedChanged', handleSpeedChanged);
+    globalAudioService.on('error', handleServiceError);
+    globalAudioService.on('shuffleChanged', handleShuffleChanged);
+
+    // Unsubscribe on unmount without destroying the global audio service
     return () => {
-      if (serviceRef.current) {
-        serviceRef.current.destroy();
-        serviceRef.current = null;
-      }
+      globalAudioService.off('play', handlePlay);
+      globalAudioService.off('pause', handlePause);
+      globalAudioService.off('timeupdate', handleTimeUpdate);
+      globalAudioService.off('loadedmetadata', handleLoadedMetadata);
+      globalAudioService.off('loaded', handleLoaded);
+      globalAudioService.off('ended', handleEnded);
+      globalAudioService.off('speedChanged', handleSpeedChanged);
+      globalAudioService.off('error', handleServiceError);
+      globalAudioService.off('shuffleChanged', handleShuffleChanged);
     };
   }, []);
 
   // Load a podcast
   const loadPodcast = useCallback(async (podcast, startTime = 0) => {
-    if (!serviceRef.current) return false;
-
     setIsLoading(true);
     setError(null);
 
@@ -89,7 +111,7 @@ export function useBackgroundAudio() {
       audioUrl: `${import.meta.env.VITE_API_BASE_URL || ''}/api/podcasts/${podcast.id || podcast.podcastId}/audio`
     };
 
-    const success = await serviceRef.current.loadPodcast(podcastWithUrl, startTime);
+    const success = await globalAudioService.loadPodcast(podcastWithUrl, startTime);
     if (!success) {
       setIsLoading(false);
       setError('Failed to load podcast');
@@ -101,10 +123,8 @@ export function useBackgroundAudio() {
 
   // Play audio
   const play = useCallback(async () => {
-    if (!serviceRef.current) return false;
-
     try {
-      const success = await serviceRef.current.play();
+      const success = await globalAudioService.play();
       if (!success) {
         setError('Failed to play audio');
       }
@@ -117,40 +137,45 @@ export function useBackgroundAudio() {
 
   // Pause audio
   const pause = useCallback(() => {
-    if (!serviceRef.current) return;
-    serviceRef.current.pause();
+    globalAudioService.pause();
   }, []);
 
   // Toggle play/pause
   const togglePlayPause = useCallback(async () => {
-    if (isPlaying) {
-      pause();
+    if (globalAudioService.isPlaying) {
+      globalAudioService.pause();
     } else {
-      await play();
+      await globalAudioService.play();
     }
-  }, [isPlaying, play, pause]);
+  }, []);
 
   // Seek to a specific time
   const seek = useCallback((time) => {
-    if (!serviceRef.current) return;
-    serviceRef.current.seek(time);
+    globalAudioService.seek(time);
   }, []);
 
   // Set playback speed
   const setSpeed = useCallback((speed) => {
-    if (!serviceRef.current) return;
-    serviceRef.current.setPlaybackSpeed(speed);
+    globalAudioService.setPlaybackSpeed(speed);
   }, []);
 
   // Skip forward/backward
   const skipForward = useCallback(() => {
-    if (!serviceRef.current) return;
-    serviceRef.current.skipNext();
+    globalAudioService.skipNext();
   }, []);
 
   const skipBackward = useCallback(() => {
-    if (!serviceRef.current) return;
-    serviceRef.current.skipPrevious();
+    globalAudioService.skipPrevious();
+  }, []);
+
+  // Set queue for playlist navigation
+  const setQueue = useCallback((podcasts, startIndex = 0) => {
+    globalAudioService.setQueue(podcasts, startIndex);
+  }, []);
+
+  // Toggle shuffle mode
+  const setShuffleMode = useCallback((enabled) => {
+    globalAudioService.setShuffleMode(enabled);
   }, []);
 
   // Handle podcast selection with auto-play
@@ -165,9 +190,6 @@ export function useBackgroundAudio() {
   // Handle podcast selection with resume from saved position
   const handlePodcastResume = useCallback(async (podcast, savedTime = 0) => {
     const success = await loadPodcast(podcast, savedTime);
-    if (success) {
-      // Don't auto-play, let user decide
-    }
     return success;
   }, [loadPodcast]);
 
@@ -180,6 +202,7 @@ export function useBackgroundAudio() {
     currentPodcast,
     isLoading,
     error,
+    shuffleMode,
 
     // Actions
     loadPodcast,
@@ -190,6 +213,8 @@ export function useBackgroundAudio() {
     setSpeed,
     skipForward,
     skipBackward,
+    setQueue,
+    setShuffleMode,
     handlePodcastSelect,
     handlePodcastResume,
 

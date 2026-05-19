@@ -69,8 +69,8 @@ class PlaylistIntegrationTest {
     podcastRepository.deleteAll();
     userRepository.deleteAll();
 
-    alice = buildUser("alice", "1001", "alice@example.com", "password123");
-    bob = buildUser("bob", "1002", "bob@example.com", "password123");
+    alice = buildUser("alice", "1001", "alice@example.com", "Password123");
+    bob = buildUser("bob", "1002", "bob@example.com", "Password123");
     userRepository.save(alice);
     userRepository.save(bob);
 
@@ -79,8 +79,8 @@ class PlaylistIntegrationTest {
     relation.setUpdatedAt(LocalDateTime.now());
     relationRepository.save(relation);
 
-    tokenAlice = login("alice@example.com", "password123");
-    tokenBob = login("bob@example.com", "password123");
+    tokenAlice = login("alice@example.com", "Password123");
+    tokenBob = login("bob@example.com", "Password123");
   }
 
   @Test

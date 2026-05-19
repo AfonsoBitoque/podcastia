@@ -191,12 +191,20 @@ public class PodcastGenerationService {
     }
 
     private String findPython() {
-        // Try venv first, then system python3
+        // Try venv first (Windows + Unix), then fall back to system python
         String projectDir = System.getProperty("user.dir");
-        File venvPython = new File(projectDir + "/venv/bin/python3");
-        if (venvPython.exists()) {
-            return venvPython.getAbsolutePath();
+        File windowsVenvPython = new File(projectDir + "/venv/Scripts/python.exe");
+        if (windowsVenvPython.exists()) {
+            return windowsVenvPython.getAbsolutePath();
         }
-        return "python3";
+        File unixVenvPython3 = new File(projectDir + "/venv/bin/python3");
+        if (unixVenvPython3.exists()) {
+            return unixVenvPython3.getAbsolutePath();
+        }
+        File unixVenvPython = new File(projectDir + "/venv/bin/python");
+        if (unixVenvPython.exists()) {
+            return unixVenvPython.getAbsolutePath();
+        }
+        return "python";
     }
 }

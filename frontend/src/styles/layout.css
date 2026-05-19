@@ -7,6 +7,11 @@
   --ink-brown: #3b231b;
   --soft-brown: #7e6363;
   --brand-brown: #a64b2a;
+  --podcast-card-bg: rgba(255, 250, 246, 0.96);
+  --podcast-card-border: rgba(114, 71, 56, 0.18);
+  --podcast-card-shadow: 0 10px 28px rgba(70, 38, 31, 0.08);
+  --podcast-card-shadow-hover: 0 18px 38px rgba(70, 38, 31, 0.12);
+  --podcast-card-radius: 18px;
 }
 
 .app-shell {

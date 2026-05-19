@@ -58,6 +58,21 @@ public class ChatController {
     }
   }
 
+  @GetMapping("/unread-count")
+  public ResponseEntity<?> getUnreadCount() {
+    Optional<User> authUser = getAuthenticatedUser();
+    if (authUser.isEmpty()) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
+    try {
+      long count = chatMessageService.getUnreadCount(authUser.get().getId());
+      return ResponseEntity.ok(Map.of("count", count));
+    } catch (ChatMessageException exception) {
+      return ResponseEntity.status(exception.getStatus()).body(Map.of("error", exception.getMessage()));
+    }
+  }
+
   @PostMapping("/messages/{messageId}/reactions")
   public ResponseEntity<?> reactToMessage(@PathVariable Long messageId,
       @RequestBody ChatReactionRequest request) {

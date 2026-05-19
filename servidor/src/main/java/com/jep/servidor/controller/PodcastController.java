@@ -5,12 +5,15 @@ import com.jep.servidor.repository.PodcastRepository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import com.jep.servidor.model.User;
 import com.jep.servidor.model.PodcastProgress;
 import com.jep.servidor.repository.UserRepository;
 import com.jep.servidor.repository.PodcastProgressRepository;
 import com.jep.servidor.service.RecommendationService;
+import com.jep.servidor.service.UserRelationshipService;
+import com.jep.servidor.dto.RelationStatusDto;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.data.domain.Sort;
@@ -41,12 +44,16 @@ public class PodcastController {
   private final UserRepository userRepository;
   private final RecommendationService recommendationService;
   private final PodcastProgressRepository podcastProgressRepository;
+  private final UserRelationshipService userRelationshipService;
 
-  public PodcastController(PodcastRepository podcastRepository, UserRepository userRepository, RecommendationService recommendationService, PodcastProgressRepository podcastProgressRepository) {
+  public PodcastController(PodcastRepository podcastRepository, UserRepository userRepository, 
+      RecommendationService recommendationService, PodcastProgressRepository podcastProgressRepository,
+      UserRelationshipService userRelationshipService) {
     this.podcastRepository = podcastRepository;
     this.userRepository = userRepository;
     this.recommendationService = recommendationService;
     this.podcastProgressRepository = podcastProgressRepository;
+    this.userRelationshipService = userRelationshipService;
   }
 
   private Optional<User> getAuthenticatedUser() {
@@ -176,11 +183,27 @@ public class PodcastController {
    * @return Lista de podcasts do utilizador.
    */
   @GetMapping("/user/{userId}")
-  public ResponseEntity<List<Podcast>> getByUser(@PathVariable("userId") Long userId) {
-    Podcast probe = new Podcast();
-    probe.setUser(new com.jep.servidor.model.User());
-    probe.getUser().setId(userId);
-    List<Podcast> podcasts = podcastRepository.findByUser(probe.getUser());
+  public ResponseEntity<?> getByUser(@PathVariable("userId") Long userId) {
+    Optional<User> optionalUser = userRepository.findById(userId);
+    if (optionalUser.isEmpty()) {
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Utilizador não encontrado."));
+    }
+    
+    List<Podcast> podcasts = podcastRepository.findByUserOrderByCreatedAtDesc(optionalUser.get());
+    
+    Optional<User> currentUser = getAuthenticatedUser();
+    boolean isSelf = currentUser.isPresent() && currentUser.get().getId().equals(userId);
+    boolean isFriend = false;
+    
+    if (currentUser.isPresent() && !isSelf) {
+        RelationStatusDto status = userRelationshipService.getRelationStatus(currentUser.get().getId(), userId);
+        isFriend = "FRIENDS".equals(status.getStatus());
+    }
+    
+    if (!isSelf && !isFriend) {
+        podcasts = podcasts.stream().filter(Podcast::isPublico).collect(Collectors.toList());
+    }
+    
     return ResponseEntity.ok(podcasts);
   }
 

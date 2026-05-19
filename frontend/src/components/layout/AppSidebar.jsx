@@ -53,7 +53,43 @@ function SidebarIcon({ type }) {
   return <span className={`sidebar-nav-icon sidebar-nav-icon--${type}`} aria-hidden="true" />
 }
 
+import { useEffect, useState } from 'react'
+import { useAuth } from '../../contexts/AuthContext'
+
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
+
 function AppSidebar() {
+  const { isAuthenticated } = useAuth()
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+    if (!isAuthenticated) return
+
+    const fetchUnreadCount = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        const response = await fetch(`${API_BASE_URL}/api/chats/unread-count`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (response.ok) {
+          const data = await response.json()
+          setUnreadCount(data.count || 0)
+        }
+      } catch (error) {
+        console.error('Error fetching unread count:', error)
+      }
+    }
+
+    fetchUnreadCount()
+    // Could set an interval here if we wanted periodic updates without websocket
+    const interval = setInterval(fetchUnreadCount, 30000)
+    return () => clearInterval(interval)
+  }, [isAuthenticated])
+
+  if (!isAuthenticated) {
+    return null
+  }
+
   const renderNavItem = (item) => (
     <NavLink key={`${item.label}-${item.to}`} to={item.to} className="sidebar-nav-link">
       <SidebarIcon type={item.icon} />
@@ -83,6 +119,9 @@ function AppSidebar() {
           <NavLink to="/messages" className="sidebar-nav-link sidebar-message-link">
             <SidebarIcon type="chat" />
             <span>Mensagens</span>
+            {unreadCount > 0 && (
+              <span className="sidebar-unread">{unreadCount > 99 ? '99+' : unreadCount}</span>
+            )}
           </NavLink>
         </section>
       </div>

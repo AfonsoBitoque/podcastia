@@ -47,7 +47,7 @@ class UserRegistrationTest {
     user.setUsername("testuser");
     user.setTag("1234");
     user.setEmail("test@example.com");
-    user.setPassword("password123");
+    user.setPassword("Password123");
 
     String userJson = objectMapper.writeValueAsString(user);
 
@@ -57,8 +57,8 @@ class UserRegistrationTest {
         .andExpect(status().isCreated());
 
     User savedUser = userRepository.findByEmail("test@example.com").orElseThrow();
-    assertNotEquals("password123", savedUser.getPassword());
-    assertTrue(passwordEncoder.matches("password123", savedUser.getPassword()));
+    assertNotEquals("Password123", savedUser.getPassword());
+    assertTrue(passwordEncoder.matches("Password123", savedUser.getPassword()));
   }
 
   @Test
@@ -67,14 +67,14 @@ class UserRegistrationTest {
     user1.setUsername("user1");
     user1.setTag("1111");
     user1.setEmail("duplicate@example.com");
-    user1.setPassword("pass");
+    user1.setPassword("Password123");
     userRepository.save(user1);
 
     User user2 = new User();
     user2.setUsername("user2");
     user2.setTag("2222");
     user2.setEmail("duplicate@example.com");
-    user2.setPassword("pass");
+    user2.setPassword("Password123");
 
     mockMvc.perform(post("/users")
             .contentType(MediaType.APPLICATION_JSON)
@@ -88,14 +88,14 @@ class UserRegistrationTest {
     user1.setUsername("sameuser");
     user1.setTag("9999");
     user1.setEmail("email1@example.com");
-    user1.setPassword("pass");
+    user1.setPassword("Password123");
     userRepository.save(user1);
 
     User user2 = new User();
     user2.setUsername("sameuser");
     user2.setTag("9999");
     user2.setEmail("email2@example.com");
-    user2.setPassword("pass");
+    user2.setPassword("Password123");
 
     mockMvc.perform(post("/users")
             .contentType(MediaType.APPLICATION_JSON)
@@ -109,7 +109,7 @@ class UserRegistrationTest {
     user.setUsername("user");
     user.setTag("1234");
     user.setEmail("invalid-email");
-    user.setPassword("pass");
+    user.setPassword("Password123");
 
     mockMvc.perform(post("/users")
             .contentType(MediaType.APPLICATION_JSON)

@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import Header from './components/layout/Header'
 import AppSidebar from './components/layout/AppSidebar'
 import Footer from './components/layout/Footer'
+import PersistentPlayer from './components/PersistentPlayer'
 import './styles/layout.css'
 
 // Lazy load pages for code splitting
@@ -11,6 +12,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage'))
 const HomePage = lazy(() => import('./pages/HomePage'))
 const TrendingPage = lazy(() => import('./pages/TrendingPage'))
 const UserPage = lazy(() => import('./pages/UserPage'))
+const UserProfilePage = lazy(() => import('./pages/UserProfilePage'))
 const TopicsPage = lazy(() => import('./pages/TopicsPage'))
 const SearchPageTest = lazy(() => import('./pages/SearchPageTest'))
 const GeneratePage = lazy(() => import('./pages/GeneratePage'))
@@ -29,48 +31,38 @@ function PageLoader() {
   )
 }
 
-function useOnboardingGuard() {
-  const location = useLocation()
-  const [authState, setAuthState] = useState(0) // Force re-render on auth changes
-  
-  useEffect(() => {
-    const handleAuthChange = () => {
-      setAuthState(prev => prev + 1)
-    }
-    window.addEventListener('auth-change', handleAuthChange)
-    return () => window.removeEventListener('auth-change', handleAuthChange)
-  }, [])
-  
-  const publicPaths = ['/login', '/register', '/onboarding']
-  const isPublicPath = publicPaths.includes(location.pathname)
-  
-  const hasCompletedOnboarding = () => {
-    const userRaw = localStorage.getItem('user')
-    if (!userRaw) return true // Não autenticado, deixa passar (login vai redirecionar)
-    
-    try {
-      const user = JSON.parse(userRaw)
-      // Só confiar no valor do objeto user, não no topicsOnboardingComplete antigo
-      return user.hasCompletedOnboarding === true
-    } catch {
-      return true
-    }
-  }
+import { useAuth } from './contexts/AuthContext'
 
-  return { isPublicPath, hasCompletedOnboarding: hasCompletedOnboarding(), authState }
+function useAuthGuard() {
+  const location = useLocation()
+  const { isAuthenticated, hasCompletedOnboarding, isLoading } = useAuth()
+  
+  const publicPaths = ['/login', '/register']
+  const isPublicPath = publicPaths.includes(location.pathname)
+
+  return { isPublicPath, isAuthenticated, hasCompletedOnboarding, isLoading }
 }
 
 function ProtectedRoute({ children }) {
-  const { isPublicPath, hasCompletedOnboarding } = useOnboardingGuard()
+  const { isPublicPath, isAuthenticated, hasCompletedOnboarding, isLoading } = useAuthGuard()
   const location = useLocation()
+
+  if (isLoading) {
+    return <PageLoader />
+  }
 
   // Se é path pública, deixa passar
   if (isPublicPath) {
     return children
   }
 
-  // Se não completou onboarding, redirecionar
-  if (!hasCompletedOnboarding) {
+  // Se não está autenticado, redirecionar
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />
+  }
+
+  // Se não completou onboarding e não está no onboarding, redirecionar
+  if (!hasCompletedOnboarding && location.pathname !== '/onboarding') {
     return <Navigate to="/onboarding" replace state={{ from: location.pathname }} />
   }
 
@@ -93,16 +85,19 @@ function App() {
             <Route path="/trending" element={<ProtectedRoute><TrendingPage /></ProtectedRoute>} />
             <Route path="/shorts" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
             <Route path="/user" element={<ProtectedRoute><UserPage /></ProtectedRoute>} />
+            <Route path="/user/:id" element={<ProtectedRoute><UserProfilePage /></ProtectedRoute>} />
             <Route path="/playlists" element={<ProtectedRoute><PlaylistPage /></ProtectedRoute>} />
             <Route path="/following" element={<ProtectedRoute><UserPage /></ProtectedRoute>} />
             <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
             <Route path="/topics" element={<ProtectedRoute><TopicsPage /></ProtectedRoute>} />
+            <Route path="/explorar" element={<ProtectedRoute><SearchPageTest /></ProtectedRoute>} />
             <Route path="/search-test" element={<ProtectedRoute><SearchPageTest /></ProtectedRoute>} />
             <Route path="/generate" element={<ProtectedRoute><GeneratePage /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
           </Routes>
         </Suspense>
       </div>
+      <PersistentPlayer />
       <Footer />
     </div>
   )
