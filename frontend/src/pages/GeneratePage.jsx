@@ -26,8 +26,6 @@ function GeneratePage() {
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0)
   const [error, setError] = useState('')
   const [generatedPodcast, setGeneratedPodcast] = useState(null)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [audioRef, setAudioRef] = useState(null)
   const [isTogglingVisibility, setIsTogglingVisibility] = useState(false)
 
   const token = localStorage.getItem('token')
@@ -107,16 +105,6 @@ function GeneratePage() {
     }
   }
 
-  const handlePlayPause = () => {
-    if (!audioRef) return
-    if (isPlaying) {
-      audioRef.pause()
-    } else {
-      audioRef.play()
-    }
-    setIsPlaying(!isPlaying)
-  }
-
   const handleToggleVisibility = async () => {
     if (!generatedPodcast) return
     setIsTogglingVisibility(true)
@@ -150,107 +138,129 @@ function GeneratePage() {
     setTema('')
     setSelectedTags(['GERAL'])
     setError('')
-    setIsPlaying(false)
   }
 
   return (
     <main className="generate-page">
-      <section className="generate-shell">
-        <h1 className="generate-title">Gerar Podcast com IA</h1>
-        <p className="generate-subtitle">
-          Escolhe um tema e a nossa inteligência artificial cria um podcast original para ti.
-        </p>
+      <section className="generate-visual-panel" aria-labelledby="generate-visual-title">
+        <span className="visual-ring ring-a"></span>
+        <span className="visual-ring ring-b"></span>
+        <span className="visual-ring ring-c"></span>
+        <span className="visual-orbit orbit-a"></span>
+        <span className="visual-orbit orbit-b"></span>
 
-        {!generatedPodcast && !isGenerating && (
-          <form className="generate-form" onSubmit={handleGenerate}>
-            <div className="form-group">
-              <label htmlFor="tema">Tema do Podcast</label>
-              <input
-                id="tema"
-                type="text"
-                placeholder="Ex: O futuro da inteligência artificial em Portugal"
-                value={tema}
-                onChange={(e) => setTema(e.target.value)}
-                maxLength={200}
-                required
-              />
-              <span className="char-count">{tema.length}/200</span>
-            </div>
+        <div className="generate-visual-content">
+          <p className="generate-kicker">Podcastia AI Studio</p>
+          <h1 id="generate-visual-title">Dá voz às tuas ideias com a nossa IA.</h1>
+          <p>Em poucos segundos, transformamos o teu tema num podcast pronto a ouvir.</p>
+        </div>
+      </section>
 
-            <div className="form-group">
-              <label>Categorias</label>
-              <div className="tag-selector">
-                {TAG_OPTIONS.map((tag) => (
-                  <button
-                    key={tag.value}
-                    type="button"
-                    className={`tag-chip ${selectedTags.includes(tag.value) ? 'active' : ''}`}
-                    onClick={() => toggleTag(tag.value)}
-                  >
-                    {tag.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {error && <p className="generate-error">{error}</p>}
-
-            <button type="submit" className="generate-btn">
-              Gerar Podcast
-            </button>
-          </form>
-        )}
-
-        {isGenerating && (
-          <div className="generate-loading">
-            <div className="ai-wave">
-              <span></span><span></span><span></span><span></span><span></span>
-            </div>
-            <p className="loading-text">{LOADING_MESSAGES[loadingMsgIndex]}</p>
+      <section className="generate-workspace" aria-label="Gerador de podcasts">
+        <div className="generate-shell">
+          <div className="generate-heading">
+            <p className="generate-kicker">Novo episódio</p>
+            <h2 className="generate-title">
+              <span className="ai-title-mark" aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+              </span>
+              Gerar Podcast com IA
+            </h2>
+            <p className="generate-subtitle">
+              Escolhe um tema e deixa a inteligência artificial compor o primeiro rascunho sonoro.
+            </p>
           </div>
-        )}
 
-        {generatedPodcast && (
-          <div className="generate-result">
-            <div className="result-card">
-              <div className="result-header">
-                <h2>{generatedPodcast.titulo}</h2>
-                <span className={`visibility-badge ${generatedPodcast.publico ? 'public' : 'private'}`}>
-                  {generatedPodcast.publico ? 'Público' : 'Privado'}
-                </span>
-              </div>
-
-              <div className="result-player">
-                <audio
-                  ref={(el) => setAudioRef(el)}
-                  src={`${API_BASE_URL}${generatedPodcast.audioUrl}`}
-                  onPlay={() => setIsPlaying(true)}
-                  onPause={() => setIsPlaying(false)}
-                  onEnded={() => setIsPlaying(false)}
-                  controls
+          {!generatedPodcast && !isGenerating && (
+            <form className="generate-form" onSubmit={handleGenerate}>
+              <div className="form-group">
+                <label htmlFor="tema">Tema do Podcast</label>
+                <input
+                  id="tema"
+                  type="text"
+                  placeholder="Ex: O futuro da inteligência artificial em Portugal"
+                  value={tema}
+                  onChange={(e) => setTema(e.target.value)}
+                  maxLength={200}
+                  required
                 />
+                <span className="char-count">{tema.length}/200</span>
               </div>
 
-              <div className="result-actions">
-                <button
-                  className={`visibility-btn ${generatedPodcast.publico ? 'is-public' : 'is-private'}`}
-                  onClick={handleToggleVisibility}
-                  disabled={isTogglingVisibility}
-                >
-                  {isTogglingVisibility
-                    ? 'A alterar...'
-                    : generatedPodcast.publico
-                      ? 'Tornar Privado'
-                      : 'Publicar'}
-                </button>
+              <div className="form-group">
+                <label>Categorias</label>
+                <div className="tag-selector" aria-label="Categorias do podcast">
+                  {TAG_OPTIONS.map((tag) => (
+                    <button
+                      key={tag.value}
+                      type="button"
+                      className={`tag-chip ${selectedTags.includes(tag.value) ? 'active' : ''}`}
+                      onClick={() => toggleTag(tag.value)}
+                    >
+                      {tag.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-                <button className="new-podcast-btn" onClick={handleNewPodcast}>
-                  Gerar Novo Podcast
-                </button>
+              {error && <p className="generate-error">{error}</p>}
+
+              <button type="submit" className="generate-btn">
+                Gerar Podcast
+              </button>
+            </form>
+          )}
+
+          {isGenerating && (
+            <div className="generate-loading">
+              <div className="sound-wave" aria-hidden="true">
+                <span></span><span></span><span></span><span></span><span></span>
+                <span></span><span></span><span></span><span></span>
+              </div>
+              <p className="loading-text">{LOADING_MESSAGES[loadingMsgIndex]}</p>
+            </div>
+          )}
+
+          {generatedPodcast && (
+            <div className="generate-result">
+              <div className="result-card">
+                <div className="result-header">
+                  <h2>{generatedPodcast.titulo}</h2>
+                  <span className={`visibility-badge ${generatedPodcast.publico ? 'public' : 'private'}`}>
+                    {generatedPodcast.publico ? 'P\u00fablico' : 'Privado'}
+                  </span>
+                </div>
+
+                <div className="result-player">
+                  <audio
+                    src={`${API_BASE_URL}${generatedPodcast.audioUrl}`}
+                    controls
+                  />
+                </div>
+
+                <div className="result-actions">
+                  <button
+                    className={`visibility-btn ${generatedPodcast.publico ? 'is-public' : 'is-private'}`}
+                    onClick={handleToggleVisibility}
+                    disabled={isTogglingVisibility}
+                  >
+                    {isTogglingVisibility
+                      ? 'A alterar...'
+                      : generatedPodcast.publico
+                        ? 'Tornar Privado'
+                        : 'Publicar'}
+                  </button>
+
+                  <button className="new-podcast-btn" onClick={handleNewPodcast}>
+                    Gerar Novo Podcast
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </section>
     </main>
   )
