@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import '../styles/sidebar.css'
 
 const TAG_UI = {
@@ -71,10 +72,21 @@ function PodcastSidebar({ podcast, isOpen, onClose, onPlayNow, onSave, isSaved, 
         {/* Conteúdo Scrollável */}
         <div className="sidebar-content">
 
+          {/* Imagem / Capa do Podcast */}
+          <div className="sidebar-cover-container">
+            <div className="sidebar-cover-placeholder">🎙</div>
+          </div>
+
           {/* Título e Host */}
           <div className="sidebar-header-info">
             <h2 className="sidebar-title">{podcast.titulo}</h2>
-            <p className="sidebar-host">{podcast.host || podcast.user?.username || 'Anónimo'}</p>
+            {podcast.user?.id ? (
+              <Link to={`/user/${podcast.user.id}`} className="sidebar-host sidebar-host--link" onClick={onClose}>
+                {podcast.host || podcast.user?.username || 'Anónimo'}
+              </Link>
+            ) : (
+              <p className="sidebar-host">{podcast.host || podcast.user?.username || 'Anónimo'}</p>
+            )}
           </div>
 
           {/* Painel de Ação Imediata */}

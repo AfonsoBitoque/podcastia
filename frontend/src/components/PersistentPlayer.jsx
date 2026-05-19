@@ -1,71 +1,61 @@
 import PlaybackSpeedControl from './PlaybackSpeedControl'
-import { usePlayer } from '../context/PlayerContext'
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
-
-const getAssetUrl = (path) => {
-  if (!path) return ''
-  if (/^https?:\/\//i.test(path)) return path
-  return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`
-}
-
-const formatTime = (seconds) => {
-  const floorSecs = Math.floor(seconds)
-  const mins = Math.floor(floorSecs / 60)
-  const secs = String(floorSecs % 60).padStart(2, '0')
-  return `${mins}:${secs}`
-}
+import { useBackgroundAudio } from '../hooks/useBackgroundAudio'
 
 function PersistentPlayer() {
   const {
-    forwardSeconds,
-    handleProgressClick,
-    handleProgressMouseDown,
-    handleSpeedChange,
     isPlaying,
-    nextPodcast,
-    playbackSpeed,
-    playingPodcast,
-    previousPodcast,
-    progressSecs,
-    rewindSeconds,
+    currentTime,
+    duration,
+    currentPodcast: playingPodcast,
     togglePlayPause,
-  } = usePlayer()
+    seek,
+    playbackSpeed,
+    setSpeed,
+    formattedCurrentTime,
+    formattedDuration,
+    skipForward,
+    skipBackward,
+    shuffleMode,
+    setShuffleMode,
+  } = useBackgroundAudio()
 
   if (!playingPodcast) return null
 
-  const totalSeconds = Math.max(1, (Number(playingPodcast.duracao) || 0) * 60)
-  const progressPercent = Math.min(100, (progressSecs / totalSeconds) * 100)
-  const coverImage = getAssetUrl(playingPodcast.coverImagePath)
+  const progressPercent = duration ? (currentTime / duration) * 100 : 0
+
+  const handleSpeedChange = (speed) => {
+    setSpeed(speed)
+  }
 
   return (
     <div className="player-bar">
+      {/* Left: Info Section */}
       <div className="player-info">
-        {coverImage ? (
-          <img
-            src={coverImage}
-            alt={playingPodcast.titulo}
-            className="player-cover"
-            onError={(event) => {
-              event.currentTarget.style.display = 'none'
-            }}
-          />
-        ) : (
-          <div className="player-cover-placeholder">P</div>
-        )}
+        <div className="player-cover-placeholder">🎙</div>
         <div className="player-text">
           <p className="player-title">{playingPodcast.titulo}</p>
-          <p className="player-host">{playingPodcast.host || playingPodcast.user?.username}</p>
+          <p className="player-host">{playingPodcast.host || playingPodcast.user?.username || 'Podcastia'}</p>
         </div>
       </div>
 
+      {/* Center: Controls Section */}
       <div className="player-controls">
         <div className="player-buttons-wrapper">
           <div className="player-buttons">
-            <button className="btn-icon btn-skip" onClick={previousPodcast} title="Podcast anterior" aria-label="Podcast anterior">
-              {'<<'}
+            <button
+              className="btn-icon btn-skip"
+              onClick={skipBackward}
+              title="Podcast anterior"
+              aria-label="Podcast anterior"
+            >
+              ⏮
             </button>
-            <button className="btn-icon" onClick={rewindSeconds} title="Recuar 15 segundos" aria-label="Recuar 15 segundos">
+            <button
+              className="btn-icon"
+              onClick={() => seek(Math.max(0, currentTime - 15))}
+              title="Recuar 15 segundos"
+              aria-label="Recuar 15 segundos"
+            >
               -15
             </button>
             <button
@@ -74,41 +64,70 @@ function PersistentPlayer() {
               aria-label={isPlaying ? 'Pausar' : 'Reproduzir'}
               type="button"
             >
-              <span className="player-play-symbol" aria-hidden="true" />
+              {isPlaying ? '⏸' : '▶'}
             </button>
-            <button className="btn-icon" onClick={forwardSeconds} title="Avancar 15 segundos" aria-label="Avancar 15 segundos">
+            <button
+              className="btn-icon"
+              onClick={() => seek(Math.min(duration, currentTime + 15))}
+              title="Avançar 15 segundos"
+              aria-label="Avançar 15 segundos"
+            >
               +15
             </button>
-            <button className="btn-icon btn-skip" onClick={nextPodcast} title="Proximo podcast" aria-label="Proximo podcast">
-              {'>>'}
+            <button
+              className="btn-icon btn-skip"
+              onClick={skipForward}
+              title="Próximo podcast"
+              aria-label="Próximo podcast"
+            >
+              ⏭
             </button>
           </div>
-          <PlaybackSpeedControl currentSpeed={playbackSpeed} onSpeedChange={handleSpeedChange} />
         </div>
+
+        {/* Timeline Progress */}
         <div className="player-progress-container">
-          <span className="time-display">{formatTime(progressSecs)}</span>
+          <span className="time-display">{formattedCurrentTime}</span>
           <div
             className="player-timeline"
-            onClick={handleProgressClick}
-            onMouseDown={handleProgressMouseDown}
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect()
+              const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+              seek(pct * duration)
+            }}
             role="slider"
             aria-label="Barra de progresso"
             aria-valuemin="0"
-            aria-valuemax={totalSeconds}
-            aria-valuenow={progressSecs}
-            style={{ '--animation-speed': `${1 / playbackSpeed}s` }}
+            aria-valuemax={duration}
+            aria-valuenow={currentTime}
           >
             <div
               className="player-timeline-fill"
               style={{
                 width: `${progressPercent}%`,
-                '--animation-speed': `${1 / playbackSpeed}s`,
+                transition: 'none',
               }}
             />
             <div className="player-timeline-thumb" style={{ left: `${progressPercent}%` }} />
           </div>
-          <span className="time-display">{formatTime(totalSeconds)}</span>
+          <span className="time-display">{formattedDuration}</span>
         </div>
+      </div>
+
+      {/* Right: Extra controls (Shuffle + Speed Control) */}
+      <div className="player-extra">
+        <button
+          className={`btn-icon btn-shuffle ${shuffleMode ? 'active' : ''}`}
+          onClick={() => setShuffleMode(!shuffleMode)}
+          title={shuffleMode ? 'Desativar aleatório' : 'Ativar aleatório'}
+          aria-label={shuffleMode ? 'Desativar modo aleatório' : 'Ativar modo aleatório'}
+        >
+          🔀
+        </button>
+        <PlaybackSpeedControl
+          currentSpeed={playbackSpeed}
+          onSpeedChange={handleSpeedChange}
+        />
       </div>
     </div>
   )

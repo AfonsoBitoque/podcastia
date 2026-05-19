@@ -47,11 +47,11 @@ public class FeedService {
     }
 
     if (Boolean.TRUE.equals(shorts)) {
-      spec = spec.and(maxDuration(SHORT_MAX_DURATION_SECONDS));
+      spec = spec.and(maxDuration(SHORT_MAX_DURATION_SECONDS / 60));
     }
 
     if (maxDuration != null) {
-      spec = spec.and(maxDuration(maxDuration));
+      spec = spec.and(maxDuration(maxDuration / 60));
     }
 
     if (Boolean.TRUE.equals(hidePlayed)) {
@@ -116,7 +116,7 @@ public class FeedService {
           .where(
               builder.equal(progress.get("user"), user),
               builder.equal(progress.get("podcast"), root),
-              builder.greaterThanOrEqualTo(progress.get("progressSeconds"), root.get("duracao"))
+              builder.greaterThanOrEqualTo(progress.get("progressSeconds"), builder.prod(root.get("duracao"), 60))
           );
       return builder.not(builder.exists(subquery));
     };

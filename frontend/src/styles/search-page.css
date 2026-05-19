@@ -15,17 +15,84 @@
   padding: 2rem 0 4rem;
 }
 
-.search-hero {
+.search-banner {
+  width: 100%;
+  border-radius: 28px;
+  padding: 3rem 2.4rem;
+  margin-bottom: 2.5rem;
+  color: #fff6ef;
+  background: linear-gradient(160deg, #8b2f17, #a7451f 54%, #6f220f);
+  box-shadow: 0 24px 40px rgba(103, 55, 33, 0.14);
+  position: relative;
+  overflow: hidden;
+  text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  text-align: center;
+  justify-content: center;
+}
+
+.search-kicker {
+  display: inline-block;
+  margin: 0 0 0.5rem;
+  font-weight: 800;
+  color: rgba(255, 213, 173, 0.9);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.85rem;
+  position: relative;
+  z-index: 1;
+}
+
+.search-banner h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 3.5vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1.25;
+  color: #ffffff;
+  position: relative;
+  z-index: 1;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.search-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.2rem;
+  margin-bottom: 2.5rem;
+  width: 100%;
 }
 
 .search-hero-copy {
   max-width: 720px;
+}
+
+.visual-ring {
+  position: absolute;
+  border: 1px solid rgba(255, 213, 173, 0.34);
+  border-radius: 999px;
+}
+
+.ring-a {
+  width: 180px;
+  height: 180px;
+  bottom: -46px;
+  right: -30px;
+}
+
+.ring-b {
+  width: 120px;
+  height: 120px;
+  bottom: 16px;
+  right: 30px;
+}
+
+.ring-c {
+  width: 240px;
+  height: 240px;
+  top: -94px;
+  right: -70px;
 }
 
 .search-hero-copy span,
@@ -185,10 +252,10 @@
 
 .explore-podcast-card,
 .explore-user-card {
-  background: rgba(255, 249, 241, 0.92);
-  border: 1px solid rgba(114, 71, 56, 0.16);
-  border-radius: 16px;
-  box-shadow: 0 8px 20px rgba(70, 38, 31, 0.08);
+  background: var(--podcast-card-bg);
+  border: 1px solid var(--podcast-card-border);
+  border-radius: var(--podcast-card-radius);
+  box-shadow: var(--podcast-card-shadow);
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
@@ -202,9 +269,9 @@
 
 .explore-podcast-card:hover,
 .explore-user-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-3px);
   border-color: #e05a2a;
-  box-shadow: 0 12px 28px rgba(224, 90, 42, 0.15);
+  box-shadow: var(--podcast-card-shadow-hover);
 }
 
 .explore-podcast-card.active-play {

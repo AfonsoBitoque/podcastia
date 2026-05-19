@@ -108,14 +108,26 @@ function TrendingPage() {
   }
 
   const handlePlayNow = async (podcast) => {
+    setIsSidebarOpen(false)
     const podcastWithUrl = {
       ...podcast,
       audioUrl: `${API_BASE_URL}/api/podcasts/${podcast.id}/audio`
     }
+    
+    const podcastId = podcast.id || podcast.podcastId
+    const currentId = playingPodcast?.id || playingPodcast?.podcastId
+    
+    if (currentId === podcastId) {
+      await togglePlayPause()
+      setSelectedPodcast(podcast)
+      return
+    }
+
     const success = await loadPodcast(podcastWithUrl, 0)
     if (success) {
       await play()
     }
+    setSelectedPodcast(podcast)
   }
 
   const openSidebar = (podcast) => {
@@ -190,45 +202,50 @@ function TrendingPage() {
     seek(newTime)
   }
 
-  const PodcastCard = ({ podcast, size = 'normal' }) => (
-    <article 
-      className={`trending-card ${size}`}
-      onClick={() => openSidebar(podcast)}
-    >
-      <div className="trending-card-cover">
-        <div className="trending-cover-placeholder">
-          <span>🎙</span>
+  const PodcastCard = ({ podcast }) => {
+    const isCurrentPlaying = playingPodcast && 
+      (playingPodcast.id || playingPodcast.podcastId) === (podcast.id || podcast.podcastId) && 
+      isPlaying
+
+    return (
+      <article 
+        className="trending-card"
+        onClick={() => openSidebar(podcast)}
+      >
+        <div className="trending-card-cover">
+          <div className="trending-cover-placeholder">
+            <span>🎙</span>
+          </div>
+          <button 
+            className="trending-play-btn"
+            onClick={(e) => {
+              e.stopPropagation()
+              e.preventDefault()
+              handlePlayNow(podcast)
+            }}
+            aria-label={isCurrentPlaying ? `Pausar ${podcast.titulo}` : `Reproduzir ${podcast.titulo}`}
+          >
+            {isCurrentPlaying ? '⏸' : '▶'}
+          </button>
+          <button
+            className="trending-info-btn"
+            onClick={(e) => {
+              e.stopPropagation()
+              e.preventDefault()
+              openSidebar(podcast)
+            }}
+            aria-label={`Informações de ${podcast.titulo}`}
+          >
+            ℹ
+          </button>
         </div>
-        <button 
-          className="trending-play-btn"
-          onClick={(e) => {
-            e.stopPropagation()
-            handlePlayNow(podcast)
-          }}
-          aria-label={`Reproduzir ${podcast.titulo}`}
-        >
-          ▶
-        </button>
-        <button
-          className="trending-info-btn"
-          onClick={(e) => {
-            e.stopPropagation()
-            openSidebar(podcast)
-          }}
-          aria-label={`Informações de ${podcast.titulo}`}
-        >
-          ℹ
-        </button>
-      </div>
-      <div className="trending-card-info">
-        <h3 className="trending-card-title">{podcast.titulo}</h3>
-        <p className="trending-card-author">{podcast.user?.username || 'Podcastia'}</p>
-        {size === 'large' && (
-          <p className="trending-card-desc">{podcast.descricao?.substring(0, 60)}...</p>
-        )}
-      </div>
-    </article>
-  )
+        <div className="trending-card-info">
+          <h3 className="trending-card-title">{podcast.titulo}</h3>
+          <p className="trending-card-author">{podcast.user?.username || 'Podcastia'}</p>
+        </div>
+      </article>
+    )
+  }
 
   const SectionHeader = ({ title, subtitle, action }) => (
     <div className="section-header">
@@ -271,16 +288,14 @@ function TrendingPage() {
   return (
     <main className="trending-page">
       {/* Hero Section - Podcasts do Dia */}
-      <section className="trending-hero">
+      <section className="trending-section">
         <SectionHeader 
           title="Podcasts do Dia" 
           subtitle="Escolhas personalizadas para ti"
         />
-        <div className="hero-grid">
-          {dailyPodcasts.slice(0, 3).map((podcast, index) => (
-            <div key={podcast.id} className={`hero-item hero-item-${index}`}>
-              <PodcastCard podcast={podcast} size={index === 0 ? 'large' : 'normal'} />
-            </div>
+        <div className="trending-row">
+          {dailyPodcasts.map((podcast) => (
+            <PodcastCard key={podcast.id} podcast={podcast} />
           ))}
         </div>
       </section>
@@ -336,113 +351,6 @@ function TrendingPage() {
           ))}
         </div>
       </section>
-
-      {/* Persistent Bottom Player */}
-      {playingPodcast && (
-        <div className={`player-bar ${isSidebarOpen ? 'sidebar-open' : ''}`}>
-          {/* Info Section */}
-          <div className="player-info">
-            <div className="player-cover-placeholder">🎙</div>
-            <div className="player-text">
-              <h4 className="player-title">{playingPodcast.titulo}</h4>
-              <p className="player-host">{playingPodcast.user?.username || 'Unknown'}</p>
-            </div>
-          </div>
-
-          {/* Controls Section */}
-          <div className="player-controls">
-            <div className="player-buttons-wrapper">
-              <div className="player-buttons">
-                <button
-                  className="btn-icon btn-skip"
-                  onClick={previousPodcast}
-                  title="Podcast anterior"
-                  aria-label="Podcast anterior"
-                >
-                  ⏮
-                </button>
-                <button
-                  className="btn-icon"
-                  onClick={rewindSeconds}
-                  title="Recuar 15 segundos"
-                  aria-label="Recuar 15 segundos"
-                >
-                  ⏪
-                </button>
-                <button className="btn-circular" onClick={togglePlayPause}>
-                  {isPlaying ? '⏸' : '▶'}
-                </button>
-                <button
-                  className="btn-icon"
-                  onClick={forwardSeconds}
-                  title="Avançar 15 segundos"
-                  aria-label="Avançar 15 segundos"
-                >
-                  ⏩
-                </button>
-                <button
-                  className="btn-icon btn-skip"
-                  onClick={nextPodcast}
-                  title="Próximo podcast"
-                  aria-label="Próximo podcast"
-                >
-                  ⏭
-                </button>
-              </div>
-              <PlaybackSpeedControl
-                currentSpeed={playbackSpeed}
-                onSpeedChange={handleSpeedChange}
-              />
-            </div>
-
-            {/* Progress Bar */}
-            <div className="player-progress-container">
-              <span className="time-display">{formatTime(currentTime)}</span>
-              <div
-                className="player-timeline"
-                ref={(el) => { timelineRef.current = el }}
-                onPointerDown={handleTimelinePointerDown}
-                onPointerMove={handleTimelinePointerMove}
-                onPointerUp={handleTimelinePointerUp}
-                onPointerCancel={handleTimelinePointerUp}
-                onMouseDown={handleTimelinePointerDown}
-                onMouseMove={handleTimelinePointerMove}
-                onMouseUp={handleTimelinePointerUp}
-                onMouseLeave={handleTimelinePointerUp}
-                onTouchStart={(e) => {
-                  e.preventDefault();
-                  handleTimelinePointerDown(e.touches[0]);
-                }}
-                onTouchMove={(e) => {
-                  e.preventDefault();
-                  handleTimelinePointerMove(e.touches[0]);
-                }}
-                onTouchEnd={handleTimelinePointerUp}
-                role="slider"
-                aria-label="Barra de progresso"
-                aria-valuemin="0"
-                aria-valuemax={duration}
-                aria-valuenow={currentTime}
-              >
-                <div
-                  className="player-timeline-fill"
-                  style={{ width: `${(currentTime / duration) * 100}%` }}
-                />
-                <div
-                  className="player-timeline-thumb"
-                  style={{ left: `${(currentTime / duration) * 100}%` }}
-                />
-              </div>
-              <span className="time-display">
-                {duration ? formatTime(duration) : (playingPodcast ? `${playingPodcast.duracao}:00` : '0:00')}
-              </span>
-            </div>
-          </div>
-
-          {/* Extra space for layout balance */}
-          <div className="player-extra"></div>
-        </div>
-      )}
 
       {/* Podcast Sidebar */}
       <PodcastSidebar

@@ -75,7 +75,7 @@ class AuthIntegrationTest {
         testUser.setUsername("testuser");
         testUser.setTag("1234");
         testUser.setEmail("test@example.com");
-        testUser.setPassword(passwordEncoder.encode("password123")); // Password encriptada pelo PasswordEncoder (guardada no Hibernate/DB)
+        testUser.setPassword(passwordEncoder.encode("Password123")); // Password encriptada pelo PasswordEncoder (guardada no Hibernate/DB)
         testUser.setUserType(User.UserType.USERNORMAL);
         testUser.setStatus(User.UserStatus.ACTIVE);
         userRepository.save(testUser);
@@ -85,7 +85,7 @@ class AuthIntegrationTest {
     void shouldLoginSuccessfullyWithEmail() throws Exception {
         LoginRequest loginRequest = new LoginRequest();
         loginRequest.identifier = "test@example.com";
-        loginRequest.password = "password123";
+        loginRequest.password = "Password123";
 
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -102,7 +102,7 @@ class AuthIntegrationTest {
         LoginRequest loginRequest = new LoginRequest();
         loginRequest.identifier = "testuser";
         loginRequest.tag = "1234";
-        loginRequest.password = "password123";
+        loginRequest.password = "Password123";
 
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -131,7 +131,7 @@ class AuthIntegrationTest {
     void shouldFailLoginWhenUserNotFound() throws Exception {
         LoginRequest loginRequest = new LoginRequest();
         loginRequest.identifier = "nonexistent@example.com";
-        loginRequest.password = "password123";
+        loginRequest.password = "Password123";
 
         // 401 e erro ao tentar login com email não registado, evito dar pistas (mensagem genérica)
         mockMvc.perform(post("/api/auth/login")
@@ -148,7 +148,7 @@ class AuthIntegrationTest {
 
         LoginRequest loginRequest = new LoginRequest();
         loginRequest.identifier = "test@example.com";
-        loginRequest.password = "password123";
+        loginRequest.password = "Password123";
 
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -164,7 +164,7 @@ class AuthIntegrationTest {
 
         LoginRequest loginRequest = new LoginRequest();
         loginRequest.identifier = "test@example.com";
-        loginRequest.password = "password123";
+        loginRequest.password = "Password123";
 
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -178,7 +178,7 @@ class AuthIntegrationTest {
         // 1. Faz Login para obter token
         LoginRequest loginRequest = new LoginRequest();
         loginRequest.identifier = "test@example.com";
-        loginRequest.password = "password123";
+        loginRequest.password = "Password123";
 
         MvcResult result = mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)

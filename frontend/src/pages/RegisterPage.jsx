@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import '../styles/register-page.css'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
+const PASSWORD_COMPLEXITY_REGEX = /^(?=.*[A-Z])(?=.*\d).{8,}$/
 
 function RegisterPage() {
   const navigate = useNavigate()
@@ -121,8 +122,8 @@ function RegisterPage() {
     }
     if (!formData.password) {
       nextErrors.password = 'A password e obrigatoria.'
-    } else if (formData.password.length < 8) {
-      nextErrors.password = 'A password deve ter pelo menos 8 caracteres.'
+    } else if (!PASSWORD_COMPLEXITY_REGEX.test(formData.password)) {
+      nextErrors.password = 'A password deve ter pelo menos 8 caracteres, uma letra maiuscula e um numero.'
     }
     if (!formData.confirmPassword) {
       nextErrors.confirmPassword = 'Confirma a password.'
@@ -293,7 +294,7 @@ function RegisterPage() {
                 type="password"
                 value={formData.password}
                 onChange={handleInputChange}
-                placeholder="Minimo 8 caracteres"
+                placeholder="Minimo 8 caracteres, 1 maiuscula e 1 numero"
               />
             </div>
             <div className="strength-meter" aria-live="polite">

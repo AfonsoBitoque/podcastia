@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { usePlayer } from '../context/PlayerContext'
+import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useBackgroundAudio } from '../hooks/useBackgroundAudio'
 import '../styles/search-page.css'
+import '../styles/trending-page.css'
+import '../styles/home-page.css'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
 const PAGE_SIZE = 8
@@ -37,6 +39,7 @@ const getInitials = (value) => {
 
 function SearchPageTest() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
   const routeQuery = searchParams.get('q') || ''
   const [query, setQuery] = useState(routeQuery)
   const [results, setResults] = useState([])
@@ -44,14 +47,42 @@ function SearchPageTest() {
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(false)
   const [error, setError] = useState('')
-  const [activeTab, setActiveTab] = useState('all')
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'all')
   const {
-    activePodcastId,
-    handleListen,
     isPlaying,
-    playingPodcast,
+    currentTime,
+    duration,
+    currentPodcast: playingPodcast,
+    loadPodcast,
+    play,
+    pause,
     togglePlayPause,
-  } = usePlayer()
+    seek,
+    formattedCurrentTime,
+    formattedDuration,
+  } = useBackgroundAudio()
+
+  const activePodcastId = playingPodcast?.id || playingPodcast?.podcastId
+
+  const handlePlayNow = async (podcast) => {
+    try {
+      const podcastId = podcast.id || podcast.podcastId
+      const currentId = playingPodcast?.id || playingPodcast?.podcastId
+      
+      if (currentId === podcastId) {
+        await togglePlayPause()
+        return
+      }
+      
+      const loaded = await loadPodcast(podcast, 0)
+      if (loaded) {
+        await play()
+      }
+    } catch (err) {
+      console.error('Error playing podcast:', err)
+    }
+  }
+
   const typingTimeoutRef = useRef(null)
   const observerRef = useRef(null)
   const latestRequestRef = useRef(0)
@@ -201,7 +232,10 @@ function SearchPageTest() {
 
     return (
       <article key={`${id}-${index}`} className={`explore-podcast-card ${activePodcastId === actualId ? 'active-play' : ''}`}>
-        <div className={`explore-podcast-cover ${primaryTag.thumbClass}`}>
+        <div className="trending-card-cover">
+          <div className="trending-cover-placeholder">
+            <span>🎙</span>
+          </div>
           {isCurrentPodcast ? (
             <button
               className={`thumb-play ${isPlaying ? 'is-playing' : ''}`}
@@ -221,7 +255,7 @@ function SearchPageTest() {
               aria-label={`Ouvir ${title}`}
               onClick={(event) => {
                 event.stopPropagation()
-                handleListen(playablePodcast, false, podcastResults)
+                handlePlayNow(playablePodcast)
               }}
             >
               <span className="thumb-play-symbol" aria-hidden="true" />
@@ -250,7 +284,12 @@ function SearchPageTest() {
     const avatar = getAssetUrl(user.imageUrl)
 
     return (
-      <article key={`user-${user.id}`} className="explore-user-card">
+      <article
+        key={`user-${user.id}`}
+        className="explore-user-card"
+        onClick={() => navigate(`/user/${user.id}`)}
+        style={{ cursor: 'pointer' }}
+      >
         <div className="explore-user-avatar">
           {avatar ? <img src={avatar} alt="" /> : <span>{getInitials(user.title)}</span>}
         </div>
@@ -267,12 +306,15 @@ function SearchPageTest() {
   return (
     <main className="search-page" aria-labelledby="search-title">
       <div className="search-shell">
-        <section className="search-hero">
-          <div className="search-hero-copy">
-            <span>Explorar</span>
-            <h1 id="search-title">Pesquisa na Podcastia</h1>
-          </div>
+        <section className="search-banner">
+          <div className="visual-ring ring-a"></div>
+          <div className="visual-ring ring-b"></div>
+          <div className="visual-ring ring-c"></div>
+          <span className="search-kicker">Explorar</span>
+          <h1 id="search-title">Pesquisa na Podcastia</h1>
+        </section>
 
+        <div className="search-controls">
           <form className="explore-search-bar" role="search" onSubmit={handleSubmit}>
             <span className="explore-search-icon" aria-hidden="true" />
             <input
@@ -297,7 +339,7 @@ function SearchPageTest() {
               </button>
             ))}
           </div>
-        </section>
+        </div>
 
         {hasQuery && (
           <section className="search-results-area" aria-live="polite">

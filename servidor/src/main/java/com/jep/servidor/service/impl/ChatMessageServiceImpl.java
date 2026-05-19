@@ -276,6 +276,15 @@ public class ChatMessageServiceImpl implements ChatMessageService {
   }
 
   @Override
+  @Transactional(readOnly = true)
+  public long getUnreadCount(Long userId) {
+    if (!userRepository.existsById(userId)) {
+      throw new ChatMessageException(HttpStatus.NOT_FOUND, "Utilizador não encontrado.");
+    }
+    return chatMessageRepository.countUnreadMessages(userId);
+  }
+
+  @Override
   public boolean isOnline(Long userId) {
     AtomicInteger count = activeSessions.get(userId);
     return count != null && count.get() > 0;

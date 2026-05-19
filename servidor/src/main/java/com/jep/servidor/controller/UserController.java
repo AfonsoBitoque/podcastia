@@ -55,6 +55,33 @@ public class UserController {
   }
 
   /**
+   * Retorna os dados públicos do perfil de um utilizador.
+   */
+  @GetMapping("/{id}/profile")
+  public ResponseEntity<?> getProfile(@PathVariable Long id) {
+    Optional<User> optionalUser = userRepository.findById(id);
+    if (optionalUser.isEmpty()) {
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Utilizador não encontrado no sistema."));
+    }
+    User user = optionalUser.get();
+    com.jep.servidor.dto.UserProfileDto profile = new com.jep.servidor.dto.UserProfileDto(
+      user.getId(),
+      user.getUsername(),
+      user.getTag(),
+      user.getBio(),
+      user.getProfilePicturePath(),
+      user.getPontosDesporto(),
+      user.getPontosPolitica(),
+      user.getPontosFinancas(),
+      user.getPontosGeral(),
+      user.getCreatedAt(),
+      user.getLastActiveAt(),
+      user.getTopics()
+    );
+    return ResponseEntity.ok(profile);
+  }
+
+  /**
    * Cria um novo utilizador.
    *
    * @param user Dados do utilizador a criar.

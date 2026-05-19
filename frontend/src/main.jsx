@@ -6,16 +6,10 @@ import App from './App.jsx'
 import { AuthProvider } from './contexts/AuthContext.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 
-// Register service worker
-if ('serviceWorker' in navigator) {
+// Service worker disabled in dev to avoid aggressive caching issues
+if (false && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(() => {
-        // Service Worker registered successfully
-      })
-      .catch(() => {
-        // Service Worker registration failed - silent fail
-      });
+    navigator.serviceWorker.register('/sw.js');
   });
 }
 

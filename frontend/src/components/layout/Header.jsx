@@ -168,7 +168,14 @@ function Header() {
     fetchSearchResults(getCategoryQuery(term), 0, true)
   }
 
-  const openPodcastResult = async (item) => {
+  const openSearchResult = async (item) => {
+    if (item.type === 'USER') {
+      saveRecentSearch(searchQuery)
+      setSearchFocused(false)
+      navigate(`/user/${item.id}`)
+      return
+    }
+
     if (item.type !== 'PODCAST') return
 
     saveRecentSearch(searchQuery)
@@ -248,7 +255,7 @@ function Header() {
           <span>Podcastia</span>
         </Link>
 
-        {!isAuthPage && !isExplorePage && (
+        {!isAuthPage && !isExplorePage && user && (
           <form
           ref={searchRootRef}
           className={`site-search ${searchFocused ? 'is-active' : ''}`}
@@ -301,8 +308,7 @@ function Header() {
                           ref={isLast ? lastSearchResultRef : null}
                           type="button"
                           className="site-search-result"
-                          onClick={() => openPodcastResult(item)}
-                          disabled={item.type !== 'PODCAST'}
+                          onClick={() => openSearchResult(item)}
                         >
                           {imageUrl ? (
                             <img src={imageUrl} alt="" className={item.type === 'USER' ? 'is-user' : ''} />

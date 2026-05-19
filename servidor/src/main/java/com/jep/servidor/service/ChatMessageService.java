@@ -23,6 +23,8 @@ public interface ChatMessageService {
 
   void deleteMessage(Long userId, Long messageId);
 
+  long getUnreadCount(Long userId);
+
   boolean isOnline(Long userId);
 
   void handleConnect(Principal principal, String sessionId);

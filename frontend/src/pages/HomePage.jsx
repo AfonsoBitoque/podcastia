@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import '../styles/home-page.css'
+import '../styles/trending-page.css'
 import PodcastSidebar from '../components/PodcastSidebar'
 import PlaybackSpeedControl from '../components/PlaybackSpeedControl'
 import { useBackgroundAudio } from '../hooks/useBackgroundAudio'
@@ -62,6 +63,51 @@ function HomePage() {
     skipForward,
     skipBackward,
   } = useBackgroundAudio()
+
+  const PodcastCard = ({ podcast }) => {
+    const isCurrentPlaying = playingPodcast && 
+      (playingPodcast.id || playingPodcast.podcastId) === (podcast.id || podcast.podcastId) && 
+      isPlaying
+
+    return (
+      <article 
+        className="trending-card"
+        onClick={() => openSidebar(podcast)}
+      >
+        <div className="trending-card-cover">
+          <div className="trending-cover-placeholder">
+            <span>🎙</span>
+          </div>
+          <button 
+            className="trending-play-btn"
+            onClick={(e) => {
+              e.stopPropagation()
+              e.preventDefault()
+              handlePlayNow(podcast)
+            }}
+            aria-label={isCurrentPlaying ? `Pausar ${podcast.titulo}` : `Reproduzir ${podcast.titulo}`}
+          >
+            {isCurrentPlaying ? '⏸' : '▶'}
+          </button>
+          <button
+            className="trending-info-btn"
+            onClick={(e) => {
+              e.stopPropagation()
+              e.preventDefault()
+              openSidebar(podcast)
+            }}
+            aria-label={`Informações de ${podcast.titulo}`}
+          >
+            ℹ
+          </button>
+        </div>
+        <div className="trending-card-info">
+          <h3 className="trending-card-title">{podcast.titulo}</h3>
+          <p className="trending-card-author">{podcast.user?.username || 'Podcastia'}</p>
+        </div>
+      </article>
+    )
+  }
 
   const TOPIC_FILTERS = [
     { value: 'all', label: 'Todos', icon: '🎵' },
@@ -126,8 +172,20 @@ function HomePage() {
   }
 
   const handlePlayNow = async (podcast) => {
+    setIsSidebarOpen(false)
     try {
       console.log('[HomePage] Playing podcast:', podcast.titulo)
+      
+      const podcastId = podcast.id || podcast.podcastId
+      const currentId = playingPodcast?.id || playingPodcast?.podcastId
+      
+      if (currentId === podcastId) {
+        // Se já é o podcast atual, apenas alterna entre play e pause sem reiniciar
+        await togglePlayPause()
+        setSelectedPodcast(podcast)
+        return
+      }
+      
       const loaded = await loadPodcast(podcast, 0)
       if (loaded) {
         console.log('[HomePage] Podcast loaded, starting playback...')
@@ -135,7 +193,6 @@ function HomePage() {
         console.log('[HomePage] Playback started')
       }
       setSelectedPodcast(podcast)
-      setIsSidebarOpen(false)
     } catch (err) {
       console.error('[HomePage] Error playing podcast:', err)
       setError('Failed to play podcast: ' + err.message)
@@ -243,10 +300,7 @@ function HomePage() {
 
   const formattedDuration = duration ? formatTime(duration) : '0:00'
 
-  const handlePlayFromSidebar = async (podcast) => {
-    await handlePlayNow(podcast)
-    closeSidebar()
-  }
+
 
   
   const nextPodcast = () => {
@@ -429,56 +483,7 @@ function HomePage() {
               </div>
             ) : filteredMyPodcasts && filteredMyPodcasts.length > 0 ? (
               filteredMyPodcasts.map((podcast) => (
-                <article key={podcast.id} className="podcast-card">
-                  <div className="podcast-cover-container">
-                    <div className="podcast-cover-placeholder">
-                      <span>🎙</span>
-                    </div>
-                  </div>
-                  
-                  <div className="podcast-content">
-                    <h3 className="podcast-title">{podcast.titulo}</h3>
-                    <p className="podcast-author">por {podcast.user?.username || 'Unknown'}</p>
-                    
-                    <div className="podcast-meta">
-                      <span className="podcast-duration">{formatTime(podcast.duracao * 60)}</span>
-                      <span className="podcast-date">
-                        {new Date(podcast.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                    
-                    {podcast.tags && podcast.tags.length > 0 && (
-                      <div className="podcast-tags">
-                        {podcast.tags.map((tag, index) => (
-                          <span
-                            key={index}
-                            className={`podcast-tag ${TAG_UI[tag]?.className || TAG_UI.DEFAULT.className}`}
-                          >
-                            {TAG_UI[tag]?.label || tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    
-                    <div className="podcast-actions">
-                      <button
-                        className="play-button"
-                        onClick={() => handlePlayNow(podcast)}
-                        aria-label={`Reproduzir ${podcast.titulo}`}
-                      >
-                        ▶️ Reproduzir
-                      </button>
-                      
-                      <button
-                        className="info-button"
-                        onClick={() => openSidebar(podcast)}
-                        aria-label={`Mais informações sobre ${podcast.titulo}`}
-                      >
-                        ℹ️
-                      </button>
-                    </div>
-                  </div>
-                </article>
+                <PodcastCard key={podcast.id} podcast={podcast} />
               ))
             ) : (
               <div className="empty-state my-podcasts-empty">
@@ -503,56 +508,7 @@ function HomePage() {
           <div className="podcast-grid fixed-width">
             {filteredSavedPodcasts && filteredSavedPodcasts.length > 0 ? (
               filteredSavedPodcasts.map((podcast) => (
-                <article key={podcast.id} className="podcast-card">
-                  <div className="podcast-cover-container">
-                    <div className="podcast-cover-placeholder">
-                      <span>🎙</span>
-                    </div>
-                  </div>
-                  
-                  <div className="podcast-content">
-                    <h3 className="podcast-title">{podcast.titulo}</h3>
-                    <p className="podcast-author">por {podcast.user?.username || 'Unknown'}</p>
-                    
-                    <div className="podcast-meta">
-                      <span className="podcast-duration">{formatTime(podcast.duracao * 60)}</span>
-                      <span className="podcast-date">
-                        {new Date(podcast.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                    
-                    {podcast.tags && podcast.tags.length > 0 && (
-                      <div className="podcast-tags">
-                        {podcast.tags.map((tag, index) => (
-                          <span
-                            key={index}
-                            className={`podcast-tag ${TAG_UI[tag]?.className || TAG_UI.DEFAULT.className}`}
-                          >
-                            {TAG_UI[tag]?.label || tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    
-                    <div className="podcast-actions">
-                      <button
-                        className="play-button"
-                        onClick={() => handlePlayNow(podcast)}
-                        aria-label={`Reproduzir ${podcast.titulo}`}
-                      >
-                        ▶️ Reproduzir
-                      </button>
-                      
-                      <button
-                        className="info-button"
-                        onClick={() => openSidebar(podcast)}
-                        aria-label={`Mais informações sobre ${podcast.titulo}`}
-                      >
-                        ℹ️
-                      </button>
-                    </div>
-                  </div>
-                </article>
+                <PodcastCard key={podcast.id} podcast={podcast} />
               ))
             ) : (
               <div className="empty-state saved-podcasts-empty">
@@ -590,56 +546,7 @@ function HomePage() {
               </div>
             ) : filteredCommunityPodcasts && filteredCommunityPodcasts.length > 0 ? (
               filteredCommunityPodcasts.map((podcast) => (
-                <article key={podcast.id} className="podcast-card">
-                  <div className="podcast-cover-container">
-                    <div className="podcast-cover-placeholder">
-                      <span>🎙</span>
-                    </div>
-                  </div>
-                  
-                  <div className="podcast-content">
-                    <h3 className="podcast-title">{podcast.titulo}</h3>
-                    <p className="podcast-author">por {podcast.user?.username || 'Unknown'}</p>
-                    
-                    <div className="podcast-meta">
-                      <span className="podcast-duration">{formatTime(podcast.duracao * 60)}</span>
-                      <span className="podcast-date">
-                        {new Date(podcast.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                    
-                    {podcast.tags && podcast.tags.length > 0 && (
-                      <div className="podcast-tags">
-                        {podcast.tags.map((tag, index) => (
-                          <span
-                            key={index}
-                            className={`podcast-tag ${TAG_UI[tag]?.className || TAG_UI.DEFAULT.className}`}
-                          >
-                            {TAG_UI[tag]?.label || tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    
-                    <div className="podcast-actions">
-                      <button
-                        className="play-button"
-                        onClick={() => handlePlayNow(podcast)}
-                        aria-label={`Reproduzir ${podcast.titulo}`}
-                      >
-                        ▶️ Reproduzir
-                      </button>
-                      
-                      <button
-                        className="info-button"
-                        onClick={() => openSidebar(podcast)}
-                        aria-label={`Mais informações sobre ${podcast.titulo}`}
-                      >
-                        ℹ️
-                      </button>
-                    </div>
-                  </div>
-                </article>
+                <PodcastCard key={podcast.id} podcast={podcast} />
               ))
             ) : (
               <div className="empty-state">
@@ -649,121 +556,12 @@ function HomePage() {
           </div>
         </section>
 
-      {/* Persistent Bottom Player */}
-      {playingPodcast && (
-        <div className={`player-bar ${isSidebarOpen ? 'sidebar-open' : ''}`}>
-          {/* Info Section */}
-          <div className="player-info">
-            <div className="player-cover-placeholder">🎙</div>
-            <div className="player-text">
-              <h4 className="player-title">{playingPodcast.titulo}</h4>
-              <p className="player-host">{playingPodcast.user?.username || 'Unknown'}</p>
-            </div>
-          </div>
-
-          {/* Controls Section */}
-          <div className="player-controls">
-            <div className="player-buttons-wrapper">
-              <div className="player-buttons">
-                <button
-                  className="btn-icon btn-skip"
-                  onClick={previousPodcast}
-                  title="Podcast anterior"
-                  aria-label="Podcast anterior"
-                >
-                  ⏮
-                </button>
-                <button
-                  className="btn-icon"
-                  onClick={rewindSeconds}
-                  title="Recuar 15 segundos"
-                  aria-label="Recuar 15 segundos"
-                >
-                  ⏪
-                </button>
-                <button className="btn-circular" onClick={togglePlayPause}>
-                  {isPlaying ? '⏸' : '▶'}
-                </button>
-                <button
-                  className="btn-icon"
-                  onClick={forwardSeconds}
-                  title="Avançar 15 segundos"
-                  aria-label="Avançar 15 segundos"
-                >
-                  ⏩
-                </button>
-                <button
-                  className="btn-icon btn-skip"
-                  onClick={nextPodcast}
-                  title="Próximo podcast"
-                  aria-label="Próximo podcast"
-                >
-                  ⏭
-                </button>
-              </div>
-              <PlaybackSpeedControl
-                currentSpeed={playbackSpeed}
-                onSpeedChange={handleSpeedChange}
-              />
-            </div>
-
-            {/* Progress Bar */}
-            <div className="player-progress-container">
-              <span className="time-display">{formatTime(currentTime)}</span>
-              <div
-                className="player-timeline"
-                ref={(el) => { timelineRef.current = el }}
-                onPointerDown={handleTimelinePointerDown}
-                onPointerMove={handleTimelinePointerMove}
-                onPointerUp={handleTimelinePointerUp}
-                onPointerCancel={handleTimelinePointerUp}
-                onMouseDown={handleTimelinePointerDown}
-                onMouseMove={handleTimelinePointerMove}
-                onMouseUp={handleTimelinePointerUp}
-                onMouseLeave={handleTimelinePointerUp}
-                onTouchStart={(e) => {
-                  e.preventDefault();
-                  handleTimelinePointerDown(e.touches[0]);
-                }}
-                onTouchMove={(e) => {
-                  e.preventDefault();
-                  handleTimelinePointerMove(e.touches[0]);
-                }}
-                onTouchEnd={handleTimelinePointerUp}
-                role="slider"
-                aria-label="Barra de progresso"
-                aria-valuemin="0"
-                aria-valuemax={duration}
-                aria-valuenow={currentTime}
-                style={{ '--animation-speed': timelineAnimationSpeed }}
-              >
-                <div
-                  className="player-timeline-fill"
-                  style={{
-                    width: `${(currentTime / duration) * 100}%`,
-                    '--animation-speed': timelineAnimationSpeed
-                  }}
-                />
-                <div
-                  className="player-timeline-thumb"
-                  style={{ left: `${(currentTime / duration) * 100}%` }}
-                />
-              </div>
-              <span className="time-display">{durationLabel}</span>
-            </div>
-          </div>
-
-          {/* Extra space for layout balance */}
-          <div className="player-extra"></div>
-        </div>
-      )}
-
       {/* Podcast Sidebar */}
       <PodcastSidebar
         podcast={selectedPodcast}
         isOpen={isSidebarOpen}
         onClose={closeSidebar}
-        onPlayNow={handlePlayFromSidebar}
+        onPlayNow={() => selectedPodcast && handlePlayNow(selectedPodcast)}
         onSave={handleSaveToPodcasts}
         isSaved={selectedPodcast ? isPodcastSaved(selectedPodcast.id || selectedPodcast.podcastId) : false}
         isPlaying={playingPodcast && (playingPodcast.id || playingPodcast.podcastId) === (selectedPodcast?.id || selectedPodcast?.podcastId) ? isPlaying : false}

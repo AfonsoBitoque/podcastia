@@ -25,4 +25,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
       @Param("cursorCreatedAt") Instant cursorCreatedAt,
       @Param("cursorId") Long cursorId,
       Pageable pageable);
+
+  @Query("SELECT COUNT(m) FROM ChatMessage m WHERE m.recipient.id = :userId AND m.status != 'READ'")
+  long countUnreadMessages(@Param("userId") Long userId);
 }

@@ -40,6 +40,8 @@ function PlaylistPage() {
     setSpeed,
     formattedCurrentTime,
     formattedDuration,
+    setQueue: setServiceQueue,
+    setShuffleMode: setServiceShuffleMode,
   } = useBackgroundAudio()
 
   const playQueueRef = useRef(playQueue)
@@ -221,6 +223,12 @@ function PlaylistPage() {
   // Playback controls
   const playEpisode = async (podcastId, queue = null, queueIdx = -1) => {
     try {
+      const currentId = playingPodcast?.id || playingPodcast?.podcastId
+      if (currentId === podcastId) {
+        await togglePlayPause()
+        return
+      }
+
       const res = await fetch(`${API_BASE_URL}/podcasts/${podcastId}`, {
         headers: { 'Authorization': `Bearer ${getToken()}` }
       })
@@ -231,6 +239,25 @@ function PlaylistPage() {
       if (queue) {
         setPlayQueue(queue)
         setPlayQueueIndex(queueIdx)
+
+        // Also set queue on the BackgroundAudioService so skip buttons work
+        try {
+          const fullPodcasts = await Promise.all(
+            queue.map(async (pid) => {
+              if (pid === podcastId) return podcast
+              try {
+                const r = await fetch(`${API_BASE_URL}/podcasts/${pid}`, {
+                  headers: { 'Authorization': `Bearer ${getToken()}` }
+                })
+                return r.ok ? await r.json() : null
+              } catch { return null }
+            })
+          )
+          const validPodcasts = fullPodcasts.filter(Boolean)
+          setServiceQueue(validPodcasts, queueIdx >= 0 ? queueIdx : 0)
+        } catch (err) {
+          console.error('Erro ao preparar queue:', err)
+        }
       }
     } catch (err) { console.error(err) }
   }
@@ -238,6 +265,7 @@ function PlaylistPage() {
   const playAll = () => {
     if (!selectedPlaylist?.episodes?.length) return
     const eps = selectedPlaylist.episodes
+    setServiceShuffleMode(false)
     playEpisode(eps[0].podcastId, eps.map(e => e.podcastId), 0)
   }
 
@@ -249,6 +277,7 @@ function PlaylistPage() {
       [eps[i], eps[j]] = [eps[j], eps[i]]
     }
     setIsShuffle(true)
+    setServiceShuffleMode(true)
     playEpisode(eps[0].podcastId, eps.map(e => e.podcastId), 0)
   }
 
@@ -577,6 +606,7 @@ function PlaylistPage() {
         onPlayNow={() => {
           if (sidebarPodcast) {
             playEpisode(sidebarPodcast.id || sidebarPodcast.podcastId)
+            setIsSidebarOpen(false)
           }
         }}
         onSave={handleSavePodcast}
@@ -584,56 +614,6 @@ function PlaylistPage() {
         isPlaying={playingPodcast && sidebarPodcast && (playingPodcast.id === sidebarPodcast.id) ? isPlaying : false}
         API_BASE_URL={API_BASE_URL}
       />
-
-      {/* Persistent Bottom Player */}
-      {playingPodcast && (
-        <div className="player-bar">
-          <div className="player-info">
-            <div className="player-cover-placeholder">🎙</div>
-            <div className="player-text">
-              <h4 className="player-title">{playingPodcast.titulo}</h4>
-              <p className="player-host">{playingPodcast.user?.username || 'Unknown'}</p>
-            </div>
-          </div>
-
-          <div className="player-controls">
-            <div className="player-buttons-wrapper">
-              <div className="player-buttons">
-                <button className="btn-icon btn-skip" onClick={playPrev} title="Anterior">⏮</button>
-                <button className="btn-icon" onClick={() => seek(Math.max(0, currentTime - 15))} title="Recuar 15s">⏪</button>
-                <button className="btn-circular" onClick={togglePlayPause}>
-                  {isPlaying ? '⏸' : '▶'}
-                </button>
-                <button className="btn-icon" onClick={() => seek(currentTime + 15)} title="Avançar 15s">⏩</button>
-                <button className="btn-icon btn-skip" onClick={playNext} title="Próximo">⏭</button>
-              </div>
-            </div>
-
-            <div className="player-progress-container">
-              <span className="time-display">{formattedCurrentTime}</span>
-              <div
-                className="player-timeline"
-                onClick={(e) => {
-                  const rect = e.currentTarget.getBoundingClientRect()
-                  const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
-                  seek(pct * duration)
-                }}
-                role="slider"
-                aria-label="Barra de progresso"
-                aria-valuemin="0"
-                aria-valuemax={duration}
-                aria-valuenow={currentTime}
-              >
-                <div className="player-timeline-fill" style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }} />
-                <div className="player-timeline-thumb" style={{ left: `${duration ? (currentTime / duration) * 100 : 0}%` }} />
-              </div>
-              <span className="time-display">{formattedDuration}</span>
-            </div>
-          </div>
-
-          <div className="player-extra"></div>
-        </div>
-      )}
     </main>
   )
 }

@@ -377,10 +377,10 @@
 
 /* Fixed width grid for sections that should always show 5 card width */
 .podcast-grid.fixed-width {
-  /* Largura fixa para 5 cards: ~1215px baseado no layout atual */
-  width: 1215px;
-  min-width: 1215px;
-  max-width: 1215px;
+  /* Largura fixa para 5 cards de 230px: (5 * 230px) + (4 * 24px) = 1246px */
+  width: 1246px;
+  min-width: 1246px;
+  max-width: 1246px;
 }
 
 .content-section {
@@ -557,8 +557,8 @@
 /* Empty states - width of 5 cards for consistent layout */
 .my-podcasts-empty,
 .saved-podcasts-empty {
-  flex: 0 0 calc((220px * 5) + (1.5rem * 4));
-  width: calc((220px * 5) + (1.5rem * 4));
+  flex: 0 0 calc((230px * 5) + (1.5rem * 4));
+  width: calc((230px * 5) + (1.5rem * 4));
   max-width: 100%;
   display: flex;
   flex-direction: column;
@@ -646,8 +646,8 @@
 .podcast-cover-placeholder {
   width: 100%;
   aspect-ratio: 16 / 10;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
+  background: linear-gradient(135deg, #b95a39 0%, #8b2f17 100%);
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -706,7 +706,7 @@
   justify-content: space-between;
 }
 
-.info-button {
+.trending-info-btn {
   width: 36px;
   height: 36px;
   border-radius: 10px;
@@ -720,7 +720,7 @@
   transition: all 0.2s;
 }
 
-.info-button:hover {
+.trending-info-btn:hover {
   background: #e05a2a;
   border-color: #e05a2a;
   transform: translateY(-1px);
@@ -866,13 +866,13 @@
 }
 
 .podcast-card {
-  background: rgba(255, 249, 241, 0.92);
-  border: 1px solid rgba(114, 71, 56, 0.2);
-  border-radius: 16px;
+  background: var(--podcast-card-bg);
+  border: 1px solid var(--podcast-card-border);
+  border-radius: var(--podcast-card-radius);
   padding: 0.85rem;
   width: 220px;
   flex: 0 0 220px;
-  box-shadow: 0 8px 20px rgba(70, 38, 31, 0.08);
+  box-shadow: var(--podcast-card-shadow);
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s;
   display: flex;
   flex-direction: column;
@@ -903,8 +903,8 @@
 }
 
 .podcast-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 28px rgba(224, 90, 42, 0.15);
+  transform: translateY(-3px);
+  box-shadow: var(--podcast-card-shadow-hover);
   border-color: #e05a2a;
 }
 
@@ -1064,7 +1064,7 @@
   background: linear-gradient(90deg, #e05a2a, #be3f14);
 }
 
-.play-button {
+.trending-play-btn {
   background: linear-gradient(135deg, #e05a2a, #be3f14);
   color: white;
   border: none;
@@ -1080,13 +1080,13 @@
   transform: scale(0.85);
 }
 
-.podcast-card:hover .play-button {
+.trending-card:hover .trending-play-btn {
   opacity: 1;
   pointer-events: auto;
   transform: scale(1);
 }
 
-.play-button:hover {
+.trending-play-btn:hover {
   transform: scale(1.05);
   box-shadow: 0 4px 12px rgba(224, 90, 42, 0.35);
 }
@@ -1096,251 +1096,7 @@
   font-size: 0.8rem;
 }
 
-/* Modern Floating Audio Player */
-.player-bar {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: calc(100% - 80px);
-  max-width: 1000px;
-  background: rgba(255, 255, 255, 0.95);
-  color: #1f2937;
-  padding: 0.8rem 1.2rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.05);
-  z-index: 997;
-  animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-@keyframes slide-up {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
-}
-
-/* Player deslocado quando sidebar está aberta */
-.player-bar.sidebar-open {
-  left: calc(50% - 210px);
-  transform: translateX(-50%);
-  max-width: calc(100% - 440px);
-  transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-.player-info {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  width: 200px;
-  min-width: 150px;
-  flex-shrink: 0;
-}
-
-.player-cover {
-  width: 50px;
-  height: 50px;
-  border-radius: 12px;
-  object-fit: cover;
-  flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(224, 90, 42, 0.15);
-}
-
-.player-cover-placeholder {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.25rem;
-  flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(224, 90, 42, 0.15);
-}
-
-.player-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  flex: 1;
-}
-
-.player-title {
-  font-weight: 700;
-  font-size: 1.1rem;
-  margin: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: #1f2937;
-}
-
-.player-host {
-  font-size: 0.85rem;
-  color: #6b7280;
-  margin: 0.2rem 0 0 0;
-}
-
-.player-controls {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  max-width: 650px;
-}
-
-.player-buttons-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  margin-bottom: 0.5rem;
-  gap: 1rem;
-}
-
-.player-buttons {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  flex: 1;
-}
-
-.btn-icon {
-  background: none;
-  border: none;
-  color: #9ca3af;
-  font-size: 1.2rem;
-  cursor: pointer;
-  transition: color 0.15s, transform 0.1s;
-  padding: 0.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-icon:hover {
-  color: #374151;
-}
-
-.btn-icon:active {
-  transform: scale(0.95);
-}
-
-.btn-skip {
-  font-size: 1.3rem;
-  opacity: 0.6;
-  transition: opacity 0.15s, color 0.15s, transform 0.1s;
-}
-
-.btn-skip:hover {
-  opacity: 1;
-  color: #1f2937;
-}
-
-.btn-circular {
-  background: linear-gradient(135deg, #e05a2a 0%, #d94d1f 100%);
-  color: white;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  cursor: pointer;
-  font-size: 1.3rem;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
-  box-shadow: 0 6px 16px rgba(224, 90, 42, 0.35);
-  flex-shrink: 0;
-}
-
-.btn-circular:hover {
-  transform: scale(1.1);
-  box-shadow: 0 8px 20px rgba(224, 90, 42, 0.45);
-  filter: brightness(1.1);
-}
-
-.btn-circular:active {
-  transform: scale(0.95);
-}
-
-.player-progress-container {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  gap: 0.8rem;
-  font-size: 0.75rem;
-  color: #6b7280;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.player-timeline {
-  flex: 1;
-  height: 3px;
-  background: #e5e7eb;
-  border-radius: 4px;
-  position: relative;
-  overflow: visible;
-  cursor: pointer;
-  transition: height 0.2s ease, background 0.2s ease;
-  display: flex;
-  align-items: center;
-  touch-action: none;
-}
-
-.player-timeline:hover {
-  height: 6px;
-  background: #d1d5db;
-}
-
-.player-timeline:hover .player-timeline-thumb {
-  opacity: 1;
-  transform: scale(1);
-}
-
-.player-timeline-fill {
-  background: #e05a2a;
-  height: 100%;
-  border-radius: 4px;
-  transition: width var(--animation-speed, 1s) linear;
-  pointer-events: none;
-}
-
-.player-timeline-thumb {
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  background: #e05a2a;
-  border-radius: 50%;
-  top: 50%;
-  transform: translateY(-50%) translateX(-50%) scale(0);
-  box-shadow: 0 2px 6px rgba(224, 90, 42, 0.6);
-  opacity: 0;
-  transition: opacity 0.15s ease, transform 0.15s ease;
-  pointer-events: none;
-}
-
-.time-display {
-  width: 40px;
-  text-align: center;
-}
-
-.player-extra {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 1rem;
-  min-width: 100px;
-  flex-shrink: 0;
-}
+/* Modern Floating Audio Player - Moved to global index.css */
 
 @media (max-width: 720px) {
   .podcast-card-discover {
@@ -1359,63 +1115,80 @@
     height: 92px;
   }
 
-  .player-bar {
-    bottom: 10px;
-    left: 10px;
-    right: 10px;
-    padding: 0.8rem;
-    border-radius: 16px;
-    flex-direction: column;
-    gap: 0.8rem;
-  }
+  /* Player bar mobile styles moved to global index.css */
+}
 
-  .player-bar.sidebar-open {
-    /* No mobile, a sidebar ocupa todo o ecrã, então o player fica escondido atrás */
-    left: 10px;
-    right: auto;
-    max-width: calc(100% - 20px);
-    transform: none;
-  }
 
-  .player-info {
-    width: 100%;
-    margin-bottom: 0.6rem;
-  }
+/* OVERRIDE TO MATCH TRENDING PAGE CARDS */
+.podcast-cover-container {
+  position: relative;
+  overflow: hidden;
+}
 
-  .player-controls {
-    width: 100%;
-    max-width: 100%;
-  }
+.trending-play-btn {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e05a2a, #be3f14);
+  color: white;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: all 0.3s ease;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(224, 90, 42, 0.4);
+  padding: 0 !important;
+  margin: 0 !important;
+}
 
-  .player-buttons-wrapper {
-    width: 100%;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-  }
+.trending-card:hover .trending-play-btn {
+  opacity: 1;
+  transform: translateY(0);
+}
 
-  .player-buttons {
-    gap: 0.5rem;
-    margin-bottom: 0.4rem;
-  }
+.trending-play-btn:hover {
+  transform: scale(1.1) !important;
+  box-shadow: 0 6px 20px rgba(224, 90, 42, 0.5);
+}
 
-  .player-progress-container {
-    gap: 0.6rem;
-  }
+.trending-info-btn {
+  position: absolute;
+  bottom: 8px;
+  right: 64px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  color: rgba(0, 0, 0, 0.6);
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: all 0.3s ease;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 0 !important;
+  margin: 0 !important;
+}
 
-  .player-extra {
-    width: 100%;
-    justify-content: center;
-    margin-top: 0.4rem;
-  }
+.trending-card:hover .trending-info-btn {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 0.05s;
+}
 
-  .btn-circular {
-    width: 36px;
-    height: 36px;
-    font-size: 1rem;
-  }
-
-  .btn-icon {
-    font-size: 0.9rem;
-  }
+.trending-info-btn:hover {
+  background: white;
+  color: #2f1f1b;
+  transform: scale(1.1) !important;
 }
