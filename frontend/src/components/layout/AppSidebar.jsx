@@ -10,8 +10,6 @@ const mainItems = [
 
 const libraryItems = [
   { to: '/playlists', label: 'Playlists', icon: 'playlist' },
-  { to: '/following', label: 'Podcasts Seguidores', icon: 'headphones' },
-  { to: '/shorts', label: 'Curtos', icon: 'shorts' },
 ]
 
 function SidebarIcon({ type }) {
