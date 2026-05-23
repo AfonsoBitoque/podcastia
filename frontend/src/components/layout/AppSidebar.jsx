@@ -8,9 +8,7 @@ const mainItems = [
   { to: '/trending', label: 'Tendencias', icon: 'trend' },
 ]
 
-const libraryItems = [
-  { to: '/playlists', label: 'Playlists', icon: 'playlist' },
-]
+const libraryItems = [{ to: '/playlists', label: 'Playlists', icon: 'playlist' }]
 
 function SidebarIcon({ type }) {
   if (type === 'home') {

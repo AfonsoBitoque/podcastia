@@ -75,8 +75,6 @@ function ProtectedRoute({ children }) {
 }
 
 function App() {
-  const location = useLocation()
-  const isAuthPage = ['/login', '/register'].includes(location.pathname)
   const [selectedPodcast, setSelectedPodcast] = useState(null)
   const [isPodcastSidebarOpen, setIsPodcastSidebarOpen] = useState(false)
   const [isSelectedPodcastSaved, setIsSelectedPodcastSaved] = useState(false)
@@ -312,7 +310,10 @@ function App() {
         onSave={handleSavePodcast}
         isSaved={isSelectedPodcastSaved}
         isPlaying={Boolean(
-          selectedPodcastId && playingPodcastId && selectedPodcastId === playingPodcastId && isPlaying,
+          selectedPodcastId &&
+          playingPodcastId &&
+          selectedPodcastId === playingPodcastId &&
+          isPlaying,
         )}
         API_BASE_URL={API_BASE_URL}
       />
