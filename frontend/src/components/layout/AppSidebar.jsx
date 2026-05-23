@@ -56,6 +56,39 @@ function SidebarIcon({ type }) {
     )
   }
 
+  if (type === 'users') {
+    return (
+      <svg className="sidebar-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <circle
+          cx="8.5"
+          cy="7"
+          r="4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M20 8v6M23 11h-6"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    )
+  }
+
   return <span className={`sidebar-nav-icon sidebar-nav-icon--${type}`} aria-hidden="true" />
 }
 
@@ -64,28 +97,38 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\
 function AppSidebar() {
   const { isAuthenticated } = useAuth()
   const [unreadCount, setUnreadCount] = useState(0)
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0)
 
   useEffect(() => {
     if (!isAuthenticated) return
 
-    const fetchUnreadCount = async () => {
+    const fetchCounts = async () => {
       try {
         const token = localStorage.getItem('token')
-        const response = await fetch(`${API_BASE_URL}/api/chats/unread-count`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (response.ok) {
-          const data = await response.json()
+        const [unreadRes, requestsRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/api/chats/unread-count`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`${API_BASE_URL}/api/relations/friend-requests/pending`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ])
+
+        if (unreadRes.ok) {
+          const data = await unreadRes.json()
           setUnreadCount(data.count || 0)
         }
+        if (requestsRes.ok) {
+          const data = await requestsRes.json()
+          setPendingRequestsCount(Array.isArray(data) ? data.length : 0)
+        }
       } catch (error) {
-        console.error('Error fetching unread count:', error)
+        console.error('Error fetching counts:', error)
       }
     }
 
-    fetchUnreadCount()
-    // Could set an interval here if we wanted periodic updates without websocket
-    const interval = setInterval(fetchUnreadCount, 30000)
+    fetchCounts()
+    const interval = setInterval(fetchCounts, 30000)
     return () => clearInterval(interval)
   }, [isAuthenticated])
 
@@ -125,6 +168,15 @@ function AppSidebar() {
           <h2 id="sidebar-social-title" className="sidebar-section-label">
             Social
           </h2>
+          <NavLink to="/friends" className="sidebar-nav-link sidebar-message-link">
+            <SidebarIcon type="users" />
+            <span>Amigos</span>
+            {pendingRequestsCount > 0 && (
+              <span className="sidebar-unread">
+                {pendingRequestsCount > 99 ? '99+' : pendingRequestsCount}
+              </span>
+            )}
+          </NavLink>
           <NavLink to="/messages" className="sidebar-nav-link sidebar-message-link">
             <SidebarIcon type="chat" />
             <span>Mensagens</span>

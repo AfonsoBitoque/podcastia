@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import '../styles/user-page.css'
+import FriendRequestButton from '../components/FriendRequestButton'
+import toast from 'react-hot-toast'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
 
@@ -153,10 +155,13 @@ function UserProfilePage() {
 
       if (response.ok) {
         const data = await response.json()
-        setPodcasts(data)
+        setPodcasts(Array.isArray(data) ? data : [])
+      } else {
+        setPodcasts([])
       }
     } catch (error) {
       console.error('Error fetching user podcasts:', error)
+      setPodcasts([])
     } finally {
       setPodcastsLoading(false)
     }
@@ -206,9 +211,26 @@ function UserProfilePage() {
         if (action === 'remove') {
           fetchPodcasts()
         }
+      } else {
+        const errorMessages = {
+          add: 'Erro ao enviar pedido',
+          accept: 'Erro ao aceitar pedido',
+          reject: 'Erro ao rejeitar pedido',
+          cancel: 'Erro ao cancelar pedido',
+          remove: 'Erro ao remover amigo',
+        }
+        toast.error(errorMessages[action] || 'Erro ao realizar ação')
       }
     } catch (error) {
       console.error(`Error performing relation action ${action}:`, error)
+      const errorMessages = {
+        add: 'Erro ao enviar pedido',
+        accept: 'Erro ao aceitar pedido',
+        reject: 'Erro ao rejeitar pedido',
+        cancel: 'Erro ao cancelar pedido',
+        remove: 'Erro ao remover amigo',
+      }
+      toast.error(errorMessages[action] || 'Erro ao realizar ação')
     } finally {
       setRelationLoading(false)
     }
@@ -273,6 +295,8 @@ function UserProfilePage() {
       : ''
 
   const isOwnProfile = String(sessionUser?.id) === String(id)
+
+  const safePodcasts = Array.isArray(podcasts) ? podcasts : []
 
   return (
     <main className="user-page" aria-labelledby="user-title">
@@ -349,77 +373,57 @@ function UserProfilePage() {
                 <span className="user-tag">#{user.tag || '0000'}</span>
               </div>
 
-              {!isOwnProfile && (
-                <div
-                  className="user-actions"
-                  style={{
-                    marginTop: '0.5rem',
-                    marginBottom: '1.5rem',
-                    display: 'flex',
-                    gap: '0.5rem',
-                  }}
-                >
-                  {relationStatus === 'NONE' && (
+              <div
+                className="user-actions"
+                style={{
+                  marginTop: '0.5rem',
+                  marginBottom: '1.5rem',
+                  display: 'flex',
+                  gap: '0.5rem',
+                }}
+              >
+                <FriendRequestButton
+                  relationStatus={relationStatus}
+                  onSendRequest={() => handleRelationAction('add')}
+                  isLoading={relationLoading}
+                  isOwnProfile={isOwnProfile}
+                />
+                {relationStatus === 'PENDING_RECEIVED' && (
+                  <>
                     <button
                       className="user-action-btn user-action-btn--primary"
                       style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
-                      onClick={() => handleRelationAction('add')}
+                      onClick={() => handleRelationAction('accept')}
                       disabled={relationLoading}
                     >
-                      Enviar Pedido
+                      Aceitar
                     </button>
-                  )}
-                  {relationStatus === 'PENDING_SENT' && (
                     <button
                       className="user-action-btn"
-                      disabled={true}
-                      style={{
-                        padding: '0.4rem 0.8rem',
-                        fontSize: '0.85rem',
-                        opacity: 0.7,
-                        cursor: 'not-allowed',
-                      }}
-                    >
-                      Pedido Enviado
-                    </button>
-                  )}
-                  {relationStatus === 'PENDING_RECEIVED' && (
-                    <>
-                      <button
-                        className="user-action-btn user-action-btn--primary"
-                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
-                        onClick={() => handleRelationAction('accept')}
-                        disabled={relationLoading}
-                      >
-                        Aceitar
-                      </button>
-                      <button
-                        className="user-action-btn"
-                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
-                        onClick={() => handleRelationAction('reject')}
-                        disabled={relationLoading}
-                      >
-                        Rejeitar
-                      </button>
-                    </>
-                  )}
-                  {relationStatus === 'FRIENDS' && (
-                    <button
-                      className="user-action-btn"
-                      style={{
-                        padding: '0.4rem 0.8rem',
-                        fontSize: '0.85rem',
-                        color: '#ef4444',
-                        borderColor: '#ef4444',
-                      }}
-                      onClick={() => setShowRemoveModal(true)}
+                      style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                      onClick={() => handleRelationAction('reject')}
                       disabled={relationLoading}
                     >
-                      Remover Amigo
+                      Rejeitar
                     </button>
-                  )}
-                </div>
-              )}
+                  </>
+                )}
+                {relationStatus === 'FRIENDS' && (
+                  <button
+                    className="user-action-btn"
+                    style={{
+                      padding: '0.4rem 0.8rem',
+                      fontSize: '0.85rem',
+                      color: '#ef4444',
+                      borderColor: '#ef4444',
+                    }}
+                    onClick={() => setShowRemoveModal(true)}
+                    disabled={relationLoading}
+                  >
+                    Remover Amigo
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -522,13 +526,13 @@ function UserProfilePage() {
 
                 {podcastsLoading ? (
                   <p className="user-podcasts-loading">A carregar podcasts...</p>
-                ) : podcasts.length === 0 ? (
+                ) : safePodcasts.length === 0 ? (
                   <p className="user-podcasts-empty">
                     Este utilizador nao publicou nenhum podcast.
                   </p>
                 ) : (
                   <div className="user-podcasts-list">
-                    {podcasts.map((podcast) => (
+                    {safePodcasts.map((podcast) => (
                       <div key={podcast.id} className="user-podcast-item">
                         <div className="user-podcast-info">
                           <h3 className="user-podcast-title">{podcast.titulo}</h3>

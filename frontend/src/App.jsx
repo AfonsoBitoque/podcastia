@@ -1,5 +1,6 @@
 import { Suspense, lazy } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { Toaster } from 'react-hot-toast'
 import Header from './components/layout/Header'
 import AppSidebar from './components/layout/AppSidebar'
 import Footer from './components/layout/Footer'
@@ -21,6 +22,7 @@ const MessagesPage = lazy(() => import('./pages/MessagesPage'))
 const AdminPage = lazy(() => import('./pages/AdminPage'))
 const OnboardingSurvey = lazy(() => import('./pages/OnboardingSurvey'))
 const PlaylistPage = lazy(() => import('./pages/PlaylistPage'))
+const FriendsPage = lazy(() => import('./pages/FriendsPage'))
 
 // Loading fallback component
 function PageLoader() {
@@ -71,6 +73,7 @@ function ProtectedRoute({ children }) {
 function App() {
   return (
     <div className="app-shell">
+      <Toaster position="bottom-center" />
       <AppSidebar />
       <Header />
       <div className="app-main">
@@ -141,6 +144,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <MessagesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/friends"
+              element={
+                <ProtectedRoute>
+                  <FriendsPage />
                 </ProtectedRoute>
               }
             />
