@@ -1,11 +1,15 @@
-import { Suspense, lazy } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import Header from './components/layout/Header'
 import AppSidebar from './components/layout/AppSidebar'
 import Footer from './components/layout/Footer'
 import PersistentPlayer from './components/PersistentPlayer'
+import PodcastSidebar from './components/PodcastSidebar'
 import './styles/layout.css'
 import { useAuth } from './hooks/useAuth'
+import { useBackgroundAudio } from './hooks/useBackgroundAudio'
+
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
 
 // Lazy load pages for code splitting
 const RegisterPage = lazy(() => import('./pages/RegisterPage'))
@@ -71,6 +75,105 @@ function ProtectedRoute({ children }) {
 function App() {
   const location = useLocation()
   const isAuthPage = ['/login', '/register'].includes(location.pathname)
+  const [selectedPodcast, setSelectedPodcast] = useState(null)
+  const [isPodcastSidebarOpen, setIsPodcastSidebarOpen] = useState(false)
+  const [isSelectedPodcastSaved, setIsSelectedPodcastSaved] = useState(false)
+  const {
+    isPlaying,
+    currentPodcast: playingPodcast,
+    loadPodcast,
+    play,
+    togglePlayPause,
+  } = useBackgroundAudio()
+
+  const getPodcastId = useCallback((podcast) => podcast?.id || podcast?.podcastId, [])
+
+  const checkSelectedPodcastFavorite = useCallback(
+    async (podcast) => {
+      const podcastId = getPodcastId(podcast)
+      const token = localStorage.getItem('token')
+      if (!podcastId || !token) {
+        setIsSelectedPodcastSaved(false)
+        return
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/favorites/${podcastId}/check`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (!response.ok) throw new Error('Falha ao verificar favorito')
+
+        const data = await response.json()
+        setIsSelectedPodcastSaved(Boolean(data.isFavorite))
+      } catch (error) {
+        console.error('Erro ao verificar favorito:', error)
+        setIsSelectedPodcastSaved(false)
+      }
+    },
+    [getPodcastId],
+  )
+
+  useEffect(() => {
+    const handleOpenPodcast = (event) => {
+      const podcast = event.detail
+      if (!podcast) return
+
+      setSelectedPodcast(podcast)
+      setIsPodcastSidebarOpen(true)
+      checkSelectedPodcastFavorite(podcast)
+    }
+
+    window.addEventListener('podcastia-open-podcast', handleOpenPodcast)
+    return () => window.removeEventListener('podcastia-open-podcast', handleOpenPodcast)
+  }, [checkSelectedPodcastFavorite])
+
+  const closePodcastSidebar = () => {
+    setIsPodcastSidebarOpen(false)
+  }
+
+  const handlePlayPodcast = async () => {
+    if (!selectedPodcast) return
+
+    setIsPodcastSidebarOpen(false)
+
+    const selectedPodcastId = getPodcastId(selectedPodcast)
+    const playingPodcastId = getPodcastId(playingPodcast)
+
+    if (selectedPodcastId && selectedPodcastId === playingPodcastId) {
+      await togglePlayPause()
+      return
+    }
+
+    const loaded = await loadPodcast(selectedPodcast, 0)
+    if (loaded) {
+      await play()
+    }
+  }
+
+  const handleSavePodcast = async (podcast) => {
+    const podcastId = getPodcastId(podcast)
+    const token = localStorage.getItem('token')
+    if (!podcastId || !token) return
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/favorites/${podcastId}/toggle`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+      if (!response.ok) throw new Error('Falha ao guardar podcast')
+
+      const data = await response.json()
+      setIsSelectedPodcastSaved(Boolean(data.isFavorite))
+    } catch (error) {
+      console.error('Erro ao guardar podcast:', error)
+    }
+  }
+
+  const selectedPodcastId = getPodcastId(selectedPodcast)
+  const playingPodcastId = getPodcastId(playingPodcast)
 
   return (
     <div className={`app-shell${isAuthPage ? ' app-shell--auth' : ''}`}>
@@ -190,6 +293,18 @@ function App() {
           </Routes>
         </Suspense>
       </div>
+      <PodcastSidebar
+        podcast={selectedPodcast}
+        isOpen={isPodcastSidebarOpen}
+        onClose={closePodcastSidebar}
+        onPlayNow={handlePlayPodcast}
+        onSave={handleSavePodcast}
+        isSaved={isSelectedPodcastSaved}
+        isPlaying={Boolean(
+          selectedPodcastId && playingPodcastId && selectedPodcastId === playingPodcastId && isPlaying,
+        )}
+        API_BASE_URL={API_BASE_URL}
+      />
       <PersistentPlayer />
       <Footer />
     </div>
