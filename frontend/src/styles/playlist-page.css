@@ -1,13 +1,24 @@
 .playlist-page {
   flex: 1;
   width: 100%;
-  max-width: 1200px;
   margin: 0 auto;
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  min-height: 100vh;
+  min-height: calc(100vh - var(--header-height));
+  background:
+    radial-gradient(circle at 10% 20%, rgba(224, 90, 42, 0.14), transparent 36%),
+    radial-gradient(circle at 90% 80%, rgba(240, 137, 92, 0.17), transparent 36%),
+    linear-gradient(140deg, #fcf2d7, #fde6d8 56%, #ffe5c8);
+  color: var(--ink-brown);
+}
+
+.playlist-header,
+.playlist-error,
+.playlist-content {
+  width: min(100%, 1200px);
+  margin-inline: auto;
 }
 
 .playlist-header {
@@ -32,7 +43,7 @@
 }
 
 .btn-create-playlist {
-  background: #e05a2a;
+  background: #a0522d;
   color: #fff;
   border: none;
   padding: 0.7rem 1.4rem;
@@ -44,9 +55,9 @@
 }
 
 .btn-create-playlist:hover {
-  background: #d04a1a;
+  background: #6f220f;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(224, 90, 42, 0.3);
+  box-shadow: 0 4px 12px rgba(160, 82, 45, 0.28);
 }
 
 .playlist-error {
@@ -88,8 +99,8 @@
   text-align: center;
   padding: 3rem 1.5rem;
   background: #fff;
-  border-radius: 16px;
-  border: 2px dashed rgba(0, 0, 0, 0.15);
+  border-radius: 24px;
+  border: none;
   gap: 0.5rem;
 }
 
@@ -111,22 +122,35 @@
   align-items: center;
   gap: 0.75rem;
   padding: 1rem 1.25rem;
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid transparent;
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .playlist-card:hover {
-  border-color: #e05a2a;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: rgba(224, 90, 42, 0.22);
+  box-shadow: 0 4px 12px rgba(93, 46, 23, 0.08);
 }
 
 .playlist-card.active {
-  border-color: #e05a2a;
-  background: rgba(224, 90, 42, 0.05);
-  box-shadow: 0 4px 16px rgba(224, 90, 42, 0.12);
+  border-color: #a0522d;
+  background: #a0522d;
+  box-shadow: 0 8px 20px rgba(93, 46, 23, 0.18);
+}
+
+.playlist-card.active .playlist-card-title,
+.playlist-card.active .playlist-card-desc,
+.playlist-card.active .playlist-card-meta,
+.playlist-card.active .playlist-visibility.public,
+.playlist-card.active .playlist-visibility.private {
+  color: #fff6ef;
+}
+
+.playlist-card.active .playlist-card-icon {
+  background: rgba(255, 246, 239, 0.18);
+  color: #fff6ef;
 }
 
 .playlist-card-info {
@@ -183,12 +207,17 @@
 }
 
 .playlist-card.saved-playlist {
-  border: 1px solid rgba(224, 90, 42, 0.2);
-  background: rgba(224, 90, 42, 0.03);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 246, 239, 0.9));
+  border-color: transparent;
 }
 
 .playlist-card.saved-playlist:hover {
-  border-color: #e05a2a;
+  border-color: rgba(224, 90, 42, 0.22);
+}
+
+.playlist-card.saved-playlist.active {
+  border-color: #a0522d;
+  background: #a0522d;
 }
 
 .btn-delete-playlist {
@@ -212,6 +241,7 @@
   border-radius: 16px;
   padding: 1.5rem;
   min-height: 400px;
+  box-shadow: 0 4px 16px rgba(93, 46, 23, 0.06);
 }
 
 .detail-header {
@@ -244,20 +274,21 @@
 }
 
 .btn-add-episode {
-  background: #e05a2a;
-  color: #fff;
+  background: #a0522d;
+  color: #fff6ef;
   border: none;
   padding: 0.6rem 1.2rem;
-  border-radius: 10px;
+  border-radius: 999px;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
+  box-shadow: 0 8px 18px rgba(93, 46, 23, 0.14);
 }
 
 .btn-add-episode:hover {
-  background: #d04a1a;
+  background: #6f220f;
   transform: translateY(-1px);
 }
 
@@ -325,8 +356,8 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  background: #e05a2a;
-  color: #fff;
+  background: #a0522d;
+  color: #fff6ef;
   border: none;
   padding: 0.6rem 1.4rem;
   border-radius: 24px;
@@ -337,9 +368,9 @@
 }
 
 .btn-play-all:hover {
-  background: #d04a1a;
+  background: #6f220f;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(224, 90, 42, 0.3);
+  box-shadow: 0 4px 12px rgba(93, 46, 23, 0.22);
 }
 
 .btn-shuffle,
@@ -513,12 +544,14 @@
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(47, 31, 27, 0.48);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: 1rem;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 .modal-content {
@@ -558,18 +591,34 @@
 .form-group input[type='text'],
 .form-group textarea {
   width: 100%;
-  padding: 0.7rem 1rem;
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(166, 75, 42, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 250, 246, 0.94);
   font-size: 0.9rem;
   outline: none;
-  transition: border-color 0.2s;
+  box-shadow: inset 0 1px 4px rgba(93, 46, 23, 0.045);
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    box-shadow 0.2s;
   box-sizing: border-box;
+}
+
+.form-group input[type='text']::placeholder,
+.form-group textarea::placeholder,
+.podcast-search-input::placeholder {
+  color: #9c7a6c;
+  opacity: 0.75;
 }
 
 .form-group input[type='text']:focus,
 .form-group textarea:focus {
-  border-color: #e05a2a;
+  background: #fff;
+  border-color: rgba(160, 82, 45, 0.42);
+  box-shadow:
+    inset 0 1px 4px rgba(93, 46, 23, 0.045),
+    0 0 0 4px rgba(160, 82, 45, 0.08);
 }
 
 .form-checkbox label {
@@ -582,7 +631,32 @@
 .form-checkbox input[type='checkbox'] {
   width: 18px;
   height: 18px;
-  accent-color: #e05a2a;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: rgba(255, 250, 246, 0.94);
+  border: 1px solid rgba(166, 75, 42, 0.28);
+  border-radius: 5px;
+  cursor: pointer;
+  position: relative;
+  box-shadow: inset 0 1px 3px rgba(93, 46, 23, 0.05);
+}
+
+.form-checkbox input[type='checkbox']:checked {
+  background: #a0522d;
+  border-color: #a0522d;
+}
+
+.form-checkbox input[type='checkbox']:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 5px;
+  height: 9px;
+  border: solid #fff6ef;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 
 .modal-actions {
@@ -609,8 +683,8 @@
 }
 
 .btn-confirm {
-  background: #e05a2a;
-  color: #fff;
+  background: #a0522d;
+  color: #fff6ef;
   border: none;
   padding: 0.65rem 1.3rem;
   border-radius: 10px;
@@ -618,26 +692,37 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+  box-shadow: 0 8px 18px rgba(93, 46, 23, 0.14);
 }
 
 .btn-confirm:hover {
-  background: #d04a1a;
+  background: #6f220f;
 }
 
 /* Add Podcast Modal */
 .podcast-search-input {
   width: 100%;
-  padding: 0.7rem 1rem;
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  border-radius: 10px;
+  padding: 0.85rem 1.15rem;
+  border: 1px solid rgba(166, 75, 42, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 250, 246, 0.94);
   font-size: 0.9rem;
   outline: none;
   margin-bottom: 1rem;
+  box-shadow: inset 0 1px 4px rgba(93, 46, 23, 0.045);
   box-sizing: border-box;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
 .podcast-search-input:focus {
-  border-color: #e05a2a;
+  background: #fff;
+  border-color: rgba(160, 82, 45, 0.42);
+  box-shadow:
+    inset 0 1px 4px rgba(93, 46, 23, 0.045),
+    0 0 0 4px rgba(160, 82, 45, 0.08);
 }
 
 .podcast-add-list {
@@ -652,14 +737,21 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 1rem;
-  background: rgba(0, 0, 0, 0.02);
-  border-radius: 10px;
-  transition: background 0.2s;
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+  background: rgba(255, 246, 239, 0.72);
+  border-radius: 16px;
+  box-shadow: 0 8px 18px rgba(93, 46, 23, 0.06);
+  transition:
+    background-color 0.2s,
+    box-shadow 0.2s,
+    transform 0.2s;
 }
 
 .podcast-add-item:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(255, 241, 229, 0.9);
+  box-shadow: 0 10px 22px rgba(93, 46, 23, 0.08);
+  transform: translateY(-1px);
 }
 
 .podcast-add-info h4 {
@@ -676,21 +768,22 @@
 }
 
 .btn-add-small {
-  background: rgba(224, 90, 42, 0.1);
-  color: #e05a2a;
+  background: #a0522d;
+  color: #fff6ef;
   border: none;
-  padding: 0.45rem 0.9rem;
-  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
+  box-shadow: 0 8px 18px rgba(93, 46, 23, 0.12);
 }
 
 .btn-add-small:hover {
-  background: #e05a2a;
-  color: #fff;
+  background: #6f220f;
+  color: #fff6ef;
 }
 
 .no-results {
