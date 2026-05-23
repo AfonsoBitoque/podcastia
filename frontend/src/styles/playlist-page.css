@@ -1,13 +1,24 @@
 .playlist-page {
   flex: 1;
   width: 100%;
-  max-width: 1200px;
   margin: 0 auto;
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  min-height: 100vh;
+  min-height: calc(100vh - var(--header-height));
+  background:
+    radial-gradient(circle at 10% 20%, rgba(224, 90, 42, 0.14), transparent 36%),
+    radial-gradient(circle at 90% 80%, rgba(240, 137, 92, 0.17), transparent 36%),
+    linear-gradient(140deg, #fcf2d7, #fde6d8 56%, #ffe5c8);
+  color: var(--ink-brown);
+}
+
+.playlist-header,
+.playlist-error,
+.playlist-content {
+  width: min(100%, 1200px);
+  margin-inline: auto;
 }
 
 .playlist-header {
@@ -32,7 +43,7 @@
 }
 
 .btn-create-playlist {
-  background: #e05a2a;
+  background: #a0522d;
   color: #fff;
   border: none;
   padding: 0.7rem 1.4rem;
@@ -44,9 +55,9 @@
 }
 
 .btn-create-playlist:hover {
-  background: #d04a1a;
+  background: #6f220f;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(224, 90, 42, 0.3);
+  box-shadow: 0 4px 12px rgba(160, 82, 45, 0.28);
 }
 
 .playlist-error {
