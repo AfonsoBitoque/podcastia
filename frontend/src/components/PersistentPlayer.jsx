@@ -34,7 +34,9 @@ function PersistentPlayer() {
         <div className="player-cover-placeholder">🎙</div>
         <div className="player-text">
           <p className="player-title">{playingPodcast.titulo}</p>
-          <p className="player-host">{playingPodcast.host || playingPodcast.user?.username || 'Podcastia'}</p>
+          <p className="player-host">
+            {playingPodcast.host || playingPodcast.user?.username || 'Podcastia'}
+          </p>
         </div>
       </div>
 
@@ -124,10 +126,7 @@ function PersistentPlayer() {
         >
           🔀
         </button>
-        <PlaybackSpeedControl
-          currentSpeed={playbackSpeed}
-          onSpeedChange={handleSpeedChange}
-        />
+        <PlaybackSpeedControl currentSpeed={playbackSpeed} onSpeedChange={handleSpeedChange} />
       </div>
     </div>
   )

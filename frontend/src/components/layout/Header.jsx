@@ -12,7 +12,9 @@ const CATEGORY_CHIPS = [
 ]
 
 const getCategoryQuery = (value) => {
-  const category = CATEGORY_CHIPS.find((chip) => chip.label.toLowerCase() === value.trim().toLowerCase())
+  const category = CATEGORY_CHIPS.find(
+    (chip) => chip.label.toLowerCase() === value.trim().toLowerCase(),
+  )
   return category?.query || value
 }
 
@@ -71,51 +73,57 @@ function Header() {
     if (!term) return
 
     setRecentSearches((prev) => {
-      const next = [term, ...prev.filter((item) => item.toLowerCase() !== term.toLowerCase())].slice(0, 5)
+      const next = [
+        term,
+        ...prev.filter((item) => item.toLowerCase() !== term.toLowerCase()),
+      ].slice(0, 5)
       localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(next))
       return next
     })
   }, [])
 
-  const fetchSearchResults = useCallback(async (value, pageNumber = 0, reset = false) => {
-    const term = value.trim()
-    if (!term) {
-      setSearchResults([])
-      setSearchHasMore(false)
-      setSearchLoading(false)
+  const fetchSearchResults = useCallback(
+    async (value, pageNumber = 0, reset = false) => {
+      const term = value.trim()
+      if (!term) {
+        setSearchResults([])
+        setSearchHasMore(false)
+        setSearchLoading(false)
+        setSearchError('')
+        return
+      }
+
+      setSearchLoading(true)
       setSearchError('')
-      return
-    }
 
-    setSearchLoading(true)
-    setSearchError('')
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/api/search?q=${encodeURIComponent(term)}&page=${pageNumber}&size=${SEARCH_PAGE_SIZE}`,
+        )
 
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/search?q=${encodeURIComponent(term)}&page=${pageNumber}&size=${SEARCH_PAGE_SIZE}`
-      )
+        if (!response.ok) {
+          throw new Error('Falha ao pesquisar')
+        }
 
-      if (!response.ok) {
-        throw new Error('Falha ao pesquisar')
+        const data = await response.json()
+        const nextResults = Array.isArray(data) ? data : []
+        setSearchResults((prev) => (reset ? nextResults : [...prev, ...nextResults]))
+        setSearchHasMore(nextResults.length === SEARCH_PAGE_SIZE)
+
+        if (reset) {
+          saveRecentSearch(term)
+        }
+      } catch (error) {
+        console.error('Erro na pesquisa:', error)
+        setSearchError('Não foi possível carregar a pesquisa.')
+        if (reset) setSearchResults([])
+        setSearchHasMore(false)
+      } finally {
+        setSearchLoading(false)
       }
-
-      const data = await response.json()
-      const nextResults = Array.isArray(data) ? data : []
-      setSearchResults((prev) => (reset ? nextResults : [...prev, ...nextResults]))
-      setSearchHasMore(nextResults.length === SEARCH_PAGE_SIZE)
-
-      if (reset) {
-        saveRecentSearch(term)
-      }
-    } catch (error) {
-      console.error('Erro na pesquisa:', error)
-      setSearchError('Não foi possível carregar a pesquisa.')
-      if (reset) setSearchResults([])
-      setSearchHasMore(false)
-    } finally {
-      setSearchLoading(false)
-    }
-  }, [saveRecentSearch])
+    },
+    [saveRecentSearch],
+  )
 
   const runSearch = (value) => {
     const nextValue = value.trim()
@@ -193,20 +201,23 @@ function Header() {
     }
   }
 
-  const lastSearchResultRef = useCallback((node) => {
-    if (searchLoading) return
-    if (observerRef.current) observerRef.current.disconnect()
+  const lastSearchResultRef = useCallback(
+    (node) => {
+      if (searchLoading) return
+      if (observerRef.current) observerRef.current.disconnect()
 
-    observerRef.current = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && searchHasMore) {
-        const nextPage = searchPage + 1
-        setSearchPage(nextPage)
-        fetchSearchResults(searchQuery, nextPage, false)
-      }
-    })
+      observerRef.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && searchHasMore) {
+          const nextPage = searchPage + 1
+          setSearchPage(nextPage)
+          fetchSearchResults(searchQuery, nextPage, false)
+        }
+      })
 
-    if (node) observerRef.current.observe(node)
-  }, [fetchSearchResults, searchHasMore, searchLoading, searchPage, searchQuery])
+      if (node) observerRef.current.observe(node)
+    },
+    [fetchSearchResults, searchHasMore, searchLoading, searchPage, searchQuery],
+  )
 
   useEffect(() => {
     const handlePointerDown = (event) => {
@@ -257,88 +268,100 @@ function Header() {
 
         {!isAuthPage && !isExplorePage && user && (
           <form
-          ref={searchRootRef}
-          className={`site-search ${searchFocused ? 'is-active' : ''}`}
-          role="search"
-          onSubmit={handleSearch}
-        >
-          <span className="site-search-icon" aria-hidden="true" />
-          <input
-            type="search"
-            value={searchQuery}
-            onChange={(e) => runSearch(e.target.value)}
-            onFocus={() => setSearchFocused(true)}
-            placeholder="Pesquisar podcasts, temas ou pessoas"
-            aria-label="Pesquisar podcasts, temas ou pessoas"
-            aria-expanded={searchFocused}
-            aria-controls="site-search-panel"
-          />
-          {searchFocused && (
-            <div id="site-search-panel" className="site-search-panel">
-              {searchQuery.trim() === '' ? (
-                <>
-                  <div className="site-search-chips" aria-label="Categorias rápidas">
-                    {CATEGORY_CHIPS.map((chip) => (
-                      <button key={chip.label} type="button" onClick={() => handleChipClick(chip)}>
-                        {chip.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  {recentSearches.length > 0 && (
-                    <div className="site-recent-searches">
-                      <p>Pesquisas Recentes</p>
-                      {recentSearches.map((term) => (
-                        <button key={term} type="button" onClick={() => handleRecentClick(term)}>
-                          {term}
+            ref={searchRootRef}
+            className={`site-search ${searchFocused ? 'is-active' : ''}`}
+            role="search"
+            onSubmit={handleSearch}
+          >
+            <span className="site-search-icon" aria-hidden="true" />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => runSearch(e.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              placeholder="Pesquisar podcasts, temas ou pessoas"
+              aria-label="Pesquisar podcasts, temas ou pessoas"
+              aria-expanded={searchFocused}
+              aria-controls="site-search-panel"
+            />
+            {searchFocused && (
+              <div id="site-search-panel" className="site-search-panel">
+                {searchQuery.trim() === '' ? (
+                  <>
+                    <div className="site-search-chips" aria-label="Categorias rápidas">
+                      {CATEGORY_CHIPS.map((chip) => (
+                        <button
+                          key={chip.label}
+                          type="button"
+                          onClick={() => handleChipClick(chip)}
+                        >
+                          {chip.label}
                         </button>
                       ))}
                     </div>
-                  )}
-                </>
-              ) : (
-                <div className="site-search-results">
-                  {searchResults.length > 0 ? (
-                    searchResults.map((item, index) => {
-                      const isLast = index === searchResults.length - 1
-                      const imageUrl = item.imageUrl ? `${API_BASE_URL}${item.imageUrl}` : ''
-                      return (
-                        <button
-                          key={`${item.type}-${item.id}`}
-                          ref={isLast ? lastSearchResultRef : null}
-                          type="button"
-                          className="site-search-result"
-                          onClick={() => openSearchResult(item)}
-                        >
-                          {imageUrl ? (
-                            <img src={imageUrl} alt="" className={item.type === 'USER' ? 'is-user' : ''} />
-                          ) : (
-                            <span className="site-search-result-fallback" aria-hidden="true">
-                              {item.type === 'USER' ? '@' : 'P'}
-                            </span>
-                          )}
-                          <span>
-                            <strong>{item.title}</strong>
-                            <small>{item.subtitle}</small>
-                          </span>
-                        </button>
-                      )
-                    })
-                  ) : !searchLoading && !searchError ? (
-                    <div className="site-search-empty">Não há resultados para "{searchQuery.trim()}".</div>
-                  ) : null}
 
-                  {searchLoading && (
-                    <div className="site-search-status">A carregar{searchPage > 0 ? ' mais' : ''}...</div>
-                  )}
-                  {searchError && <div className="site-search-status error">{searchError}</div>}
-                  {!searchHasMore && searchResults.length > 0 && (
-                    <div className="site-search-status">Fim dos resultados.</div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+                    {recentSearches.length > 0 && (
+                      <div className="site-recent-searches">
+                        <p>Pesquisas Recentes</p>
+                        {recentSearches.map((term) => (
+                          <button key={term} type="button" onClick={() => handleRecentClick(term)}>
+                            {term}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="site-search-results">
+                    {searchResults.length > 0 ? (
+                      searchResults.map((item, index) => {
+                        const isLast = index === searchResults.length - 1
+                        const imageUrl = item.imageUrl ? `${API_BASE_URL}${item.imageUrl}` : ''
+                        return (
+                          <button
+                            key={`${item.type}-${item.id}`}
+                            ref={isLast ? lastSearchResultRef : null}
+                            type="button"
+                            className="site-search-result"
+                            onClick={() => openSearchResult(item)}
+                          >
+                            {imageUrl ? (
+                              <img
+                                src={imageUrl}
+                                alt=""
+                                className={item.type === 'USER' ? 'is-user' : ''}
+                              />
+                            ) : (
+                              <span className="site-search-result-fallback" aria-hidden="true">
+                                {item.type === 'USER' ? '@' : 'P'}
+                              </span>
+                            )}
+                            <span>
+                              <strong>{item.title}</strong>
+                              <small>{item.subtitle}</small>
+                            </span>
+                          </button>
+                        )
+                      })
+                    ) : !searchLoading && !searchError ? (
+                      <div className="site-search-empty">
+                        Não há resultados para "{searchQuery.trim()}".
+                      </div>
+                    ) : null}
+
+                    {searchLoading && (
+                      <div className="site-search-status">
+                        A carregar{searchPage > 0 ? ' mais' : ''}...
+                      </div>
+                    )}
+                    {searchError && <div className="site-search-status error">{searchError}</div>}
+                    {!searchHasMore && searchResults.length > 0 && (
+                      <div className="site-search-status">Fim dos resultados.</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </form>
         )}
 
@@ -349,19 +372,27 @@ function Header() {
                 Gerar Podcast
               </NavLink>
               <div className="site-profile">
-                <NavLink to="/user" className="site-profile-trigger" aria-label={`Perfil de ${profileName}`}>
+                <NavLink
+                  to="/user"
+                  className="site-profile-trigger"
+                  aria-label={`Perfil de ${profileName}`}
+                >
                   <span className="site-avatar">{profileName.slice(0, 1).toUpperCase()}</span>
                   <span className="site-profile-name">{profileName}</span>
                   <span className="site-profile-chevron" aria-hidden="true" />
                 </NavLink>
                 <div className="site-profile-menu">
                   <NavLink to="/user">Perfil</NavLink>
-                  <button type="button" onClick={handleLogout}>Logout</button>
+                  <button type="button" onClick={handleLogout}>
+                    Logout
+                  </button>
                 </div>
               </div>
             </>
           ) : (
-            <NavLink to="/login" className="site-login-link">Login</NavLink>
+            <NavLink to="/login" className="site-login-link">
+              Login
+            </NavLink>
           )}
         </div>
       </div>

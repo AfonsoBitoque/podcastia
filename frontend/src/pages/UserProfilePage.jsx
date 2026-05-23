@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import '../styles/user-page.css'
 
@@ -97,20 +97,18 @@ function UserProfilePage() {
   const [relationLoading, setRelationLoading] = useState(false)
   const [podcasts, setPodcasts] = useState([])
   const [podcastsLoading, setPodcastsLoading] = useState(false)
-  
+
   const [avatarFailed, setAvatarFailed] = useState(false)
   const [avatarLoading, setAvatarLoading] = useState(false)
   const [showRemoveModal, setShowRemoveModal] = useState(false)
 
-  const avatarUrl = !avatarFailed
-    ? resolveProfilePicture(user?.profilePicturePath)
-    : ''
+  const avatarUrl = !avatarFailed ? resolveProfilePicture(user?.profilePicturePath) : ''
 
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     try {
       const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/users/${id}/profile`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
 
       if (!response.ok) throw new Error('Utilizador não encontrado.')
@@ -125,15 +123,15 @@ function UserProfilePage() {
       setErrorMessage(error.message)
       setStatus('error')
     }
-  }
+  }, [id])
 
-  const fetchRelationStatus = async () => {
+  const fetchRelationStatus = useCallback(async () => {
     try {
       const token = localStorage.getItem('token')
       if (!token) return
 
       const response = await fetch(`${API_BASE_URL}/api/relations/status/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       })
 
       if (response.ok) {
@@ -143,14 +141,14 @@ function UserProfilePage() {
     } catch (error) {
       console.error('Error fetching relation status:', error)
     }
-  }
+  }, [id])
 
-  const fetchPodcasts = async () => {
+  const fetchPodcasts = useCallback(async () => {
     setPodcastsLoading(true)
     try {
       const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/podcasts/user/${id}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
 
       if (response.ok) {
@@ -162,7 +160,7 @@ function UserProfilePage() {
     } finally {
       setPodcastsLoading(false)
     }
-  }
+  }, [id])
 
   useEffect(() => {
     setStatus('loading')
@@ -170,7 +168,7 @@ function UserProfilePage() {
     fetchProfile()
     fetchRelationStatus()
     fetchPodcasts()
-  }, [id])
+  }, [id, fetchProfile, fetchRelationStatus, fetchPodcasts])
 
   const handleRelationAction = async (action) => {
     if (relationLoading) return
@@ -198,7 +196,7 @@ function UserProfilePage() {
 
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method,
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       })
 
       if (response.ok) {
@@ -247,37 +245,70 @@ function UserProfilePage() {
   }
 
   const currentTopics = user.topics || []
-  const totalPoints = (user.pontosDesporto || 0) + (user.pontosPolitica || 0) + (user.pontosFinancas || 0) + (user.pontosGeral || 0)
+  const totalPoints =
+    (user.pontosDesporto || 0) +
+    (user.pontosPolitica || 0) +
+    (user.pontosFinancas || 0) +
+    (user.pontosGeral || 0)
 
-  let desportoPct = 0, politicaPct = 0, financasPct = 0, geralPct = 0;
+  let desportoPct = 0,
+    politicaPct = 0,
+    financasPct = 0,
+    geralPct = 0
   if (totalPoints > 0) {
-    desportoPct = Math.round(((user.pontosDesporto || 0) / totalPoints) * 100);
-    politicaPct = Math.round(((user.pontosPolitica || 0) / totalPoints) * 100);
-    financasPct = Math.round(((user.pontosFinancas || 0) / totalPoints) * 100);
-    geralPct = 100 - desportoPct - politicaPct - financasPct;
+    desportoPct = Math.round(((user.pontosDesporto || 0) / totalPoints) * 100)
+    politicaPct = Math.round(((user.pontosPolitica || 0) / totalPoints) * 100)
+    financasPct = Math.round(((user.pontosFinancas || 0) / totalPoints) * 100)
+    geralPct = 100 - desportoPct - politicaPct - financasPct
   }
 
-  const conicGradient = totalPoints > 0 
-    ? `conic-gradient(
+  const conicGradient =
+    totalPoints > 0
+      ? `conic-gradient(
         #3b82f6 0% ${desportoPct}%, 
         #ef4444 ${desportoPct}% ${desportoPct + politicaPct}%, 
         #10b981 ${desportoPct + politicaPct}% ${desportoPct + politicaPct + financasPct}%, 
         #f59e0b ${desportoPct + politicaPct + financasPct}% 100%
       )`
-    : '';
+      : ''
 
-  const isOwnProfile = String(sessionUser?.id) === String(id);
+  const isOwnProfile = String(sessionUser?.id) === String(id)
 
   return (
     <main className="user-page" aria-labelledby="user-title">
       {showRemoveModal && (
         <div className="modal-backdrop">
-          <div className="modal-content" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-            <h2 id="modal-title" style={{ marginTop: 0 }}>Remover Amigo</h2>
+          <div
+            className="modal-content"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-title"
+          >
+            <h2 id="modal-title" style={{ marginTop: 0 }}>
+              Remover Amigo
+            </h2>
             <p>Tem a certeza que deseja remover {user.username} da sua lista de amigos?</p>
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
-              <button className="user-action-btn" onClick={() => setShowRemoveModal(false)} disabled={relationLoading}>Cancelar</button>
-              <button className="user-action-btn user-action-btn--danger" style={{ background: '#ef4444', color: 'white', border: 'none' }} onClick={() => handleRelationAction('remove')} disabled={relationLoading}>
+            <div
+              style={{
+                display: 'flex',
+                gap: '1rem',
+                marginTop: '1.5rem',
+                justifyContent: 'flex-end',
+              }}
+            >
+              <button
+                className="user-action-btn"
+                onClick={() => setShowRemoveModal(false)}
+                disabled={relationLoading}
+              >
+                Cancelar
+              </button>
+              <button
+                className="user-action-btn user-action-btn--danger"
+                style={{ background: '#ef4444', color: 'white', border: 'none' }}
+                onClick={() => handleRelationAction('remove')}
+                disabled={relationLoading}
+              >
                 {relationLoading ? 'A remover...' : 'Remover'}
               </button>
             </div>
@@ -289,7 +320,6 @@ function UserProfilePage() {
         <div className="user-banner" aria-hidden="true" />
 
         <article className="user-card">
-
           <div className="user-intro">
             <div className="user-avatar-wrap" style={{ cursor: 'default' }}>
               {avatarUrl ? (
@@ -318,12 +348,20 @@ function UserProfilePage() {
                 <h1 id="user-title">{formatText(user.username)}</h1>
                 <span className="user-tag">#{user.tag || '0000'}</span>
               </div>
-              
+
               {!isOwnProfile && (
-                <div className="user-actions" style={{ marginTop: '0.5rem', marginBottom: '1.5rem', display: 'flex', gap: '0.5rem' }}>
+                <div
+                  className="user-actions"
+                  style={{
+                    marginTop: '0.5rem',
+                    marginBottom: '1.5rem',
+                    display: 'flex',
+                    gap: '0.5rem',
+                  }}
+                >
                   {relationStatus === 'NONE' && (
-                    <button 
-                      className="user-action-btn user-action-btn--primary" 
+                    <button
+                      className="user-action-btn user-action-btn--primary"
                       style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
                       onClick={() => handleRelationAction('add')}
                       disabled={relationLoading}
@@ -332,26 +370,31 @@ function UserProfilePage() {
                     </button>
                   )}
                   {relationStatus === 'PENDING_SENT' && (
-                    <button 
-                      className="user-action-btn" 
+                    <button
+                      className="user-action-btn"
                       disabled={true}
-                      style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', opacity: 0.7, cursor: 'not-allowed' }}
+                      style={{
+                        padding: '0.4rem 0.8rem',
+                        fontSize: '0.85rem',
+                        opacity: 0.7,
+                        cursor: 'not-allowed',
+                      }}
                     >
                       Pedido Enviado
                     </button>
                   )}
                   {relationStatus === 'PENDING_RECEIVED' && (
                     <>
-                      <button 
-                        className="user-action-btn user-action-btn--primary" 
+                      <button
+                        className="user-action-btn user-action-btn--primary"
                         style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
                         onClick={() => handleRelationAction('accept')}
                         disabled={relationLoading}
                       >
                         Aceitar
                       </button>
-                      <button 
-                        className="user-action-btn" 
+                      <button
+                        className="user-action-btn"
                         style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
                         onClick={() => handleRelationAction('reject')}
                         disabled={relationLoading}
@@ -361,9 +404,14 @@ function UserProfilePage() {
                     </>
                   )}
                   {relationStatus === 'FRIENDS' && (
-                    <button 
-                      className="user-action-btn" 
-                      style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', color: '#ef4444', borderColor: '#ef4444' }}
+                    <button
+                      className="user-action-btn"
+                      style={{
+                        padding: '0.4rem 0.8rem',
+                        fontSize: '0.85rem',
+                        color: '#ef4444',
+                        borderColor: '#ef4444',
+                      }}
                       onClick={() => setShowRemoveModal(true)}
                       disabled={relationLoading}
                     >
@@ -431,16 +479,34 @@ function UserProfilePage() {
                 <p className="info-title">A tua Roda de Estilo Percentual</p>
                 {totalPoints > 0 ? (
                   <>
-                    <div className="user-style-wheel" style={{ background: conicGradient }} aria-label="Grafico percentual das escutas"></div>
+                    <div
+                      className="user-style-wheel"
+                      style={{ background: conicGradient }}
+                      aria-label="Grafico percentual das escutas"
+                    ></div>
                     <div className="style-legend">
-                      <div className="legend-item"><span className="legend-color" style={{background: '#3b82f6'}}></span>Desporto ({desportoPct}%)</div>
-                      <div className="legend-item"><span className="legend-color" style={{background: '#ef4444'}}></span>Politica ({politicaPct}%)</div>
-                      <div className="legend-item"><span className="legend-color" style={{background: '#10b981'}}></span>Financas ({financasPct}%)</div>
-                      <div className="legend-item"><span className="legend-color" style={{background: '#f59e0b'}}></span>Geral ({geralPct}%)</div>
+                      <div className="legend-item">
+                        <span className="legend-color" style={{ background: '#3b82f6' }}></span>
+                        Desporto ({desportoPct}%)
+                      </div>
+                      <div className="legend-item">
+                        <span className="legend-color" style={{ background: '#ef4444' }}></span>
+                        Politica ({politicaPct}%)
+                      </div>
+                      <div className="legend-item">
+                        <span className="legend-color" style={{ background: '#10b981' }}></span>
+                        Financas ({financasPct}%)
+                      </div>
+                      <div className="legend-item">
+                        <span className="legend-color" style={{ background: '#f59e0b' }}></span>
+                        Geral ({geralPct}%)
+                      </div>
                     </div>
                   </>
                 ) : (
-                  <div className="user-style-wheel user-style-empty">Ouve podcasts para revelar!</div>
+                  <div className="user-style-wheel user-style-empty">
+                    Ouve podcasts para revelar!
+                  </div>
                 )}
               </div>
             </section>
@@ -469,9 +535,7 @@ function UserProfilePage() {
                           <div className="user-podcast-meta">
                             <span className="user-podcast-duration">{podcast.duracao} min</span>
                             {podcast.tags && podcast.tags.length > 0 && (
-                              <span className="user-podcast-tags">
-                                {podcast.tags.join(', ')}
-                              </span>
+                              <span className="user-podcast-tags">{podcast.tags.join(', ')}</span>
                             )}
                           </div>
                         </div>
@@ -479,7 +543,15 @@ function UserProfilePage() {
                           <button
                             className="user-podcast-toggle-btn is-public"
                             onClick={() => handleOpenPodcast(podcast)}
-                            style={{ background: 'var(--brand-primary)', color: 'white', border: 'none', padding: '0.4rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: '500' }}
+                            style={{
+                              background: 'var(--brand-primary)',
+                              color: 'white',
+                              border: 'none',
+                              padding: '0.4rem 1rem',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontWeight: '500',
+                            }}
                           >
                             Ouvir Agora
                           </button>

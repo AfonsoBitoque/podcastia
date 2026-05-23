@@ -1,10 +1,11 @@
-import { useState, useEffect, Suspense, lazy } from 'react'
+import { Suspense, lazy } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import Header from './components/layout/Header'
 import AppSidebar from './components/layout/AppSidebar'
 import Footer from './components/layout/Footer'
 import PersistentPlayer from './components/PersistentPlayer'
 import './styles/layout.css'
+import { useAuth } from './hooks/useAuth'
 
 // Lazy load pages for code splitting
 const RegisterPage = lazy(() => import('./pages/RegisterPage'))
@@ -31,12 +32,10 @@ function PageLoader() {
   )
 }
 
-import { useAuth } from './contexts/AuthContext'
-
 function useAuthGuard() {
   const location = useLocation()
   const { isAuthenticated, hasCompletedOnboarding, isLoading } = useAuth()
-  
+
   const publicPaths = ['/login', '/register']
   const isPublicPath = publicPaths.includes(location.pathname)
 
@@ -81,19 +80,110 @@ function App() {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/onboarding" element={<OnboardingSurvey />} />
-            <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-            <Route path="/trending" element={<ProtectedRoute><TrendingPage /></ProtectedRoute>} />
-            <Route path="/shorts" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-            <Route path="/user" element={<ProtectedRoute><UserPage /></ProtectedRoute>} />
-            <Route path="/user/:id" element={<ProtectedRoute><UserProfilePage /></ProtectedRoute>} />
-            <Route path="/playlists" element={<ProtectedRoute><PlaylistPage /></ProtectedRoute>} />
-            <Route path="/following" element={<ProtectedRoute><UserPage /></ProtectedRoute>} />
-            <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
-            <Route path="/topics" element={<ProtectedRoute><TopicsPage /></ProtectedRoute>} />
-            <Route path="/explorar" element={<ProtectedRoute><SearchPageTest /></ProtectedRoute>} />
-            <Route path="/search-test" element={<ProtectedRoute><SearchPageTest /></ProtectedRoute>} />
-            <Route path="/generate" element={<ProtectedRoute><GeneratePage /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
+            <Route
+              path="/home"
+              element={
+                <ProtectedRoute>
+                  <HomePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/trending"
+              element={
+                <ProtectedRoute>
+                  <TrendingPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/shorts"
+              element={
+                <ProtectedRoute>
+                  <HomePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/user"
+              element={
+                <ProtectedRoute>
+                  <UserPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/user/:id"
+              element={
+                <ProtectedRoute>
+                  <UserProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/playlists"
+              element={
+                <ProtectedRoute>
+                  <PlaylistPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/following"
+              element={
+                <ProtectedRoute>
+                  <UserPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/messages"
+              element={
+                <ProtectedRoute>
+                  <MessagesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/topics"
+              element={
+                <ProtectedRoute>
+                  <TopicsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/explorar"
+              element={
+                <ProtectedRoute>
+                  <SearchPageTest />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/search-test"
+              element={
+                <ProtectedRoute>
+                  <SearchPageTest />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/generate"
+              element={
+                <ProtectedRoute>
+                  <GeneratePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <AdminPage />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </Suspense>
       </div>

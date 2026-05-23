@@ -141,7 +141,10 @@
   color: inherit;
   text-align: left;
   cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
 }
 
 .conversation-item:hover,
@@ -290,7 +293,11 @@
   transform: scale(0.88);
   box-shadow: 0 8px 18px rgba(70, 38, 31, 0.08);
   cursor: pointer;
-  transition: opacity 0.18s ease, transform 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
 }
 
 .reaction-trigger svg {
@@ -363,7 +370,9 @@
   font-size: 1.08rem;
   line-height: 1;
   cursor: pointer;
-  transition: transform 0.16s ease, background-color 0.16s ease;
+  transition:
+    transform 0.16s ease,
+    background-color 0.16s ease;
 }
 
 .reaction-picker button:hover {

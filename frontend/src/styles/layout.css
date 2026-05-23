@@ -90,7 +90,7 @@
 }
 
 .brand-mic::before {
-  content: "";
+  content: '';
   position: absolute;
   left: 50%;
   bottom: -7px;
@@ -102,7 +102,7 @@
 }
 
 .brand-mic::after {
-  content: "";
+  content: '';
   position: absolute;
   left: 50%;
   bottom: -10px;
@@ -171,7 +171,10 @@
     linear-gradient(45deg, transparent 42%, currentColor 42%, currentColor 58%, transparent 58%),
     linear-gradient(-45deg, transparent 42%, currentColor 42%, currentColor 58%, transparent 58%);
   color: rgba(126, 99, 99, 0.72);
-  transition: color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease,
+    transform 0.2s ease;
 }
 
 .site-search input::-webkit-search-cancel-button:hover {
@@ -191,7 +194,7 @@
 }
 
 .site-search-icon::after {
-  content: "";
+  content: '';
   position: absolute;
   right: -5px;
   bottom: -4px;
@@ -234,7 +237,11 @@
   font-size: 0.86rem;
   font-weight: 800;
   cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
 }
 
 .site-search-chips button:hover,
@@ -299,7 +306,9 @@
   font: inherit;
   cursor: pointer;
   border-radius: 12px;
-  transition: background-color 0.2s ease, transform 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease;
 }
 
 .site-search-result:last-of-type {
@@ -398,7 +407,9 @@
   text-decoration: none;
   font-weight: 800;
   white-space: nowrap;
-  transition: background-color 0.2s ease, transform 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease;
 }
 
 .site-generate-cta:hover,
@@ -465,7 +476,10 @@
   opacity: 0;
   visibility: hidden;
   transform: translateY(-4px);
-  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease,
+    visibility 0.2s ease;
 }
 
 .site-profile:hover .site-profile-menu,
@@ -551,7 +565,10 @@
   font-weight: 800;
   width: fit-content;
   max-width: 100%;
-  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
 }
 
 .sidebar-nav-link:hover {
@@ -589,7 +606,7 @@
 }
 
 .sidebar-nav-icon--compass::before {
-  content: "";
+  content: '';
   position: absolute;
   left: 5px;
   top: 3px;
@@ -602,7 +619,7 @@
 
 .sidebar-nav-icon--trend::before,
 .sidebar-nav-icon--trend::after {
-  content: "";
+  content: '';
   position: absolute;
   background: currentColor;
 }
@@ -634,7 +651,7 @@
 }
 
 .sidebar-nav-icon--playlist::before {
-  content: "";
+  content: '';
   position: absolute;
   left: 4px;
   right: 4px;
@@ -651,7 +668,7 @@
 
 .sidebar-nav-icon--headphones::before,
 .sidebar-nav-icon--headphones::after {
-  content: "";
+  content: '';
   position: absolute;
   bottom: -2px;
   width: 4px;
@@ -669,7 +686,7 @@
 }
 
 .sidebar-nav-icon--shorts::before {
-  content: "";
+  content: '';
   position: absolute;
   left: 5px;
   top: 3px;

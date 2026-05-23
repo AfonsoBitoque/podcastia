@@ -1,8 +1,9 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
 
-const PlayerContext = createContext(null)
+export const PlayerContext = createContext(null)
 
 const getPodcastId = (podcast) => podcast?.id || podcast?.podcastId
 
@@ -13,13 +14,17 @@ const normalizePodcast = (podcast) => {
     ...podcast,
     id,
     titulo: podcast?.titulo || podcast?.title || 'Podcast',
-    host: podcast?.host || podcast?.user?.username || podcast?.subtitle?.replace('Criador: ', '') || 'Podcastia',
+    host:
+      podcast?.host ||
+      podcast?.user?.username ||
+      podcast?.subtitle?.replace('Criador: ', '') ||
+      'Podcastia',
     duracao: Number(podcast?.duracao) || 0,
     coverImagePath: podcast?.coverImagePath || podcast?.imageUrl || '',
   }
 }
 
-function PlayerProvider({ children }) {
+export function PlayerProvider({ children }) {
   const [playingPodcast, setPlayingPodcast] = useState(null)
   const [activePodcastId, setActivePodcastId] = useState(null)
   const [progressSecs, setProgressSecs] = useState(0)
@@ -55,21 +60,27 @@ function PlayerProvider({ children }) {
     return () => window.clearInterval(interval)
   }, [isPlaying, playingPodcast, playbackSpeed])
 
-  const saveProgressToBackend = useCallback(async (seconds) => {
-    if (!playingPodcast) return
+  const saveProgressToBackend = useCallback(
+    async (seconds) => {
+      if (!playingPodcast) return
 
-    try {
-      const actualId = getPodcastId(playingPodcast)
-      const token = localStorage.getItem('token')
-      const headers = token ? { Authorization: `Bearer ${token}` } : {}
-      await fetch(`${API_BASE_URL}/podcasts/${actualId}/progress?seconds=${Math.floor(seconds)}`, {
-        method: 'POST',
-        headers,
-      })
-    } catch (error) {
-      console.error('Erro ao guardar progresso:', error)
-    }
-  }, [playingPodcast])
+      try {
+        const actualId = getPodcastId(playingPodcast)
+        const token = localStorage.getItem('token')
+        const headers = token ? { Authorization: `Bearer ${token}` } : {}
+        await fetch(
+          `${API_BASE_URL}/podcasts/${actualId}/progress?seconds=${Math.floor(seconds)}`,
+          {
+            method: 'POST',
+            headers,
+          },
+        )
+      } catch (error) {
+        console.error('Erro ao guardar progresso:', error)
+      }
+    },
+    [playingPodcast],
+  )
 
   const handleListen = useCallback(async (podcast, isResume = false, nextQueue = []) => {
     const normalizedPodcast = normalizePodcast(podcast)
@@ -78,22 +89,26 @@ function PlayerProvider({ children }) {
 
     setActivePodcastId(actualId)
     setPlayingPodcast(normalizedPodcast)
-    const startingSecs = isResume && normalizedPodcast.progressSeconds ? normalizedPodcast.progressSeconds : 0
+    const startingSecs =
+      isResume && normalizedPodcast.progressSeconds ? normalizedPodcast.progressSeconds : 0
     setProgressSecs(startingSecs)
     setIsPlaying(true)
 
     if (Array.isArray(nextQueue) && nextQueue.length > 0) {
       setQueue(nextQueue.map(normalizePodcast).filter(getPodcastId))
     } else {
-      setQueue((prev) => (
-        prev.some((item) => getPodcastId(item) === actualId) ? prev : [normalizedPodcast, ...prev]
-      ))
+      setQueue((prev) =>
+        prev.some((item) => getPodcastId(item) === actualId) ? prev : [normalizedPodcast, ...prev],
+      )
     }
 
     try {
       const token = localStorage.getItem('token')
       const headers = token ? { Authorization: `Bearer ${token}` } : {}
-      const response = await fetch(`${API_BASE_URL}/podcasts/${actualId}/listen`, { method: 'POST', headers })
+      const response = await fetch(`${API_BASE_URL}/podcasts/${actualId}/listen`, {
+        method: 'POST',
+        headers,
+      })
 
       await fetch(`${API_BASE_URL}/podcasts/${actualId}/progress?seconds=${startingSecs}`, {
         method: 'POST',
@@ -119,17 +134,24 @@ function PlayerProvider({ children }) {
     }
   }, [isPlaying, playingPodcast, saveProgressToBackend])
 
-  const seekTo = useCallback((seconds) => {
-    if (!playingPodcast) return
-    const totalSeconds = Math.max(0, (Number(playingPodcast.duracao) || 0) * 60)
-    const clampedSeconds = totalSeconds > 0 ? Math.max(0, Math.min(seconds, totalSeconds)) : Math.max(0, seconds)
-    setProgressSecs(clampedSeconds)
-  }, [playingPodcast])
+  const seekTo = useCallback(
+    (seconds) => {
+      if (!playingPodcast) return
+      const totalSeconds = Math.max(0, (Number(playingPodcast.duracao) || 0) * 60)
+      const clampedSeconds =
+        totalSeconds > 0 ? Math.max(0, Math.min(seconds, totalSeconds)) : Math.max(0, seconds)
+      setProgressSecs(clampedSeconds)
+    },
+    [playingPodcast],
+  )
 
   const forwardSeconds = useCallback(() => {
     if (!playingPodcast) return
     const totalSeconds = Math.max(0, (Number(playingPodcast.duracao) || 0) * 60)
-    const newTime = totalSeconds > 0 ? Math.min(progressSecsRef.current + 15, totalSeconds) : progressSecsRef.current + 15
+    const newTime =
+      totalSeconds > 0
+        ? Math.min(progressSecsRef.current + 15, totalSeconds)
+        : progressSecsRef.current + 15
     setProgressSecs(newTime)
     saveProgressToBackend(newTime)
   }, [playingPodcast, saveProgressToBackend])
@@ -141,15 +163,18 @@ function PlayerProvider({ children }) {
     saveProgressToBackend(newTime)
   }, [playingPodcast, saveProgressToBackend])
 
-  const playQueueOffset = useCallback((offset) => {
-    if (!playingPodcast || queue.length === 0) return
+  const playQueueOffset = useCallback(
+    (offset) => {
+      if (!playingPodcast || queue.length === 0) return
 
-    const currentId = getPodcastId(playingPodcast)
-    const currentIndex = queue.findIndex((podcast) => getPodcastId(podcast) === currentId)
-    const startIndex = currentIndex >= 0 ? currentIndex : 0
-    const nextIndex = (startIndex + offset + queue.length) % queue.length
-    handleListen(queue[nextIndex], false, queue)
-  }, [handleListen, playingPodcast, queue])
+      const currentId = getPodcastId(playingPodcast)
+      const currentIndex = queue.findIndex((podcast) => getPodcastId(podcast) === currentId)
+      const startIndex = currentIndex >= 0 ? currentIndex : 0
+      const nextIndex = (startIndex + offset + queue.length) % queue.length
+      handleListen(queue[nextIndex], false, queue)
+    },
+    [handleListen, playingPodcast, queue],
+  )
 
   const nextPodcast = useCallback(() => {
     playQueueOffset(1)
@@ -164,17 +189,20 @@ function PlayerProvider({ children }) {
     localStorage.setItem('playbackSpeed', speed.toString())
   }, [])
 
-  const handleProgressClick = useCallback((event) => {
-    if (!playingPodcast) return
-    const timeline = event.currentTarget
-    const rect = timeline.getBoundingClientRect()
-    const clickX = event.clientX - rect.left
-    const percent = Math.max(0, Math.min(1, clickX / rect.width))
-    const totalSeconds = Math.max(0, (Number(playingPodcast.duracao) || 0) * 60)
-    const newSeconds = percent * totalSeconds
-    seekTo(newSeconds)
-    saveProgressToBackend(newSeconds)
-  }, [playingPodcast, saveProgressToBackend, seekTo])
+  const handleProgressClick = useCallback(
+    (event) => {
+      if (!playingPodcast) return
+      const timeline = event.currentTarget
+      const rect = timeline.getBoundingClientRect()
+      const clickX = event.clientX - rect.left
+      const percent = Math.max(0, Math.min(1, clickX / rect.width))
+      const totalSeconds = Math.max(0, (Number(playingPodcast.duracao) || 0) * 60)
+      const newSeconds = percent * totalSeconds
+      seekTo(newSeconds)
+      saveProgressToBackend(newSeconds)
+    },
+    [playingPodcast, saveProgressToBackend, seekTo],
+  )
 
   const handleProgressMouseDown = useCallback(() => {
     setIsDragging(true)
@@ -209,58 +237,47 @@ function PlayerProvider({ children }) {
     }
   }, [isDragging, playingPodcast, saveProgressToBackend, seekTo])
 
-  const value = useMemo(() => ({
-    activePodcastId,
-    forwardSeconds,
-    handleListen,
-    handleProgressClick,
-    handleProgressMouseDown,
-    handleSpeedChange,
-    isDragging,
-    isPlaying,
-    nextPodcast,
-    playbackSpeed,
-    playingPodcast,
-    previousPodcast,
-    progressSecs,
-    rewindSeconds,
-    saveProgressToBackend,
-    seekTo,
-    setQueue,
-    togglePlayPause,
-  }), [
-    activePodcastId,
-    forwardSeconds,
-    handleListen,
-    handleProgressClick,
-    handleProgressMouseDown,
-    handleSpeedChange,
-    isDragging,
-    isPlaying,
-    nextPodcast,
-    playbackSpeed,
-    playingPodcast,
-    previousPodcast,
-    progressSecs,
-    rewindSeconds,
-    saveProgressToBackend,
-    seekTo,
-    togglePlayPause,
-  ])
-
-  return (
-    <PlayerContext.Provider value={value}>
-      {children}
-    </PlayerContext.Provider>
+  const value = useMemo(
+    () => ({
+      activePodcastId,
+      forwardSeconds,
+      handleListen,
+      handleProgressClick,
+      handleProgressMouseDown,
+      handleSpeedChange,
+      isDragging,
+      isPlaying,
+      nextPodcast,
+      playbackSpeed,
+      playingPodcast,
+      previousPodcast,
+      progressSecs,
+      rewindSeconds,
+      saveProgressToBackend,
+      seekTo,
+      setQueue,
+      togglePlayPause,
+    }),
+    [
+      activePodcastId,
+      forwardSeconds,
+      handleListen,
+      handleProgressClick,
+      handleProgressMouseDown,
+      handleSpeedChange,
+      isDragging,
+      isPlaying,
+      nextPodcast,
+      playbackSpeed,
+      playingPodcast,
+      previousPodcast,
+      progressSecs,
+      rewindSeconds,
+      saveProgressToBackend,
+      seekTo,
+      togglePlayPause,
+    ],
   )
-}
 
-function usePlayer() {
-  const context = useContext(PlayerContext)
-  if (!context) {
-    throw new Error('usePlayer must be used within a PlayerProvider')
-  }
-  return context
+  return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>
 }
-
-export { PlayerProvider, usePlayer }

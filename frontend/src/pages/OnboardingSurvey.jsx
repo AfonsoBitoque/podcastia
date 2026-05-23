@@ -23,12 +23,6 @@ function OnboardingSurvey() {
   const remainingCount = Math.max(0, MIN_TOPICS - selectedCount)
   const isCompleteDisabled = selectedCount < MIN_TOPICS
 
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('token')
-    console.log('Token from localStorage:', token ? 'exists' : 'missing')
-    if (!token) return {}
-    return { Authorization: `Bearer ${token}` }
-  }
 
   useEffect(() => {
     const storedUserRaw = localStorage.getItem('user')
@@ -44,7 +38,7 @@ function OnboardingSurvey() {
         return
       }
       setUserId(parsedUser.id)
-      
+
       // Se já completou onboarding, redirecionar para home
       if (parsedUser.hasCompletedOnboarding === true) {
         navigate('/home', { replace: true })
@@ -98,11 +92,14 @@ function OnboardingSurvey() {
       const rawUser = localStorage.getItem('user')
       if (rawUser) {
         const parsed = JSON.parse(rawUser)
-        localStorage.setItem('user', JSON.stringify({
-          ...parsed,
-          hasCompletedOnboarding: true,
-          topics: Array.from(selectedTopics),
-        }))
+        localStorage.setItem(
+          'user',
+          JSON.stringify({
+            ...parsed,
+            hasCompletedOnboarding: true,
+            topics: Array.from(selectedTopics),
+          }),
+        )
       }
       // Notificar App.jsx da mudança de estado
       window.dispatchEvent(new Event('auth-change'))
@@ -133,9 +130,8 @@ function OnboardingSurvey() {
           <p className="topic-kicker">Bem-vindo à Podcastia</p>
           <h1 id="onboarding-title">Escolhe os teus temas favoritos</h1>
           <p>
-            Personaliza a tua experiência desde o primeiro segundo. 
-            Seleciona pelo menos {MIN_TOPICS} temas para receberes recomendações 
-            de podcasts feitas à tua medida.
+            Personaliza a tua experiência desde o primeiro segundo. Seleciona pelo menos{' '}
+            {MIN_TOPICS} temas para receberes recomendações de podcasts feitas à tua medida.
           </p>
         </div>
 
@@ -173,9 +169,7 @@ function OnboardingSurvey() {
               </span>
             </div>
 
-            {submitError && (
-              <p className="topic-feedback error">{submitError}</p>
-            )}
+            {submitError && <p className="topic-feedback error">{submitError}</p>}
 
             <div className="topic-actions">
               <button

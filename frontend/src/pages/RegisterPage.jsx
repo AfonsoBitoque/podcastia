@@ -123,7 +123,8 @@ function RegisterPage() {
     if (!formData.password) {
       nextErrors.password = 'A password e obrigatoria.'
     } else if (!PASSWORD_COMPLEXITY_REGEX.test(formData.password)) {
-      nextErrors.password = 'A password deve ter pelo menos 8 caracteres, uma letra maiuscula e um numero.'
+      nextErrors.password =
+        'A password deve ter pelo menos 8 caracteres, uma letra maiuscula e um numero.'
     }
     if (!formData.confirmPassword) {
       nextErrors.confirmPassword = 'Confirma a password.'
@@ -193,9 +194,7 @@ function RegisterPage() {
         <aside className="register-visual">
           <p className="visual-kicker">Podcastia Studio</p>
           <h2>Transforma a tua voz no proximo grande podcast.</h2>
-          <p>
-            Cria a tua conta, define a tua identidade e comeca a publicar episodios em minutos.
-          </p>
+          <p>Cria a tua conta, define a tua identidade e comeca a publicar episodios em minutos.</p>
 
           <div className="wave-cluster" aria-hidden="true">
             <span />
@@ -337,7 +336,7 @@ function RegisterPage() {
           {serverMessage && <p className="feedback error">{serverMessage}</p>}
 
           <p className="signin-link">
-              Ja tens conta? <Link to="/login">Entrar</Link>
+            Ja tens conta? <Link to="/login">Entrar</Link>
           </p>
         </section>
       </div>

@@ -22,9 +22,9 @@ function AdminPodcastManagement() {
       const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/admin/podcasts`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       })
 
       if (!response.ok) {
@@ -57,10 +57,10 @@ function AdminPodcastManagement() {
       const response = await fetch(`${API_BASE_URL}/api/admin/podcasts/${podcast.id}/explicit`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ explicit: !podcast.explicitContent })
+        body: JSON.stringify({ explicit: !podcast.explicitContent }),
       })
 
       if (!response.ok) {
@@ -80,10 +80,10 @@ function AdminPodcastManagement() {
       const response = await fetch(`${API_BASE_URL}/api/admin/podcasts/${podcast.id}/hidden`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ hidden: !podcast.hidden })
+        body: JSON.stringify({ hidden: !podcast.hidden }),
       })
 
       if (!response.ok) {
@@ -103,10 +103,10 @@ function AdminPodcastManagement() {
       const response = await fetch(`${API_BASE_URL}/api/admin/podcasts/${podcast.id}/featured`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ featured: !podcast.featured })
+        body: JSON.stringify({ featured: !podcast.featured }),
       })
 
       if (!response.ok) {
@@ -126,10 +126,10 @@ function AdminPodcastManagement() {
       const response = await fetch(`${API_BASE_URL}/api/admin/podcasts/${updatedPodcast.id}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify(updatedPodcast)
+        body: JSON.stringify(updatedPodcast),
       })
 
       if (!response.ok) {
@@ -148,14 +148,17 @@ function AdminPodcastManagement() {
   const handleConfirmDelete = async (confirmation, adminPassword) => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE_URL}/api/admin/podcasts/${selectedPodcast.id}/confirm`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      const response = await fetch(
+        `${API_BASE_URL}/api/admin/podcasts/${selectedPodcast.id}/confirm`,
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ confirmation, adminPassword }),
         },
-        body: JSON.stringify({ confirmation, adminPassword })
-      })
+      )
 
       if (!response.ok) {
         const errorData = await response.json()
@@ -171,15 +174,16 @@ function AdminPodcastManagement() {
     }
   }
 
-  const filteredPodcasts = podcasts.filter(podcast => {
-    const matchesSearch = podcast.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         podcast.author.toLowerCase().includes(searchTerm.toLowerCase())
-    
+  const filteredPodcasts = podcasts.filter((podcast) => {
+    const matchesSearch =
+      podcast.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      podcast.author.toLowerCase().includes(searchTerm.toLowerCase())
+
     if (filterStatus === 'all') return matchesSearch
     if (filterStatus === 'hidden') return matchesSearch && podcast.hidden
     if (filterStatus === 'explicit') return matchesSearch && podcast.explicitContent
     if (filterStatus === 'featured') return matchesSearch && podcast.featured
-    
+
     return matchesSearch
   })
 
@@ -196,7 +200,7 @@ function AdminPodcastManagement() {
     <div className="admin-podcast-management">
       <div className="admin-card">
         <h2>Podcast Management</h2>
-        
+
         {/* Search and Filter */}
         <div className="search-filter-bar">
           <input
@@ -245,7 +249,9 @@ function AdminPodcastManagement() {
                       <div className="podcast-title">{podcast.titulo}</div>
                       <div className="podcast-tags">
                         {podcast.tags.map((tag, index) => (
-                          <span key={index} className="tag-badge">{tag}</span>
+                          <span key={index} className="tag-badge">
+                            {tag}
+                          </span>
                         ))}
                       </div>
                     </div>
@@ -257,9 +263,7 @@ function AdminPodcastManagement() {
                       {podcast.explicitContent && (
                         <span className="status-badge status-explicit">Explicit</span>
                       )}
-                      {podcast.hidden && (
-                        <span className="status-badge status-hidden">Hidden</span>
-                      )}
+                      {podcast.hidden && <span className="status-badge status-hidden">Hidden</span>}
                       {podcast.featured && (
                         <span className="status-badge status-featured">Featured</span>
                       )}
@@ -362,7 +366,7 @@ function EditPodcastModal({ podcast, onSave, onClose }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
   return (
@@ -370,9 +374,11 @@ function EditPodcastModal({ podcast, onSave, onClose }) {
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Edit Podcast</h2>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="modal-close" onClick={onClose}>
+            ×
+          </button>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="admin-form">
           <div className="form-group">
             <label htmlFor="titulo">Title</label>
@@ -406,10 +412,15 @@ function EditPodcastModal({ podcast, onSave, onClose }) {
               id="tags"
               name="tags"
               value={formData.tags ? formData.tags.join(', ') : ''}
-              onChange={(e) => setFormData(prev => ({
-                ...prev,
-                tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag)
-              }))}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  tags: e.target.value
+                    .split(',')
+                    .map((tag) => tag.trim())
+                    .filter((tag) => tag),
+                }))
+              }
               placeholder="e.g., politics, technology, entertainment"
             />
           </div>
@@ -448,11 +459,15 @@ function DeletePodcastModal({ podcast, onConfirm, onClose }) {
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Delete Podcast</h2>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="modal-close" onClick={onClose}>
+            ×
+          </button>
         </div>
-        
+
         <div className="delete-warning">
-          <p><strong>⚠️ Warning: This action cannot be undone!</strong></p>
+          <p>
+            <strong>⚠️ Warning: This action cannot be undone!</strong>
+          </p>
           <p>You are about to permanently delete the podcast:</p>
           <p className="podcast-to-delete">"{podcast.titulo}"</p>
         </div>
@@ -488,9 +503,9 @@ function DeletePodcastModal({ podcast, onConfirm, onClose }) {
             <button type="button" className="btn-secondary" onClick={onClose}>
               Cancel
             </button>
-            <button 
-              type="submit" 
-              className="btn-danger" 
+            <button
+              type="submit"
+              className="btn-danger"
               disabled={loading || confirmation !== expectedConfirmation}
             >
               {loading ? 'Deleting...' : 'Delete Permanently'}

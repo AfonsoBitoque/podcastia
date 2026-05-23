@@ -10,7 +10,16 @@ const TAG_UI = {
   DEFAULT: { label: 'Podcast', className: 'tag-geral' },
 }
 
-function PodcastSidebar({ podcast, isOpen, onClose, onPlayNow, onSave, isSaved, isPlaying, API_BASE_URL }) {
+function PodcastSidebar({
+  podcast,
+  isOpen,
+  onClose,
+  onPlayNow,
+  onSave,
+  isSaved,
+  isPlaying,
+  API_BASE_URL,
+}) {
   const getSafeTags = (pod) => (Array.isArray(pod?.tags) ? pod.tags : [])
 
   const getTagUi = (tag) => TAG_UI[String(tag || '').toUpperCase()] || TAG_UI.DEFAULT
@@ -48,17 +57,21 @@ function PodcastSidebar({ podcast, isOpen, onClose, onPlayNow, onSave, isSaved, 
 
   const primaryTag = getPrimaryTagUi(podcast)
   const safeTags = getSafeTags(podcast)
-  const publicationDate = podcast.dataCriacao ? new Date(podcast.dataCriacao).toLocaleDateString('pt-PT') : 'Data desconhecida'
+  const publicationDate = podcast.dataCriacao
+    ? new Date(podcast.dataCriacao).toLocaleDateString('pt-PT')
+    : 'Data desconhecida'
 
   return (
     <>
       {/* Overlay */}
-      {isOpen && (
-        <div className="sidebar-overlay" onClick={onClose} aria-hidden="true" />
-      )}
+      {isOpen && <div className="sidebar-overlay" onClick={onClose} aria-hidden="true" />}
 
       {/* Sidebar Container */}
-      <aside className={`podcast-sidebar ${isOpen ? 'sidebar-open' : ''}`} role="complementary" aria-label="Detalhes do podcast">
+      <aside
+        className={`podcast-sidebar ${isOpen ? 'sidebar-open' : ''}`}
+        role="complementary"
+        aria-label="Detalhes do podcast"
+      >
         {/* Botão Fechar */}
         <button
           className="sidebar-close-btn"
@@ -71,7 +84,6 @@ function PodcastSidebar({ podcast, isOpen, onClose, onPlayNow, onSave, isSaved, 
 
         {/* Conteúdo Scrollável */}
         <div className="sidebar-content">
-
           {/* Imagem / Capa do Podcast */}
           <div className="sidebar-cover-container">
             <div className="sidebar-cover-placeholder">🎙</div>
@@ -81,7 +93,11 @@ function PodcastSidebar({ podcast, isOpen, onClose, onPlayNow, onSave, isSaved, 
           <div className="sidebar-header-info">
             <h2 className="sidebar-title">{podcast.titulo}</h2>
             {podcast.user?.id ? (
-              <Link to={`/user/${podcast.user.id}`} className="sidebar-host sidebar-host--link" onClick={onClose}>
+              <Link
+                to={`/user/${podcast.user.id}`}
+                className="sidebar-host sidebar-host--link"
+                onClick={onClose}
+              >
                 {podcast.host || podcast.user?.username || 'Anónimo'}
               </Link>
             ) : (

@@ -16,9 +16,24 @@ const SEARCH_TABS = [
 ]
 
 const TAG_UI = {
-  DESPORTO: { label: 'Desporto', className: 'tag-desporto', thumbClass: 'thumb-desporto', short: 'DSP' },
-  FINANCAS: { label: 'Financas', className: 'tag-financas', thumbClass: 'thumb-financas', short: 'FIN' },
-  POLITICA: { label: 'Politica', className: 'tag-politica', thumbClass: 'thumb-politica', short: 'POL' },
+  DESPORTO: {
+    label: 'Desporto',
+    className: 'tag-desporto',
+    thumbClass: 'thumb-desporto',
+    short: 'DSP',
+  },
+  FINANCAS: {
+    label: 'Financas',
+    className: 'tag-financas',
+    thumbClass: 'thumb-financas',
+    short: 'FIN',
+  },
+  POLITICA: {
+    label: 'Politica',
+    className: 'tag-politica',
+    thumbClass: 'thumb-politica',
+    short: 'POL',
+  },
   GERAL: { label: 'Geral', className: 'tag-geral', thumbClass: 'thumb-geral', short: 'GER' },
   DEFAULT: { label: 'Podcast', className: 'tag-geral', thumbClass: 'thumb-geral', short: 'POD' },
 }
@@ -32,7 +47,9 @@ const getAssetUrl = (path) => {
 const getTagUi = (tag) => TAG_UI[String(tag || '').toUpperCase()] || TAG_UI.DEFAULT
 
 const getInitials = (value) => {
-  const clean = String(value || '').replace(/^@/, '').trim()
+  const clean = String(value || '')
+    .replace(/^@/, '')
+    .trim()
   if (!clean) return '@'
   return clean.slice(0, 2).toUpperCase()
 }
@@ -50,16 +67,10 @@ function SearchPageTest() {
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'all')
   const {
     isPlaying,
-    currentTime,
-    duration,
     currentPodcast: playingPodcast,
     loadPodcast,
     play,
-    pause,
     togglePlayPause,
-    seek,
-    formattedCurrentTime,
-    formattedDuration,
   } = useBackgroundAudio()
 
   const activePodcastId = playingPodcast?.id || playingPodcast?.podcastId
@@ -68,12 +79,12 @@ function SearchPageTest() {
     try {
       const podcastId = podcast.id || podcast.podcastId
       const currentId = playingPodcast?.id || playingPodcast?.podcastId
-      
+
       if (currentId === podcastId) {
         await togglePlayPause()
         return
       }
-      
+
       const loaded = await loadPodcast(podcast, 0)
       if (loaded) {
         await play()
@@ -105,7 +116,7 @@ function SearchPageTest() {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/search?q=${encodeURIComponent(term)}&page=${pageNumber}&size=${PAGE_SIZE}`
+        `${API_BASE_URL}/api/search?q=${encodeURIComponent(term)}&page=${pageNumber}&size=${PAGE_SIZE}`,
       )
 
       if (!response.ok) {
@@ -180,14 +191,8 @@ function SearchPageTest() {
     }
   }
 
-  const podcastResults = useMemo(
-    () => results.filter((item) => item.type === 'PODCAST'),
-    [results]
-  )
-  const userResults = useMemo(
-    () => results.filter((item) => item.type === 'USER'),
-    [results]
-  )
+  const podcastResults = useMemo(() => results.filter((item) => item.type === 'PODCAST'), [results])
+  const userResults = useMemo(() => results.filter((item) => item.type === 'USER'), [results])
 
   const visibleResultCount = useMemo(() => {
     if (activeTab === 'podcasts') return podcastResults.length
@@ -196,30 +201,39 @@ function SearchPageTest() {
     return podcastResults.length + userResults.length
   }, [activeTab, podcastResults.length, userResults.length])
 
-  const lastElementRef = useCallback((node) => {
-    if (loading || activeTab === 'playlists') return
-    if (observerRef.current) observerRef.current.disconnect()
+  const lastElementRef = useCallback(
+    (node) => {
+      if (loading || activeTab === 'playlists') return
+      if (observerRef.current) observerRef.current.disconnect()
 
-    observerRef.current = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && hasMore) {
-        const nextPage = page + 1
-        setPage(nextPage)
-        fetchResults(query, nextPage, false)
-      }
-    })
+      observerRef.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMore) {
+          const nextPage = page + 1
+          setPage(nextPage)
+          fetchResults(query, nextPage, false)
+        }
+      })
 
-    if (node) observerRef.current.observe(node)
-  }, [activeTab, fetchResults, hasMore, loading, page, query])
+      if (node) observerRef.current.observe(node)
+    },
+    [activeTab, fetchResults, hasMore, loading, page, query],
+  )
 
   const renderPodcastCard = (podcast, index = 0) => {
     const id = podcast.id || podcast.podcastId || podcast.title || podcast.titulo
     const actualId = podcast.id || podcast.podcastId
     const title = podcast.titulo || podcast.title || 'Podcast'
-    const host = podcast.host || podcast.user?.username || podcast.subtitle?.replace('Criador: ', '') || 'Podcastia'
+    const host =
+      podcast.host ||
+      podcast.user?.username ||
+      podcast.subtitle?.replace('Criador: ', '') ||
+      'Podcastia'
     const tags = Array.isArray(podcast.tags) && podcast.tags.length > 0 ? podcast.tags : ['GERAL']
-    const primaryTag = getTagUi(tags[0])
     const duration = podcast.duracao ? `${podcast.duracao} min` : 'Podcast'
-    const progressPercent = Math.max(8, Math.min(100, Number(podcast.progressPercent) || ((index + 2) * 13) % 74))
+    const progressPercent = Math.max(
+      8,
+      Math.min(100, Number(podcast.progressPercent) || ((index + 2) * 13) % 74),
+    )
     const currentPodcastId = playingPodcast?.id || playingPodcast?.podcastId
     const isCurrentPodcast = Boolean(actualId && currentPodcastId === actualId)
     const playablePodcast = {
@@ -231,7 +245,10 @@ function SearchPageTest() {
     }
 
     return (
-      <article key={`${id}-${index}`} className={`explore-podcast-card ${activePodcastId === actualId ? 'active-play' : ''}`}>
+      <article
+        key={`${id}-${index}`}
+        className={`explore-podcast-card ${activePodcastId === actualId ? 'active-play' : ''}`}
+      >
         <div className="trending-card-cover">
           <div className="trending-cover-placeholder">
             <span>🎙</span>
@@ -268,10 +285,16 @@ function SearchPageTest() {
           <div className="explore-chip-list" aria-label="Categorias">
             {tags.slice(0, 2).map((tag) => {
               const tagUi = getTagUi(tag)
-              return <span key={`${id}-${tag}`} className={`explore-chip ${tagUi.className}`}>{tagUi.label}</span>
+              return (
+                <span key={`${id}-${tag}`} className={`explore-chip ${tagUi.className}`}>
+                  {tagUi.label}
+                </span>
+              )
             })}
           </div>
-          <p>{duration} | Host: {host}</p>
+          <p>
+            {duration} | Host: {host}
+          </p>
           <div className="explore-progress" aria-hidden="true">
             <span style={{ width: `${progressPercent}%` }} />
           </div>
@@ -344,27 +367,31 @@ function SearchPageTest() {
         {hasQuery && (
           <section className="search-results-area" aria-live="polite">
             <div className="search-section-heading">
-              <span>{loading && page === 0 ? 'A pesquisar' : `${visibleResultCount} resultado${visibleResultCount === 1 ? '' : 's'}`}</span>
+              <span>
+                {loading && page === 0
+                  ? 'A pesquisar'
+                  : `${visibleResultCount} resultado${visibleResultCount === 1 ? '' : 's'}`}
+              </span>
               <h2>Resultados para "{query.trim()}"</h2>
             </div>
 
             {error && <p className="search-status error">{error}</p>}
 
-            {!error && (activeTab === 'all' || activeTab === 'podcasts') && podcastResults.length > 0 && (
-              <section className="search-result-section" aria-labelledby="podcast-results-title">
-                <h3 id="podcast-results-title">Podcasts</h3>
-                <div className="explore-podcast-grid">
-                  {podcastResults.map((podcast, index) => renderPodcastCard(podcast, index))}
-                </div>
-              </section>
-            )}
+            {!error &&
+              (activeTab === 'all' || activeTab === 'podcasts') &&
+              podcastResults.length > 0 && (
+                <section className="search-result-section" aria-labelledby="podcast-results-title">
+                  <h3 id="podcast-results-title">Podcasts</h3>
+                  <div className="explore-podcast-grid">
+                    {podcastResults.map((podcast, index) => renderPodcastCard(podcast, index))}
+                  </div>
+                </section>
+              )}
 
             {!error && (activeTab === 'all' || activeTab === 'users') && userResults.length > 0 && (
               <section className="search-result-section" aria-labelledby="user-results-title">
                 <h3 id="user-results-title">Hosts</h3>
-                <div className="explore-user-grid">
-                  {userResults.map(renderUserCard)}
-                </div>
+                <div className="explore-user-grid">{userResults.map(renderUserCard)}</div>
               </section>
             )}
 
@@ -383,8 +410,12 @@ function SearchPageTest() {
             )}
 
             {loading && <p className="search-status">A carregar{page > 0 ? ' mais' : ''}...</p>}
-            {hasMore && activeTab !== 'playlists' && <div ref={lastElementRef} className="search-load-sentinel" />}
-            {!hasMore && visibleResultCount > 0 && <p className="search-status">Fim dos resultados.</p>}
+            {hasMore && activeTab !== 'playlists' && (
+              <div ref={lastElementRef} className="search-load-sentinel" />
+            )}
+            {!hasMore && visibleResultCount > 0 && (
+              <p className="search-status">Fim dos resultados.</p>
+            )}
           </section>
         )}
       </div>
