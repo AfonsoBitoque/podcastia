@@ -600,6 +600,11 @@
   height: 21px;
 }
 
+.sidebar-nav-icon--trend-svg {
+  width: 20px;
+  height: 20px;
+}
+
 .sidebar-nav-icon--compass {
   border: 2px solid currentColor;
   border-radius: 50%;
@@ -615,32 +620,6 @@
   background: currentColor;
   clip-path: polygon(50% 0, 100% 100%, 50% 76%, 0 100%);
   transform: rotate(35deg);
-}
-
-.sidebar-nav-icon--trend::before,
-.sidebar-nav-icon--trend::after {
-  content: '';
-  position: absolute;
-  background: currentColor;
-}
-
-.sidebar-nav-icon--trend::before {
-  left: 1px;
-  bottom: 4px;
-  width: 15px;
-  height: 2px;
-  border-radius: 999px;
-  transform: rotate(-35deg);
-}
-
-.sidebar-nav-icon--trend::after {
-  right: 0;
-  top: 2px;
-  width: 7px;
-  height: 7px;
-  border-top: 2px solid currentColor;
-  border-right: 2px solid currentColor;
-  background: transparent;
 }
 
 .sidebar-nav-icon--playlist,
