@@ -69,9 +69,12 @@ function ProtectedRoute({ children }) {
 }
 
 function App() {
+  const location = useLocation()
+  const isAuthPage = ['/login', '/register'].includes(location.pathname)
+
   return (
-    <div className="app-shell">
-      <AppSidebar />
+    <div className={`app-shell${isAuthPage ? ' app-shell--auth' : ''}`}>
+      {!isAuthPage && <AppSidebar />}
       <Header />
       <div className="app-main">
         <Suspense fallback={<PageLoader />}>
