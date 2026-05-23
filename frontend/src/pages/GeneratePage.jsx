@@ -83,7 +83,7 @@ function GeneratePage() {
       // Check content type to avoid JSON parse errors
       const contentType = response.headers.get('content-type')
       let data = {}
-      
+
       if (contentType && contentType.includes('application/json')) {
         data = await response.json()
       } else {
@@ -93,7 +93,9 @@ function GeneratePage() {
       }
 
       if (!response.ok) {
-        throw new Error(data.error || data.message || `HTTP ${response.status}: Erro ao gerar podcast.`)
+        throw new Error(
+          data.error || data.message || `HTTP ${response.status}: Erro ao gerar podcast.`,
+        )
       }
 
       setGeneratedPodcast(data)
@@ -120,7 +122,7 @@ function GeneratePage() {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ publico: newPublico }),
-        }
+        },
       )
 
       if (response.ok) {
@@ -216,8 +218,15 @@ function GeneratePage() {
           {isGenerating && (
             <div className="generate-loading">
               <div className="sound-wave" aria-hidden="true">
-                <span></span><span></span><span></span><span></span><span></span>
-                <span></span><span></span><span></span><span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
               </div>
               <p className="loading-text">{LOADING_MESSAGES[loadingMsgIndex]}</p>
             </div>
@@ -228,16 +237,15 @@ function GeneratePage() {
               <div className="result-card">
                 <div className="result-header">
                   <h2>{generatedPodcast.titulo}</h2>
-                  <span className={`visibility-badge ${generatedPodcast.publico ? 'public' : 'private'}`}>
+                  <span
+                    className={`visibility-badge ${generatedPodcast.publico ? 'public' : 'private'}`}
+                  >
                     {generatedPodcast.publico ? 'P\u00fablico' : 'Privado'}
                   </span>
                 </div>
 
                 <div className="result-player">
-                  <audio
-                    src={`${API_BASE_URL}${generatedPodcast.audioUrl}`}
-                    controls
-                  />
+                  <audio src={`${API_BASE_URL}${generatedPodcast.audioUrl}`} controls />
                 </div>
 
                 <div className="result-actions">

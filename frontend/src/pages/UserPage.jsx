@@ -120,7 +120,9 @@ function UserPage() {
   const avatarUrl = !avatarFailed
     ? resolveProfilePicture(user?.id ? `users/${user.id}/profile-image?v=${avatarVersion}` : '')
     : ''
-  const hasProfilePicture = Boolean(String(user?.profilePicturePath || sessionUser?.profilePicturePath || '').trim()) && !avatarFailed
+  const hasProfilePicture =
+    Boolean(String(user?.profilePicturePath || sessionUser?.profilePicturePath || '').trim()) &&
+    !avatarFailed
 
   useEffect(() => {
     setAvatarFailed(false)
@@ -431,7 +433,11 @@ function UserPage() {
       return
     }
 
-    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+    if (
+      !passwordForm.currentPassword ||
+      !passwordForm.newPassword ||
+      !passwordForm.confirmPassword
+    ) {
       setPasswordFormError('Preenche os três campos obrigatórios.')
       return
     }
@@ -442,7 +448,9 @@ function UserPage() {
     }
 
     if (!PASSWORD_COMPLEXITY_REGEX.test(passwordForm.newPassword)) {
-      setPasswordFormError('A nova password deve ter pelo menos 8 caracteres, uma letra maiuscula e um numero.')
+      setPasswordFormError(
+        'A nova password deve ter pelo menos 8 caracteres, uma letra maiuscula e um numero.',
+      )
       return
     }
 
@@ -493,7 +501,9 @@ function UserPage() {
         newPassword: false,
         confirmPassword: false,
       })
-      setPasswordFormSuccess('Password alterada com sucesso. Por seguranca, vais iniciar sessao novamente.')
+      setPasswordFormSuccess(
+        'Password alterada com sucesso. Por seguranca, vais iniciar sessao novamente.',
+      )
 
       if (reauthTimeoutRef.current) {
         window.clearTimeout(reauthTimeoutRef.current)
@@ -569,9 +579,7 @@ function UserPage() {
         method: 'PATCH',
         headers,
         body: JSON.stringify(
-          activeEditSection === 'username'
-            ? { username: nextUsername }
-            : { bio: nextBio }
+          activeEditSection === 'username' ? { username: nextUsername } : { bio: nextBio },
         ),
       })
 
@@ -600,7 +608,7 @@ function UserPage() {
       setProfileFormSuccess(
         activeEditSection === 'username'
           ? 'Nome de utilizador atualizado com sucesso.'
-          : 'Biografia atualizada com sucesso.'
+          : 'Biografia atualizada com sucesso.',
       )
     } catch (error) {
       setProfileFormError(error?.message || 'Nao foi possivel atualizar o perfil.')
@@ -668,7 +676,7 @@ function UserPage() {
     }
   }, [])
 
-  const currentProfile = user || sessionUser;
+  const currentProfile = user || sessionUser
   const currentTopics = Array.isArray(currentProfile?.topics) ? currentProfile.topics : []
 
   useEffect(() => {
@@ -699,7 +707,7 @@ function UserPage() {
       })
       if (response.ok) {
         setMyPodcasts((prev) =>
-          prev.map((p) => (p.id === podcastId ? { ...p, publico: !currentPublico } : p))
+          prev.map((p) => (p.id === podcastId ? { ...p, publico: !currentPublico } : p)),
         )
       }
     } catch (err) {
@@ -709,27 +717,32 @@ function UserPage() {
     }
   }
 
-  const totalPoints = (currentProfile?.pontosDesporto || 0) + 
-                      (currentProfile?.pontosPolitica || 0) + 
-                      (currentProfile?.pontosFinancas || 0) + 
-                      (currentProfile?.pontosGeral || 0);
+  const totalPoints =
+    (currentProfile?.pontosDesporto || 0) +
+    (currentProfile?.pontosPolitica || 0) +
+    (currentProfile?.pontosFinancas || 0) +
+    (currentProfile?.pontosGeral || 0)
 
-  let desportoPct = 0, politicaPct = 0, financasPct = 0, geralPct = 0;
+  let desportoPct = 0,
+    politicaPct = 0,
+    financasPct = 0,
+    geralPct = 0
   if (totalPoints > 0) {
-    desportoPct = Math.round(((currentProfile.pontosDesporto || 0) / totalPoints) * 100);
-    politicaPct = Math.round(((currentProfile.pontosPolitica || 0) / totalPoints) * 100);
-    financasPct = Math.round(((currentProfile.pontosFinancas || 0) / totalPoints) * 100);
-    geralPct = 100 - desportoPct - politicaPct - financasPct;
+    desportoPct = Math.round(((currentProfile.pontosDesporto || 0) / totalPoints) * 100)
+    politicaPct = Math.round(((currentProfile.pontosPolitica || 0) / totalPoints) * 100)
+    financasPct = Math.round(((currentProfile.pontosFinancas || 0) / totalPoints) * 100)
+    geralPct = 100 - desportoPct - politicaPct - financasPct
   }
 
-  const conicGradient = totalPoints > 0 
-    ? `conic-gradient(
+  const conicGradient =
+    totalPoints > 0
+      ? `conic-gradient(
         #3b82f6 0% ${desportoPct}%, 
         #ef4444 ${desportoPct}% ${desportoPct + politicaPct}%, 
         #10b981 ${desportoPct + politicaPct}% ${desportoPct + politicaPct + financasPct}%, 
         #f59e0b ${desportoPct + politicaPct + financasPct}% 100%
       )`
-    : '';
+      : ''
 
   if (status === 'loading') {
     return (
@@ -763,7 +776,6 @@ function UserPage() {
         <div className="user-banner" aria-hidden="true" />
 
         <article className="user-card">
-
           <div className="user-intro">
             <input
               ref={photoInputRef}
@@ -819,7 +831,10 @@ function UserPage() {
 
             <div className="user-headline">
               {activeEditSection === 'username' ? (
-                <form className="user-title-row user-title-row--editing" onSubmit={handleSaveProfile}>
+                <form
+                  className="user-title-row user-title-row--editing"
+                  onSubmit={handleSaveProfile}
+                >
                   <h1 id="user-title" className="visually-hidden">
                     {formatText(user?.username, sessionUser?.username)}
                   </h1>
@@ -870,7 +885,9 @@ function UserPage() {
                   </button>
                 </div>
               )}
-              {activeEditSection === 'username' && profileFormError && <p className="user-warning user-inline-feedback">{profileFormError}</p>}
+              {activeEditSection === 'username' && profileFormError && (
+                <p className="user-warning user-inline-feedback">{profileFormError}</p>
+              )}
               <p className="user-handle">
                 @{formatText(user?.username, sessionUser?.username).toLowerCase()}#
                 {formatText(user?.tag, '0000')}
@@ -879,7 +896,7 @@ function UserPage() {
               {photoMessage && <p className="user-success user-inline-feedback">{photoMessage}</p>}
               {photoError && <p className="user-warning user-inline-feedback">{photoError}</p>}
             </div>
-        </div>
+          </div>
 
           {errorMessage && <p className="user-warning">{errorMessage}</p>}
 
@@ -895,7 +912,11 @@ function UserPage() {
                 Alterar password
               </button>
 
-              <button type="button" className="user-action-btn user-action-btn--danger" onClick={handleLogout}>
+              <button
+                type="button"
+                className="user-action-btn user-action-btn--danger"
+                onClick={handleLogout}
+              >
                 <span className="icon-dot" aria-hidden="true" />
                 Logout
               </button>
@@ -929,14 +950,25 @@ function UserPage() {
                         className="password-visibility-btn"
                         onClick={() => togglePasswordVisibility('currentPassword')}
                         disabled={isChangingPassword}
-                        aria-label={showPasswords.currentPassword ? 'Mascarar password atual' : 'Desmascarar password atual'}
+                        aria-label={
+                          showPasswords.currentPassword
+                            ? 'Mascarar password atual'
+                            : 'Desmascarar password atual'
+                        }
                       >
-                        <svg className="password-visibility-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <svg
+                          className="password-visibility-icon"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          aria-hidden="true"
+                        >
                           <path d="M2 12s3.8-6 10-6 10 6 10 6-3.8 6-10 6-10-6-10-6Z" />
                           <circle cx="12" cy="12" r="3" />
                         </svg>
                         <span className="visually-hidden">
-                          {showPasswords.currentPassword ? 'Mascarar password atual' : 'Desmascarar password atual'}
+                          {showPasswords.currentPassword
+                            ? 'Mascarar password atual'
+                            : 'Desmascarar password atual'}
                         </span>
                       </button>
                     </div>
@@ -958,14 +990,25 @@ function UserPage() {
                         className="password-visibility-btn"
                         onClick={() => togglePasswordVisibility('newPassword')}
                         disabled={isChangingPassword}
-                        aria-label={showPasswords.newPassword ? 'Mascarar nova password' : 'Desmascarar nova password'}
+                        aria-label={
+                          showPasswords.newPassword
+                            ? 'Mascarar nova password'
+                            : 'Desmascarar nova password'
+                        }
                       >
-                        <svg className="password-visibility-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <svg
+                          className="password-visibility-icon"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          aria-hidden="true"
+                        >
                           <path d="M2 12s3.8-6 10-6 10 6 10 6-3.8 6-10 6-10-6-10-6Z" />
                           <circle cx="12" cy="12" r="3" />
                         </svg>
                         <span className="visually-hidden">
-                          {showPasswords.newPassword ? 'Mascarar nova password' : 'Desmascarar nova password'}
+                          {showPasswords.newPassword
+                            ? 'Mascarar nova password'
+                            : 'Desmascarar nova password'}
                         </span>
                       </button>
                     </div>
@@ -990,14 +1033,25 @@ function UserPage() {
                         className="password-visibility-btn"
                         onClick={() => togglePasswordVisibility('confirmPassword')}
                         disabled={isChangingPassword}
-                        aria-label={showPasswords.confirmPassword ? 'Mascarar confirmacao da nova password' : 'Desmascarar confirmacao da nova password'}
+                        aria-label={
+                          showPasswords.confirmPassword
+                            ? 'Mascarar confirmacao da nova password'
+                            : 'Desmascarar confirmacao da nova password'
+                        }
                       >
-                        <svg className="password-visibility-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <svg
+                          className="password-visibility-icon"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          aria-hidden="true"
+                        >
                           <path d="M2 12s3.8-6 10-6 10 6 10 6-3.8 6-10 6-10-6-10-6Z" />
                           <circle cx="12" cy="12" r="3" />
                         </svg>
                         <span className="visually-hidden">
-                          {showPasswords.confirmPassword ? 'Mascarar confirmacao da nova password' : 'Desmascarar confirmacao da nova password'}
+                          {showPasswords.confirmPassword
+                            ? 'Mascarar confirmacao da nova password'
+                            : 'Desmascarar confirmacao da nova password'}
                         </span>
                       </button>
                     </div>
@@ -1044,7 +1098,10 @@ function UserPage() {
                   )}
                 </div>
                 {activeEditSection === 'bio' ? (
-                  <form className="user-edit-form user-edit-form--inline" onSubmit={handleSaveProfile}>
+                  <form
+                    className="user-edit-form user-edit-form--inline"
+                    onSubmit={handleSaveProfile}
+                  >
                     <label htmlFor="edit-bio" className="visually-hidden">
                       Biografia
                     </label>
@@ -1064,10 +1121,19 @@ function UserPage() {
                     {profileFormError && <p className="user-warning">{profileFormError}</p>}
 
                     <div className="user-edit-actions">
-                      <button type="button" className="user-action-btn" onClick={closeEditProfile} disabled={isSavingProfile}>
+                      <button
+                        type="button"
+                        className="user-action-btn"
+                        onClick={closeEditProfile}
+                        disabled={isSavingProfile}
+                      >
                         Cancelar
                       </button>
-                      <button type="submit" className="user-action-btn user-action-btn--primary" disabled={isSavingProfile}>
+                      <button
+                        type="submit"
+                        className="user-action-btn user-action-btn--primary"
+                        disabled={isSavingProfile}
+                      >
                         {isSavingProfile ? 'A guardar...' : 'Guardar'}
                       </button>
                     </div>
@@ -1133,16 +1199,34 @@ function UserPage() {
                 <p className="info-title">A tua Roda de Estilo Percentual</p>
                 {totalPoints > 0 ? (
                   <>
-                    <div className="user-style-wheel" style={{ background: conicGradient }} aria-label="Grafico percentual das tuas escutas"></div>
+                    <div
+                      className="user-style-wheel"
+                      style={{ background: conicGradient }}
+                      aria-label="Grafico percentual das tuas escutas"
+                    ></div>
                     <div className="style-legend">
-                      <div className="legend-item"><span className="legend-color" style={{background: '#3b82f6'}}></span>Desporto ({desportoPct}%)</div>
-                      <div className="legend-item"><span className="legend-color" style={{background: '#ef4444'}}></span>Politica ({politicaPct}%)</div>
-                      <div className="legend-item"><span className="legend-color" style={{background: '#10b981'}}></span>Financas ({financasPct}%)</div>
-                      <div className="legend-item"><span className="legend-color" style={{background: '#f59e0b'}}></span>Geral ({geralPct}%)</div>
+                      <div className="legend-item">
+                        <span className="legend-color" style={{ background: '#3b82f6' }}></span>
+                        Desporto ({desportoPct}%)
+                      </div>
+                      <div className="legend-item">
+                        <span className="legend-color" style={{ background: '#ef4444' }}></span>
+                        Politica ({politicaPct}%)
+                      </div>
+                      <div className="legend-item">
+                        <span className="legend-color" style={{ background: '#10b981' }}></span>
+                        Financas ({financasPct}%)
+                      </div>
+                      <div className="legend-item">
+                        <span className="legend-color" style={{ background: '#f59e0b' }}></span>
+                        Geral ({geralPct}%)
+                      </div>
                     </div>
                   </>
                 ) : (
-                  <div className="user-style-wheel user-style-empty">Ouve podcasts para revelar!</div>
+                  <div className="user-style-wheel user-style-empty">
+                    Ouve podcasts para revelar!
+                  </div>
                 )}
               </div>
             </section>
@@ -1177,13 +1261,13 @@ function UserPage() {
                         <h3 className="user-podcast-title">{podcast.titulo}</h3>
                         <div className="user-podcast-meta">
                           <span className="user-podcast-duration">{podcast.duracao} min</span>
-                          <span className={`user-podcast-visibility ${podcast.publico ? 'public' : 'private'}`}>
+                          <span
+                            className={`user-podcast-visibility ${podcast.publico ? 'public' : 'private'}`}
+                          >
                             {podcast.publico ? 'Público' : 'Privado'}
                           </span>
                           {podcast.tags && podcast.tags.length > 0 && (
-                            <span className="user-podcast-tags">
-                              {podcast.tags.join(', ')}
-                            </span>
+                            <span className="user-podcast-tags">{podcast.tags.join(', ')}</span>
                           )}
                         </div>
                       </div>

@@ -172,7 +172,7 @@
 }
 
 .explore-search-icon::after {
-  content: "";
+  content: '';
   position: absolute;
   right: -6px;
   bottom: -5px;
@@ -207,7 +207,10 @@
   font-size: 0.9rem;
   font-weight: 900;
   cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
 }
 
 .explore-tabs button:hover {
@@ -256,7 +259,10 @@
   border: 1px solid var(--podcast-card-border);
   border-radius: var(--podcast-card-radius);
   box-shadow: var(--podcast-card-shadow);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .explore-podcast-card {
@@ -306,7 +312,9 @@
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.35);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
   transform: scale(0.8);
 }
 

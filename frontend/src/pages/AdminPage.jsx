@@ -28,9 +28,9 @@ function AdminPage() {
 
         const response = await fetch(`${API_BASE_URL}/api/users/me`, {
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
         })
 
         if (!response.ok) {
@@ -43,7 +43,7 @@ function AdminPage() {
         }
 
         const userData = await response.json()
-        
+
         // Check if user has admin role
         if (userData.userType !== 'USER_ADMIN') {
           navigate('/', { state: { error: 'Access denied. Admin privileges required.' } })
@@ -93,7 +93,7 @@ function AdminPage() {
         <h1>Admin Dashboard</h1>
         <div className="admin-user-info">
           <span>Welcome, {user?.username}</span>
-          <button 
+          <button
             onClick={() => {
               localStorage.removeItem('token')
               navigate('/login')

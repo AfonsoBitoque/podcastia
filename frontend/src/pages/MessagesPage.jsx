@@ -25,11 +25,14 @@ const parseStoredUser = () => {
 
 const getToken = () => localStorage.getItem('token') || ''
 
-const getInitial = (name) => String(name || '?').trim().charAt(0).toUpperCase()
+const getInitial = (name) =>
+  String(name || '?')
+    .trim()
+    .charAt(0)
+    .toUpperCase()
 
-const getPendingReactionsStorageKey = (userId) => (
+const getPendingReactionsStorageKey = (userId) =>
   `${PENDING_REACTIONS_STORAGE_PREFIX}.${userId || 'guest'}`
-)
 
 const readPendingReactions = (userId) => {
   try {
@@ -55,11 +58,10 @@ const normalizeReactionsForViewer = (reactions, viewerId) => {
 
   return reactions
     .map((reaction) => {
-      const reactorUserIds = Array.isArray(reaction.reactorUserIds)
-        ? reaction.reactorUserIds
-        : []
+      const reactorUserIds = Array.isArray(reaction.reactorUserIds) ? reaction.reactorUserIds : []
       const reactedByMe = viewerKey
-        ? reactorUserIds.some((reactorId) => String(reactorId) === viewerKey) || Boolean(reaction.reactedByMe)
+        ? reactorUserIds.some((reactorId) => String(reactorId) === viewerKey) ||
+          Boolean(reaction.reactedByMe)
         : Boolean(reaction.reactedByMe)
       const count = reactorUserIds.length || Number(reaction.count || 0)
 
@@ -98,33 +100,36 @@ const encodeStompFrame = (command, headers = {}, body = '') => {
   return `${command}\n${headerLines.join('\n')}\n\n${body}\0`
 }
 
-const parseStompFrames = (chunk) => chunk
-  .split('\0')
-  .filter(Boolean)
-  .map((frameText) => {
-    const normalized = frameText.replace(/\r/g, '')
-    const [head, ...bodyParts] = normalized.split('\n\n')
-    const [command, ...headerLines] = head.split('\n').filter(Boolean)
-    const headers = {}
-    headerLines.forEach((line) => {
-      const dividerIndex = line.indexOf(':')
-      if (dividerIndex > -1) {
-        headers[line.slice(0, dividerIndex)] = line.slice(dividerIndex + 1)
+const parseStompFrames = (chunk) =>
+  chunk
+    .split('\0')
+    .filter(Boolean)
+    .map((frameText) => {
+      const normalized = frameText.replace(/\r/g, '')
+      const [head, ...bodyParts] = normalized.split('\n\n')
+      const [command, ...headerLines] = head.split('\n').filter(Boolean)
+      const headers = {}
+      headerLines.forEach((line) => {
+        const dividerIndex = line.indexOf(':')
+        if (dividerIndex > -1) {
+          headers[line.slice(0, dividerIndex)] = line.slice(dividerIndex + 1)
+        }
+      })
+
+      return {
+        command,
+        headers,
+        body: bodyParts.join('\n\n'),
       }
     })
-
-    return {
-      command,
-      headers,
-      body: bodyParts.join('\n\n'),
-    }
-  })
 
 const upsertMessage = (messages, nextMessage) => {
   const messageId = String(nextMessage.id)
   const exists = messages.some((message) => String(message.id) === messageId)
   const nextMessages = exists
-    ? messages.map((message) => (String(message.id) === messageId ? { ...message, ...nextMessage } : message))
+    ? messages.map((message) =>
+        String(message.id) === messageId ? { ...message, ...nextMessage } : message,
+      )
     : [...messages, nextMessage]
 
   return nextMessages.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0))
@@ -157,29 +162,29 @@ function MessagesPage() {
 
   const activeFriend = useMemo(
     () => friends.find((friend) => String(friend.id) === String(activeFriendId)) || null,
-    [activeFriendId, friends]
+    [activeFriendId, friends],
   )
 
   const activeMessages = useMemo(
     () => messagesByFriend[String(activeFriendId)] || [],
-    [activeFriendId, messagesByFriend]
+    [activeFriendId, messagesByFriend],
   )
 
-  const connectionLabel = socketStatus === 'online'
-    ? 'Online'
-    : socketStatus === 'error'
-      ? 'Erro'
-      : 'A ligar'
-  const chatSubtitle = socketStatus === 'online'
-    ? 'Ligacao em tempo real ativa'
-    : 'A preparar a conversa'
+  const connectionLabel =
+    socketStatus === 'online' ? 'Online' : socketStatus === 'error' ? 'Erro' : 'A ligar'
+  const chatSubtitle =
+    socketStatus === 'online' ? 'Ligacao em tempo real ativa' : 'A preparar a conversa'
   const canSendMessage = socketStatus === 'online'
 
-  const conversations = useMemo(() => friends.map((friend) => {
-    const friendMessages = messagesByFriend[String(friend.id)] || []
-    const lastMessage = friendMessages[friendMessages.length - 1]
-    return { ...friend, lastMessage }
-  }), [friends, messagesByFriend])
+  const conversations = useMemo(
+    () =>
+      friends.map((friend) => {
+        const friendMessages = messagesByFriend[String(friend.id)] || []
+        const lastMessage = friendMessages[friendMessages.length - 1]
+        return { ...friend, lastMessage }
+      }),
+    [friends, messagesByFriend],
+  )
 
   const sendFrame = (command, headers, body) => {
     const socket = socketRef.current
@@ -205,14 +210,16 @@ function MessagesPage() {
           if (String(message.id) !== String(messageId)) return message
 
           const normalizedReactions = normalizeReactionsForViewer(message.reactions, viewerId)
-          const currentReaction = normalizedReactions.find((reaction) => (
-            reaction.reactorUserIds.some((reactorId) => String(reactorId) === viewerKey)
-          ))
+          const currentReaction = normalizedReactions.find((reaction) =>
+            reaction.reactorUserIds.some((reactorId) => String(reactorId) === viewerKey),
+          )
 
           const withoutViewer = normalizedReactions
             .map((reaction) => ({
               ...reaction,
-              reactorUserIds: reaction.reactorUserIds.filter((reactorId) => String(reactorId) !== viewerKey),
+              reactorUserIds: reaction.reactorUserIds.filter(
+                (reactorId) => String(reactorId) !== viewerKey,
+              ),
             }))
             .map((reaction) => ({
               ...reaction,
@@ -227,25 +234,25 @@ function MessagesPage() {
 
           const targetReaction = withoutViewer.find((reaction) => reaction.emoji === emoji)
           const nextReactions = targetReaction
-            ? withoutViewer.map((reaction) => (
-              reaction.emoji === emoji
-                ? {
-                  ...reaction,
-                  reactorUserIds: [...reaction.reactorUserIds, viewerId],
-                  count: reaction.count + 1,
-                  reactedByMe: true,
-                }
-                : reaction
-            ))
+            ? withoutViewer.map((reaction) =>
+                reaction.emoji === emoji
+                  ? {
+                      ...reaction,
+                      reactorUserIds: [...reaction.reactorUserIds, viewerId],
+                      count: reaction.count + 1,
+                      reactedByMe: true,
+                    }
+                  : reaction,
+              )
             : [
-              ...withoutViewer,
-              {
-                emoji,
-                count: 1,
-                reactorUserIds: [viewerId],
-                reactedByMe: true,
-              },
-            ]
+                ...withoutViewer,
+                {
+                  emoji,
+                  count: 1,
+                  reactorUserIds: [viewerId],
+                  reactedByMe: true,
+                },
+              ]
 
           return { ...message, reactions: nextReactions }
         })
@@ -284,7 +291,7 @@ function MessagesPage() {
     sendFrame(
       'SEND',
       { destination: '/app/chat.ack', 'content-type': 'application/json' },
-      JSON.stringify({ messageId, type })
+      JSON.stringify({ messageId, type }),
     )
   }
 
@@ -292,18 +299,20 @@ function MessagesPage() {
     if (!message) return
 
     const currentUserId = String(userIdRef.current || '')
-    const friendId = String(message.senderId) === currentUserId
-      ? String(message.recipientId)
-      : String(message.senderId)
+    const friendId =
+      String(message.senderId) === currentUserId
+        ? String(message.recipientId)
+        : String(message.senderId)
 
     setMessagesByFriend((previous) => ({
       ...previous,
       [friendId]: upsertMessage(previous[friendId] || [], message),
     }))
 
-    const isIncomingFromOpenChat = String(message.senderId) === friendId
-      && String(activeFriendRef.current) === friendId
-      && String(message.recipientId) === currentUserId
+    const isIncomingFromOpenChat =
+      String(message.senderId) === friendId &&
+      String(activeFriendRef.current) === friendId &&
+      String(message.recipientId) === currentUserId
 
     if (isIncomingFromOpenChat) {
       sendChatAck(message.id, 'READ')
@@ -326,7 +335,10 @@ function MessagesPage() {
           if (String(message.id) !== String(messageId)) return message
           return {
             ...message,
-            reactions: normalizeReactionsForViewer(payload.reactions || message.reactions || [], sessionUser?.id),
+            reactions: normalizeReactionsForViewer(
+              payload.reactions || message.reactions || [],
+              sessionUser?.id,
+            ),
           }
         })
       })
@@ -358,9 +370,9 @@ function MessagesPage() {
   }
 
   const toggleReactionPicker = (messageId) => {
-    setActiveReactionPickerId((current) => (
-      String(current) === String(messageId) ? null : messageId
-    ))
+    setActiveReactionPickerId((current) =>
+      String(current) === String(messageId) ? null : messageId,
+    )
   }
 
   const openReactionPicker = (messageId) => {
@@ -378,11 +390,12 @@ function MessagesPage() {
     window.clearTimeout(reactionLongPressTimeoutRef.current)
   }
 
-  const sendReactionFrame = (payload) => sendFrame(
-    'SEND',
-    { destination: '/app/chat.reaction', 'content-type': 'application/json' },
-    JSON.stringify(payload)
-  )
+  const sendReactionFrame = (payload) =>
+    sendFrame(
+      'SEND',
+      { destination: '/app/chat.reaction', 'content-type': 'application/json' },
+      JSON.stringify(payload),
+    )
 
   useEffect(() => {
     activeFriendRef.current = activeFriendId
@@ -487,9 +500,9 @@ function MessagesPage() {
         if (!isActive) return
         const nextMessages = Array.isArray(payload?.messages)
           ? payload.messages.map((message) => ({
-            ...message,
-            reactions: normalizeReactionsForViewer(message.reactions, sessionUser?.id),
-          }))
+              ...message,
+              reactions: normalizeReactionsForViewer(message.reactions, sessionUser?.id),
+            }))
           : []
         setMessagesByFriend((previous) => ({
           ...previous,
@@ -497,7 +510,10 @@ function MessagesPage() {
         }))
         setHistoryStatus('ready')
         nextMessages
-          .filter((message) => String(message.recipientId) === String(sessionUser?.id) && message.status !== 'READ')
+          .filter(
+            (message) =>
+              String(message.recipientId) === String(sessionUser?.id) && message.status !== 'READ',
+          )
           .forEach((message) => sendChatAck(message.id, 'READ'))
       })
       .catch((fetchError) => {
@@ -528,20 +544,24 @@ function MessagesPage() {
     })
 
     socket.addEventListener('open', () => {
-      socket.send(encodeStompFrame('CONNECT', {
-        'accept-version': '1.2',
-        'heart-beat': '10000,10000',
-      }))
+      socket.send(
+        encodeStompFrame('CONNECT', {
+          'accept-version': '1.2',
+          'heart-beat': '10000,10000',
+        }),
+      )
     })
 
     socket.addEventListener('message', (event) => {
       parseStompFrames(String(event.data)).forEach((frame) => {
         if (frame.command === 'CONNECTED') {
           setSocketStatus('online')
-          socket.send(encodeStompFrame('SUBSCRIBE', {
-            id: 'podcastia-messages',
-            destination: '/user/queue/messages',
-          }))
+          socket.send(
+            encodeStompFrame('SUBSCRIBE', {
+              id: 'podcastia-messages',
+              destination: '/user/queue/messages',
+            }),
+          )
           return
         }
 
@@ -607,10 +627,13 @@ function MessagesPage() {
     messagesEndRef.current?.scrollIntoView({ block: 'end' })
   }, [activeMessages.length, activeFriendId])
 
-  useEffect(() => () => {
-    window.clearTimeout(reactionLongPressTimeoutRef.current)
-    window.clearTimeout(reactionPulseTimeoutRef.current)
-  }, [])
+  useEffect(
+    () => () => {
+      window.clearTimeout(reactionLongPressTimeoutRef.current)
+      window.clearTimeout(reactionPulseTimeoutRef.current)
+    },
+    [],
+  )
 
   const handleSendMessage = (event) => {
     event.preventDefault()
@@ -624,7 +647,7 @@ function MessagesPage() {
         recipientId: activeFriend.id,
         content,
         metadata: null,
-      })
+      }),
     )
 
     if (sent) {
@@ -665,15 +688,17 @@ function MessagesPage() {
 
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       })
 
       if (response.ok) {
-        setPendingRequests(prev => prev.filter(req => String(req.senderId) !== String(senderId)))
+        setPendingRequests((prev) =>
+          prev.filter((req) => String(req.senderId) !== String(senderId)),
+        )
         if (action === 'accept') {
           // Refetch friends list
           const friendsRes = await fetch(`${API_BASE_URL}/api/relations/friends`, {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
           })
           if (friendsRes.ok) {
             const newFriends = await friendsRes.json()
@@ -685,7 +710,7 @@ function MessagesPage() {
         alert(errorData.message || 'Ocorreu um erro. O pedido pode ja não estar disponivel.')
         // Refetch requests in case it was cancelled
         const reqRes = await fetch(`${API_BASE_URL}/api/relations/friend-requests/pending`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         })
         if (reqRes.ok) {
           const newReqs = await reqRes.json()
@@ -703,7 +728,9 @@ function MessagesPage() {
         <section className="messages-empty-panel">
           <h1>Mensagens</h1>
           <p>Entra na tua conta para veres as conversas com os teus amigos.</p>
-          <Link to="/login" className="messages-login-link">Ir para login</Link>
+          <Link to="/login" className="messages-login-link">
+            Ir para login
+          </Link>
         </section>
       </main>
     )
@@ -729,7 +756,7 @@ function MessagesPage() {
             {pendingRequestsStatus === 'ready' && pendingRequests.length > 0 && (
               <div className="pending-requests-section">
                 <p className="messages-section-title">Pedidos de Amizade</p>
-                {pendingRequests.map(req => (
+                {pendingRequests.map((req) => (
                   <div key={req.id} className="conversation-item pending-request-item">
                     <span className="conversation-avatar">
                       {req.senderAvatarUrl ? (
@@ -741,8 +768,26 @@ function MessagesPage() {
                     <span className="conversation-copy">
                       <strong>{req.senderUsername}</strong>
                       <span className="pending-actions">
-                        <button className="user-action-btn user-action-btn--primary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }} onClick={(e) => { e.stopPropagation(); handleRequestAction(req.senderId, 'accept'); }}>Aceitar</button>
-                        <button className="user-action-btn" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }} onClick={(e) => { e.stopPropagation(); handleRequestAction(req.senderId, 'reject'); }}>Rejeitar</button>
+                        <button
+                          className="user-action-btn user-action-btn--primary"
+                          style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleRequestAction(req.senderId, 'accept')
+                          }}
+                        >
+                          Aceitar
+                        </button>
+                        <button
+                          className="user-action-btn"
+                          style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleRequestAction(req.senderId, 'reject')
+                          }}
+                        >
+                          Rejeitar
+                        </button>
                       </span>
                     </span>
                   </div>
@@ -773,9 +818,7 @@ function MessagesPage() {
                 </span>
                 <span className="conversation-copy">
                   <strong>{friend.username}</strong>
-                  <span>
-                    {friend.lastMessage?.content || 'Abre a conversa para comecar.'}
-                  </span>
+                  <span>{friend.lastMessage?.content || 'Abre a conversa para comecar.'}</span>
                 </span>
               </button>
             ))}
@@ -786,7 +829,11 @@ function MessagesPage() {
           {activeFriend ? (
             <>
               <header className="chat-header">
-                <div className="chat-user" onClick={() => navigate(`/user/${activeFriend.id}`)} style={{ cursor: 'pointer' }}>
+                <div
+                  className="chat-user"
+                  onClick={() => navigate(`/user/${activeFriend.id}`)}
+                  style={{ cursor: 'pointer' }}
+                >
                   <span className="chat-avatar">
                     {activeFriend.profilePicturePath ? (
                       <img src={resolveMediaUrl(activeFriend.profilePicturePath)} alt="" />
@@ -802,7 +849,9 @@ function MessagesPage() {
               </header>
 
               <div className="chat-thread" aria-live="polite">
-                {historyStatus === 'loading' && <p className="messages-muted">A carregar historico...</p>}
+                {historyStatus === 'loading' && (
+                  <p className="messages-muted">A carregar historico...</p>
+                )}
                 {historyStatus !== 'loading' && activeMessages.length === 0 && (
                   <div className="chat-empty-state">
                     <h3>Comeca a conversa</h3>
@@ -813,7 +862,10 @@ function MessagesPage() {
                 {activeMessages.map((message, index) => {
                   const isMine = String(message.senderId) === String(sessionUser.id)
                   const sentAt = message.createdAt ? new Date(message.createdAt) : null
-                  const messageReactions = normalizeReactionsForViewer(message.reactions, sessionUser.id)
+                  const messageReactions = normalizeReactionsForViewer(
+                    message.reactions,
+                    sessionUser.id,
+                  )
                   const isPickerOpen = String(activeReactionPickerId) === String(message.id)
                   const shouldOpenPickerBelow = index === 0
                   return (
@@ -823,7 +875,9 @@ function MessagesPage() {
                         'chat-row',
                         isMine ? 'mine' : 'theirs',
                         shouldOpenPickerBelow ? 'reaction-picker-below' : '',
-                      ].filter(Boolean).join(' ')}
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
                       data-reaction-zone="true"
                     >
                       <div className="message-body">
@@ -857,8 +911,12 @@ function MessagesPage() {
                           className={[
                             'chat-bubble',
                             messageReactions.length > 0 ? 'chat-bubble--with-reactions' : '',
-                            String(reactionPulseMessageId) === String(message.id) ? 'chat-bubble--reaction-pulse' : '',
-                          ].filter(Boolean).join(' ')}
+                            String(reactionPulseMessageId) === String(message.id)
+                              ? 'chat-bubble--reaction-pulse'
+                              : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' ')}
                           onClick={() => openReactionPicker(message.id)}
                           onPointerDown={() => startReactionLongPress(message.id)}
                           onPointerUp={cancelReactionLongPress}
@@ -907,8 +965,23 @@ function MessagesPage() {
                         )}
                       </div>
                       <div className="message-meta">
-                        {sentAt && <span>{sentAt.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</span>}
-                        {isMine && <span>{message.status === 'READ' ? 'Lida' : message.status === 'DELIVERED' ? 'Entregue' : 'Enviada'}</span>}
+                        {sentAt && (
+                          <span>
+                            {sentAt.toLocaleTimeString('pt-PT', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        )}
+                        {isMine && (
+                          <span>
+                            {message.status === 'READ'
+                              ? 'Lida'
+                              : message.status === 'DELIVERED'
+                                ? 'Entregue'
+                                : 'Enviada'}
+                          </span>
+                        )}
                       </div>
                     </article>
                   )
@@ -948,7 +1021,11 @@ function MessagesPage() {
                   placeholder={`Mensagem para ${activeFriend.username}`}
                   maxLength={2000}
                 />
-                <button type="submit" className="send-message-btn" disabled={!draft.trim() || !canSendMessage}>
+                <button
+                  type="submit"
+                  className="send-message-btn"
+                  disabled={!draft.trim() || !canSendMessage}
+                >
                   <span className="send-icon" aria-hidden="true" />
                   <span className="visually-hidden">Enviar mensagem</span>
                 </button>
@@ -989,7 +1066,9 @@ function MessagesPage() {
               </svg>
               <h2>Ainda ninguem esta a falar?</h2>
               <p>Comeca por partilhar um episodio e transforma uma descoberta numa conversa.</p>
-              <Link to="/explorar?tab=users" className="messages-empty-cta">Procurar amigos</Link>
+              <Link to="/explorar?tab=users" className="messages-empty-cta">
+                Procurar amigos
+              </Link>
             </div>
           )}
         </section>

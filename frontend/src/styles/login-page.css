@@ -55,10 +55,18 @@
   background: linear-gradient(to top, #ffd5ae, rgba(255, 230, 208, 0.32));
 }
 
-.login-wave span:nth-child(1) { height: 22px; }
-.login-wave span:nth-child(2) { height: 58px; }
-.login-wave span:nth-child(3) { height: 34px; }
-.login-wave span:nth-child(4) { height: 48px; }
+.login-wave span:nth-child(1) {
+  height: 22px;
+}
+.login-wave span:nth-child(2) {
+  height: 58px;
+}
+.login-wave span:nth-child(3) {
+  height: 34px;
+}
+.login-wave span:nth-child(4) {
+  height: 48px;
+}
 
 .login-card {
   background: rgba(255, 249, 241, 0.92);
@@ -110,7 +118,10 @@
   font-family: 'Source Sans 3', sans-serif;
   background: #fff;
   color: #2f1f1b;
-  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
 }
 
 .login-form input:hover,
@@ -137,7 +148,9 @@
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
-  transition: transform 180ms ease, box-shadow 180ms ease;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
 }
 
 .login-submit-button:hover {

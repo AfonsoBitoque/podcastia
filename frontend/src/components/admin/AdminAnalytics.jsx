@@ -20,9 +20,9 @@ function AdminAnalytics() {
       const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/admin/analytics`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       })
 
       if (!response.ok) {
@@ -45,8 +45,8 @@ function AdminAnalytics() {
       const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/admin/export/csv`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-        }
+          Authorization: `Bearer ${token}`,
+        },
       })
 
       if (!response.ok) {
@@ -75,8 +75,8 @@ function AdminAnalytics() {
       const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/admin/export/pdf`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-        }
+          Authorization: `Bearer ${token}`,
+        },
       })
 
       if (!response.ok) {
@@ -106,10 +106,10 @@ function AdminAnalytics() {
       const response = await fetch(`${API_BASE_URL}/api/admin/reports/generate`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ type: reportType, email })
+        body: JSON.stringify({ type: reportType, email }),
       })
 
       if (!response.ok) {
@@ -117,7 +117,9 @@ function AdminAnalytics() {
       }
 
       const data = await response.json()
-      alert(`Report generation started! Job ID: ${data.jobId}. You will receive an email when it's ready.`)
+      alert(
+        `Report generation started! Job ID: ${data.jobId}. You will receive an email when it's ready.`,
+      )
       setShowReportModal(false)
     } catch (err) {
       console.error('Error generating report:', err)
@@ -176,24 +178,13 @@ function AdminAnalytics() {
       <div className="admin-card">
         <h2>Export Analytics</h2>
         <div className="export-actions">
-          <button 
-            className="btn-primary" 
-            onClick={handleExportCSV}
-            disabled={exportLoading}
-          >
+          <button className="btn-primary" onClick={handleExportCSV} disabled={exportLoading}>
             {exportLoading ? 'Exporting...' : 'Export CSV'}
           </button>
-          <button 
-            className="btn-primary" 
-            onClick={handleExportPDF}
-            disabled={exportLoading}
-          >
+          <button className="btn-primary" onClick={handleExportPDF} disabled={exportLoading}>
             {exportLoading ? 'Exporting...' : 'Export PDF'}
           </button>
-          <button 
-            className="btn-secondary" 
-            onClick={() => setShowReportModal(true)}
-          >
+          <button className="btn-secondary" onClick={() => setShowReportModal(true)}>
             Generate Background Report
           </button>
         </div>
@@ -245,14 +236,18 @@ function AdminAnalytics() {
             <div className="analytics-trend">All time</div>
           </div>
           <div className="analytics-item">
-            <div className="analytics-value">{formatNumber(analytics.newRegistrationsThisMonth)}</div>
+            <div className="analytics-value">
+              {formatNumber(analytics.newRegistrationsThisMonth)}
+            </div>
             <div className="analytics-label">New This Month</div>
             <div className="analytics-trend">Monthly registrations</div>
           </div>
           <div className="analytics-item">
             <div className="analytics-value">
-              {analytics.totalPodcasts > 0 ? 
-                Math.round(analytics.totalListeningTime / analytics.totalPodcasts) : 0}m
+              {analytics.totalPodcasts > 0
+                ? Math.round(analytics.totalListeningTime / analytics.totalPodcasts)
+                : 0}
+              m
             </div>
             <div className="analytics-label">Avg Podcast Length</div>
             <div className="analytics-trend">Average duration</div>
@@ -278,7 +273,9 @@ function AdminAnalytics() {
                     <span className="metric-label">plays</span>
                   </div>
                   <div className="metric">
-                    <span className="metric-value-large">{formatTime(podcast.totalListeningTime)}</span>
+                    <span className="metric-value-large">
+                      {formatTime(podcast.totalListeningTime)}
+                    </span>
                     <span className="metric-label">total time</span>
                   </div>
                   <div className="metric">
@@ -302,10 +299,10 @@ function AdminAnalytics() {
             <div className="chart-bars">
               {analytics.weeklyUsage.map((day, index) => (
                 <div key={index} className="chart-bar-container">
-                  <div 
-                    className="chart-bar" 
-                    style={{ 
-                      height: `${Math.max((day.activeUsers / Math.max(...analytics.weeklyUsage.map(d => d.activeUsers))) * 100, 5)}%` 
+                  <div
+                    className="chart-bar"
+                    style={{
+                      height: `${Math.max((day.activeUsers / Math.max(...analytics.weeklyUsage.map((d) => d.activeUsers))) * 100, 5)}%`,
                     }}
                     title={`${day.date}: ${day.activeUsers} active users`}
                   ></div>
@@ -332,10 +329,10 @@ function AdminAnalytics() {
             <div className="chart-bars">
               {analytics.monthlyUsage.map((month, index) => (
                 <div key={index} className="chart-bar-container">
-                  <div 
-                    className="chart-bar" 
-                    style={{ 
-                      height: `${Math.max((month.activeUsers / Math.max(...analytics.monthlyUsage.map(d => d.activeUsers))) * 100, 5)}%` 
+                  <div
+                    className="chart-bar"
+                    style={{
+                      height: `${Math.max((month.activeUsers / Math.max(...analytics.monthlyUsage.map((d) => d.activeUsers))) * 100, 5)}%`,
                     }}
                     title={`${month.date}: ${month.activeUsers} active users`}
                   ></div>
@@ -381,11 +378,16 @@ function ReportGenerationModal({ onGenerate, onClose, loading }) {
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Generate Background Report</h2>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="modal-close" onClick={onClose}>
+            ×
+          </button>
         </div>
-        
+
         <div className="report-info">
-          <p>Generate a comprehensive report that will be processed in the background and sent to your email when ready.</p>
+          <p>
+            Generate a comprehensive report that will be processed in the background and sent to
+            your email when ready.
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="admin-form">

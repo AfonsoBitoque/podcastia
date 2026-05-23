@@ -111,7 +111,9 @@
   cursor: pointer;
   opacity: 0;
   transform: translateY(4px);
-  transition: opacity 120ms ease, transform 120ms ease;
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
 }
 
 .user-avatar-wrap:hover .user-avatar-upload-trigger,
@@ -139,7 +141,9 @@
   cursor: pointer;
   opacity: 0;
   transform: translateY(-4px);
-  transition: opacity 120ms ease, transform 120ms ease;
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
 }
 
 .user-avatar-wrap:hover .user-avatar-delete-trigger,
@@ -167,7 +171,12 @@
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: linear-gradient(100deg, rgba(246, 221, 206, 0.6) 20%, rgba(255, 244, 235, 0.95) 40%, rgba(246, 221, 206, 0.6) 60%);
+  background: linear-gradient(
+    100deg,
+    rgba(246, 221, 206, 0.6) 20%,
+    rgba(255, 244, 235, 0.95) 40%,
+    rgba(246, 221, 206, 0.6) 60%
+  );
   background-size: 200% 100%;
   animation: shimmer 1.2s linear infinite;
 }
@@ -332,7 +341,10 @@
   color: #603a2b;
   background: rgba(255, 250, 246, 0.75);
   cursor: pointer;
-  transition: transform 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    background-color 140ms ease;
 }
 
 .user-action-btn:hover {
@@ -553,7 +565,10 @@
   color: #6a3f31;
   background: rgba(255, 248, 242, 0.9);
   cursor: pointer;
-  transition: transform 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    background-color 120ms ease;
 }
 
 .user-inline-edit-btn:hover {
@@ -919,4 +934,3 @@
   font-size: 0.75rem;
   color: #7b5f53;
 }
-

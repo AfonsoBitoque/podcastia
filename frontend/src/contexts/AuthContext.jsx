@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useState, useEffect, useCallback } from 'react'
 
-const AuthContext = createContext(null)
+export const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
@@ -14,7 +15,7 @@ export function AuthProvider({ children }) {
       try {
         const token = localStorage.getItem('token')
         const userRaw = localStorage.getItem('user')
-        
+
         if (token && userRaw) {
           const parsedUser = JSON.parse(userRaw)
           setUser(parsedUser)
@@ -39,7 +40,7 @@ export function AuthProvider({ children }) {
     const handleAuthChange = () => {
       const token = localStorage.getItem('token')
       const userRaw = localStorage.getItem('user')
-      
+
       if (token && userRaw) {
         try {
           const parsedUser = JSON.parse(userRaw)
@@ -80,17 +81,20 @@ export function AuthProvider({ children }) {
     window.dispatchEvent(new Event('auth-change'))
   }, [])
 
-  const completeOnboarding = useCallback((topics) => {
-    const updatedUser = {
-      ...user,
-      hasCompletedOnboarding: true,
-      topics: topics || []
-    }
-    localStorage.setItem('user', JSON.stringify(updatedUser))
-    setUser(updatedUser)
-    setHasCompletedOnboarding(true)
-    window.dispatchEvent(new Event('auth-change'))
-  }, [user])
+  const completeOnboarding = useCallback(
+    (topics) => {
+      const updatedUser = {
+        ...user,
+        hasCompletedOnboarding: true,
+        topics: topics || [],
+      }
+      localStorage.setItem('user', JSON.stringify(updatedUser))
+      setUser(updatedUser)
+      setHasCompletedOnboarding(true)
+      window.dispatchEvent(new Event('auth-change'))
+    },
+    [user],
+  )
 
   const value = {
     user,
@@ -99,20 +103,8 @@ export function AuthProvider({ children }) {
     isLoading,
     login,
     logout,
-    completeOnboarding
+    completeOnboarding,
   }
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  )
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
-  return context
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

@@ -22,9 +22,9 @@ function AdminUserManagement() {
       const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/admin/users`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       })
 
       if (!response.ok) {
@@ -55,13 +55,16 @@ function AdminUserManagement() {
   const handleConfirmReset = async () => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE_URL}/api/admin/users/${selectedUser.id}/reset-password`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
+      const response = await fetch(
+        `${API_BASE_URL}/api/admin/users/${selectedUser.id}/reset-password`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      )
 
       if (!response.ok) {
         throw new Error('Failed to reset password')
@@ -81,10 +84,10 @@ function AdminUserManagement() {
       const response = await fetch(`${API_BASE_URL}/api/admin/users/${selectedUser.id}/confirm`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ confirmation, adminPassword })
+        body: JSON.stringify({ confirmation, adminPassword }),
       })
 
       if (!response.ok) {
@@ -101,34 +104,46 @@ function AdminUserManagement() {
     }
   }
 
-  const filteredUsers = users.filter(user => 
-    user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredUsers = users.filter(
+    (user) =>
+      user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
   const getUserTypeColor = (userType) => {
     switch (userType) {
-      case 'USER_ADMIN': return '#9c27b0'
-      case 'USER_NORMAL': return '#4caf50'
-      default: return '#757575'
+      case 'USER_ADMIN':
+        return '#9c27b0'
+      case 'USER_NORMAL':
+        return '#4caf50'
+      default:
+        return '#757575'
     }
   }
 
   const getUserStatusLabel = (status) => {
     switch (status) {
-      case 'ACTIVE': return 'Active'
-      case 'INACTIVE': return 'Inactive'
-      case 'SUSPENDED': return 'Suspended'
-      default: return status
+      case 'ACTIVE':
+        return 'Active'
+      case 'INACTIVE':
+        return 'Inactive'
+      case 'SUSPENDED':
+        return 'Suspended'
+      default:
+        return status
     }
   }
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'ACTIVE': return '#4caf50'
-      case 'INACTIVE': return '#9e9e9e'
-      case 'SUSPENDED': return '#f44336'
-      default: return '#757575'
+      case 'ACTIVE':
+        return '#4caf50'
+      case 'INACTIVE':
+        return '#9e9e9e'
+      case 'SUSPENDED':
+        return '#f44336'
+      default:
+        return '#757575'
     }
   }
 
@@ -145,7 +160,7 @@ function AdminUserManagement() {
     <div className="admin-user-management">
       <div className="admin-card">
         <h2>User Management</h2>
-        
+
         {/* Search */}
         <div className="search-filter-bar">
           <input
@@ -188,24 +203,24 @@ function AdminUserManagement() {
                   </td>
                   <td>{user.email}</td>
                   <td>
-                    <span 
-                      className="status-badge" 
-                      style={{ 
+                    <span
+                      className="status-badge"
+                      style={{
                         background: `${getUserTypeColor(user.userType)}20`,
                         color: getUserTypeColor(user.userType),
-                        borderColor: `${getUserTypeColor(user.userType)}40`
+                        borderColor: `${getUserTypeColor(user.userType)}40`,
                       }}
                     >
                       {user.userType.replace('USER_', '')}
                     </span>
                   </td>
                   <td>
-                    <span 
-                      className="status-badge" 
-                      style={{ 
+                    <span
+                      className="status-badge"
+                      style={{
                         background: `${getStatusColor(user.status)}20`,
                         color: getStatusColor(user.status),
-                        borderColor: `${getStatusColor(user.status)}40`
+                        borderColor: `${getStatusColor(user.status)}40`,
                       }}
                     >
                       {getUserStatusLabel(user.status)}
@@ -214,16 +229,18 @@ function AdminUserManagement() {
                   <td>
                     <div className="points-display">
                       <div className="points-total">
-                        {user.pontosGeral + user.pontosDesporto + user.pontosFinanca + user.pontosPolitica}
+                        {user.pontosGeral +
+                          user.pontosDesporto +
+                          user.pontosFinanca +
+                          user.pontosPolitica}
                       </div>
                       <div className="points-breakdown">
-                        G:{user.pontosGeral} S:{user.pontosDesporto} F:{user.pontosFinanca} P:{user.pontosPolitica}
+                        G:{user.pontosGeral} S:{user.pontosDesporto} F:{user.pontosFinanca} P:
+                        {user.pontosPolitica}
                       </div>
                     </div>
                   </td>
-                  <td>
-                    {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
-                  </td>
+                  <td>{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}</td>
                   <td>
                     <div className="action-buttons">
                       <button
@@ -302,9 +319,11 @@ function ResetPasswordModal({ user, tempPassword, onReset, onClose }) {
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Reset User Password</h2>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="modal-close" onClick={onClose}>
+            ×
+          </button>
         </div>
-        
+
         <div className="reset-info">
           <p>You are about to reset the password for:</p>
           <div className="user-details">
@@ -322,7 +341,9 @@ function ResetPasswordModal({ user, tempPassword, onReset, onClose }) {
 
         {!hasReset ? (
           <div className="reset-warning">
-            <p><strong>⚠️ Important:</strong></p>
+            <p>
+              <strong>⚠️ Important:</strong>
+            </p>
             <ul>
               <li>This will generate a temporary password</li>
               <li>The user will need to change it on next login</li>
@@ -331,12 +352,14 @@ function ResetPasswordModal({ user, tempPassword, onReset, onClose }) {
           </div>
         ) : (
           <div className="reset-success">
-            <p><strong>✅ Password Reset Successfully!</strong></p>
+            <p>
+              <strong>✅ Password Reset Successfully!</strong>
+            </p>
             <div className="temp-password-display">
               <label>Temporary Password:</label>
               <div className="temp-password">
                 {tempPassword}
-                <button 
+                <button
                   className="btn-secondary"
                   onClick={() => navigator.clipboard.writeText(tempPassword)}
                 >
@@ -383,13 +406,19 @@ function DeleteUserModal({ user, onConfirm, onClose }) {
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Delete User</h2>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="modal-close" onClick={onClose}>
+            ×
+          </button>
         </div>
-        
+
         <div className="delete-warning">
-          <p><strong>⚠️ Warning: This action cannot be undone!</strong></p>
+          <p>
+            <strong>⚠️ Warning: This action cannot be undone!</strong>
+          </p>
           <p>You are about to permanently delete the user:</p>
-          <p className="user-to-delete">"{user.username}@{user.tag}"</p>
+          <p className="user-to-delete">
+            "{user.username}@{user.tag}"
+          </p>
           <p>Email: {user.email}</p>
         </div>
 
@@ -424,9 +453,9 @@ function DeleteUserModal({ user, onConfirm, onClose }) {
             <button type="button" className="btn-secondary" onClick={onClose}>
               Cancel
             </button>
-            <button 
-              type="submit" 
-              className="btn-danger" 
+            <button
+              type="submit"
+              className="btn-danger"
               disabled={loading || confirmation !== expectedConfirmation}
             >
               {loading ? 'Deleting...' : 'Delete Permanently'}

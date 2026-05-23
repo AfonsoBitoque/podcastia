@@ -240,7 +240,10 @@ h1 {
   font-family: 'Source Sans 3', sans-serif;
   background: #fff;
   color: var(--text-main);
-  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
 }
 
 .register-form input:hover {
@@ -271,7 +274,10 @@ h1 {
   background: #fff;
   color: var(--text-main);
   cursor: pointer;
-  transition: border-color 170ms ease, color 170ms ease, transform 170ms ease;
+  transition:
+    border-color 170ms ease,
+    color 170ms ease,
+    transform 170ms ease;
 }
 
 .tag-action-button:hover {
@@ -305,7 +311,10 @@ h1 {
   height: 100%;
   width: 14%;
   border-radius: inherit;
-  transition: width 200ms ease, background-color 200ms ease, box-shadow 200ms ease;
+  transition:
+    width 200ms ease,
+    background-color 200ms ease,
+    box-shadow 200ms ease;
 }
 
 .strength-fill.level-0 {
@@ -347,7 +356,10 @@ h1 {
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
-  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    filter 180ms ease;
 }
 
 .submit-button:hover {

@@ -117,7 +117,9 @@
   border-radius: 999px;
   overflow: hidden;
   isolation: isolate;
-  transition: background-color 0.28s ease, padding 0.28s ease;
+  transition:
+    background-color 0.28s ease,
+    padding 0.28s ease;
 }
 
 .filter-strip.is-expanded {
@@ -143,7 +145,11 @@
   font-family: inherit;
   font-weight: 400;
   cursor: pointer;
-  transition: background-color 0.25s ease, color 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease,
+    transform 0.25s ease,
+    border-color 0.25s ease;
 }
 
 .filter-toggle:hover,
@@ -163,7 +169,7 @@
 
 .filter-toggle-icon::before,
 .filter-toggle-icon::after {
-  content: "";
+  content: '';
   position: absolute;
   left: 0;
   width: 18px;
@@ -216,7 +222,12 @@
   margin-bottom: 0;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
-  transition: max-width 0.34s ease-in-out, opacity 0.24s ease, transform 0.34s ease-in-out, padding 0.24s ease, margin-bottom 0.24s ease;
+  transition:
+    max-width 0.34s ease-in-out,
+    opacity 0.24s ease,
+    transform 0.34s ease-in-out,
+    padding 0.24s ease,
+    margin-bottom 0.24s ease;
 }
 
 .filter-strip.is-expanded .filter-scroll {
@@ -248,7 +259,9 @@
   bottom: 0;
   border-radius: inherit;
   background: rgba(160, 82, 45, 0.62);
-  transition: left 0.08s linear, width 0.18s ease;
+  transition:
+    left 0.08s linear,
+    width 0.18s ease;
 }
 
 .filter-scroll::-webkit-scrollbar {
@@ -265,7 +278,11 @@
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
-  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, transform 0.25s ease;
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease,
+    transform 0.25s ease;
   white-space: nowrap;
 }
 
@@ -317,7 +334,7 @@
 }
 
 .filter-eye-icon::before {
-  content: "";
+  content: '';
   position: absolute;
   inset: 2px 4px;
   border-radius: 50%;
@@ -325,7 +342,7 @@
 }
 
 .filter-eye-icon::after {
-  content: "";
+  content: '';
   position: absolute;
   width: 20px;
   height: 2px;
@@ -359,7 +376,10 @@
   border-radius: 999px;
   cursor: pointer;
   font-weight: 700;
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .filter-clear:hover {
@@ -415,7 +435,10 @@
   cursor: pointer;
   font-size: 0.72rem;
   font-weight: 900;
-  transition: background-color 0.2s ease, transform 0.2s ease, color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease,
+    color 0.2s ease;
 }
 
 .filter-close:hover {
@@ -492,7 +515,7 @@
 }
 
 .filter-empty-mark::after {
-  content: "";
+  content: '';
   position: absolute;
   width: 12px;
   height: 3px;
@@ -515,13 +538,25 @@
 }
 
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes filter-results-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .home-sections {
@@ -599,7 +634,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .error-state {
@@ -621,7 +658,9 @@
   border-radius: 10px;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 .retry-button:hover {
@@ -817,7 +856,9 @@
   border-radius: 25px;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 .create-podcast-btn:hover {
@@ -873,7 +914,10 @@
   width: 220px;
   flex: 0 0 220px;
   box-shadow: var(--podcast-card-shadow);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s;
   display: flex;
   flex-direction: column;
 }
@@ -978,7 +1022,9 @@
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.35);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
   transform: scale(0.8);
 }
 
@@ -1074,7 +1120,10 @@
   font-size: 0.9rem;
   cursor: pointer;
   margin-top: auto;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
   opacity: 0;
   pointer-events: none;
   transform: scale(0.85);
@@ -1117,7 +1166,6 @@
 
   /* Player bar mobile styles moved to global index.css */
 }
-
 
 /* OVERRIDE TO MATCH TRENDING PAGE CARDS */
 .podcast-cover-container {

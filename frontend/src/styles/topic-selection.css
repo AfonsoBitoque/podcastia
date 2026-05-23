@@ -29,7 +29,7 @@
 }
 
 .topic-hero::after {
-  content: "";
+  content: '';
   position: absolute;
   width: 220px;
   height: 220px;
@@ -87,7 +87,9 @@
   border: 1px solid rgba(114, 71, 56, 0.24);
   background: #fffaf6;
   font: inherit;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .topic-search input:focus {
@@ -167,7 +169,10 @@
   justify-content: space-between;
   gap: 0.8rem;
   cursor: pointer;
-  transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease;
   text-align: left;
 }
 
@@ -235,7 +240,10 @@
   font-weight: 700;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
 }
 
 .topic-action.primary {

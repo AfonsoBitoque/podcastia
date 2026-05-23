@@ -17,9 +17,9 @@ function AdminDashboard() {
       const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/admin/analytics`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       })
 
       if (!response.ok) {
@@ -114,13 +114,17 @@ function AdminDashboard() {
               <div className="metric-label">Total Listening Time</div>
             </div>
             <div className="metric-item">
-              <div className="metric-value">{formatNumber(analytics.newRegistrationsThisMonth)}</div>
+              <div className="metric-value">
+                {formatNumber(analytics.newRegistrationsThisMonth)}
+              </div>
               <div className="metric-label">New This Month</div>
             </div>
             <div className="metric-item">
               <div className="metric-value">
-                {analytics.totalUsers > 0 ? 
-                  Math.round((analytics.dailyActiveUsers / analytics.totalUsers) * 100) : 0}%
+                {analytics.totalUsers > 0
+                  ? Math.round((analytics.dailyActiveUsers / analytics.totalUsers) * 100)
+                  : 0}
+                %
               </div>
               <div className="metric-label">Daily Engagement</div>
             </div>
@@ -164,22 +168,23 @@ function AdminDashboard() {
             <div className="health-metrics">
               <div className="health-item">
                 <div className="health-label">Database</div>
-                <div className={`health-status ${analytics.systemHealth.database === 'HEALTHY' ? 'healthy' : 'unhealthy'}`}>
+                <div
+                  className={`health-status ${analytics.systemHealth.database === 'HEALTHY' ? 'healthy' : 'unhealthy'}`}
+                >
                   {analytics.systemHealth.database}
                 </div>
               </div>
               <div className="health-item">
                 <div className="health-label">Memory Usage</div>
                 <div className="health-status">
-                  {analytics.systemHealth.memoryUsagePercent ? 
-                    `${Math.round(analytics.systemHealth.memoryUsagePercent)}%` : 'N/A'}
+                  {analytics.systemHealth.memoryUsagePercent
+                    ? `${Math.round(analytics.systemHealth.memoryUsagePercent)}%`
+                    : 'N/A'}
                 </div>
               </div>
               <div className="health-item">
                 <div className="health-label">Disk Space</div>
-                <div className="health-status">
-                  {analytics.systemHealth.diskSpace || 'N/A'}
-                </div>
+                <div className="health-status">{analytics.systemHealth.diskSpace || 'N/A'}</div>
               </div>
             </div>
           )}
@@ -189,16 +194,25 @@ function AdminDashboard() {
         <div className="admin-card">
           <h2>Quick Actions</h2>
           <div className="quick-actions">
-            <button className="btn-primary" onClick={() => window.location.href = '#/admin/podcasts'}>
+            <button
+              className="btn-primary"
+              onClick={() => (window.location.href = '#/admin/podcasts')}
+            >
               Manage Podcasts
             </button>
-            <button className="btn-primary" onClick={() => window.location.href = '#/admin/users'}>
+            <button
+              className="btn-primary"
+              onClick={() => (window.location.href = '#/admin/users')}
+            >
               Manage Users
             </button>
-            <button className="btn-primary" onClick={() => window.location.href = '#/admin/analytics'}>
+            <button
+              className="btn-primary"
+              onClick={() => (window.location.href = '#/admin/analytics')}
+            >
               View Analytics
             </button>
-            <button className="btn-primary" onClick={() => window.location.href = '#/admin/logs'}>
+            <button className="btn-primary" onClick={() => (window.location.href = '#/admin/logs')}>
               View Logs
             </button>
           </div>
@@ -211,20 +225,24 @@ function AdminDashboard() {
             <div className="info-item">
               <span className="info-label">Last Updated:</span>
               <span className="info-value">
-                {analytics.generatedAt ? 
-                  new Date(analytics.generatedAt).toLocaleString() : 'Unknown'
-                }
+                {analytics.generatedAt
+                  ? new Date(analytics.generatedAt).toLocaleString()
+                  : 'Unknown'}
               </span>
             </div>
             <div className="info-item">
               <span className="info-label">Data Freshness:</span>
               <span className="info-value">
-                {analytics.generatedAt ? 
-                  getRelativeTime(new Date(analytics.generatedAt)) : 'Unknown'
-                }
+                {analytics.generatedAt
+                  ? getRelativeTime(new Date(analytics.generatedAt))
+                  : 'Unknown'}
               </span>
             </div>
-            <button className="btn-secondary" onClick={fetchAnalytics} style={{ marginTop: '1rem' }}>
+            <button
+              className="btn-secondary"
+              onClick={fetchAnalytics}
+              style={{ marginTop: '1rem' }}
+            >
               Refresh Data
             </button>
           </div>
@@ -238,13 +256,13 @@ function getRelativeTime(date) {
   const now = new Date()
   const diffMs = now - date
   const diffMins = Math.floor(diffMs / 60000)
-  
+
   if (diffMins < 1) return 'Just now'
   if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`
-  
+
   const diffHours = Math.floor(diffMins / 60)
   if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
-  
+
   const diffDays = Math.floor(diffHours / 24)
   return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
 }

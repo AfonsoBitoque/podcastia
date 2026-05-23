@@ -58,16 +58,19 @@ function LoginPage() {
 
       if (response.ok && data?.token) {
         localStorage.setItem('token', data.token)
-        localStorage.setItem('user', JSON.stringify({
-          id: data.userId,
-          username: data.username,
-          type: data.userType,
-          hasCompletedOnboarding: data.hasCompletedOnboarding,
-          topics: data.topics || []
-        }))
+        localStorage.setItem(
+          'user',
+          JSON.stringify({
+            id: data.userId,
+            username: data.username,
+            type: data.userType,
+            hasCompletedOnboarding: data.hasCompletedOnboarding,
+            topics: data.topics || [],
+          }),
+        )
 
         window.dispatchEvent(new Event('auth-change'))
-        
+
         // Redirecionar baseado no estado do onboarding
         if (data.hasCompletedOnboarding !== true) {
           navigate('/onboarding', { replace: true })
@@ -133,12 +136,18 @@ function LoginPage() {
               placeholder="A tua password"
             />
 
-            <button type="submit" className="login-submit-button" disabled={status === 'submitting'}>
+            <button
+              type="submit"
+              className="login-submit-button"
+              disabled={status === 'submitting'}
+            >
               {status === 'submitting' ? 'A entrar...' : 'Entrar'}
             </button>
           </form>
 
-          {message && <p className={`login-feedback ${status === 'error' ? 'error' : ''}`}>{message}</p>}
+          {message && (
+            <p className={`login-feedback ${status === 'error' ? 'error' : ''}`}>{message}</p>
+          )}
 
           <p className="signup-link">
             Ainda nao tem conta? <Link to="/register">Registe-se aqui</Link>

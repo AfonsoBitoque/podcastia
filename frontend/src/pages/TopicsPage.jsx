@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import '../styles/topic-selection.css'
 
@@ -38,17 +38,20 @@ function TopicsPage() {
       const rawUser = localStorage.getItem('user')
       if (!rawUser) return
       const parsed = JSON.parse(rawUser)
-      localStorage.setItem('user', JSON.stringify({
-        ...parsed,
-        topics: topicIds,
-      }))
+      localStorage.setItem(
+        'user',
+        JSON.stringify({
+          ...parsed,
+          topics: topicIds,
+        }),
+      )
       window.dispatchEvent(new Event('auth-change'))
     } catch {
       // ignore invalid local storage
     }
   }
 
-  const fetchUserTopics = async (targetUserId) => {
+  const fetchUserTopics = useCallback(async (targetUserId) => {
     try {
       const response = await fetch(`${API_BASE_URL}/users`, {
         headers: getAuthHeaders(),
@@ -65,9 +68,9 @@ function TopicsPage() {
     } catch {
       // ignore profile hydration failures
     }
-  }
+  }, [])
 
-  const fetchTopics = async (term, isInitial = false) => {
+  const fetchTopics = useCallback(async (term, isInitial = false) => {
     if (isInitial) {
       setLoading(true)
     } else {
@@ -97,7 +100,7 @@ function TopicsPage() {
       setLoading(false)
       setSearching(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     const storedUserRaw = localStorage.getItem('user')
@@ -121,11 +124,11 @@ function TopicsPage() {
     } catch {
       navigate('/login', { replace: true })
     }
-  }, [navigate])
+  }, [navigate, fetchUserTopics])
 
   useEffect(() => {
     fetchTopics('', true)
-  }, [])
+  }, [fetchTopics])
 
   useEffect(() => {
     if (debounceRef.current) {
@@ -141,7 +144,7 @@ function TopicsPage() {
         window.clearTimeout(debounceRef.current)
       }
     }
-  }, [searchTerm])
+  }, [searchTerm, fetchTopics])
 
   const toggleTopic = (topicId) => {
     setSelectedTopics((prev) => {
@@ -252,7 +255,9 @@ function TopicsPage() {
                     aria-pressed={isSelected}
                   >
                     <span className="topic-pill-label">{topic.label || topic.id}</span>
-                    <span className="topic-pill-meta">{isSelected ? 'Selecionado' : 'Selecionar'}</span>
+                    <span className="topic-pill-meta">
+                      {isSelected ? 'Selecionado' : 'Selecionar'}
+                    </span>
                   </button>
                 )
               })}
@@ -263,7 +268,9 @@ function TopicsPage() {
             <div className="topic-progress">
               <span>{selectedCount} temas selecionados</span>
               {selectedCount < MIN_TOPICS ? (
-                <span className="topic-hint">Escolhe mais {remainingCount} tema{remainingCount === 1 ? '' : 's'}.</span>
+                <span className="topic-hint">
+                  Escolhe mais {remainingCount} tema{remainingCount === 1 ? '' : 's'}.
+                </span>
               ) : (
                 <span className="topic-hint ready">Tudo pronto para continuar.</span>
               )}
