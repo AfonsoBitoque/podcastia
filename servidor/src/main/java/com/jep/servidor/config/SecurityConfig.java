@@ -48,7 +48,7 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
             // Endpoints públicos
             .requestMatchers("/api/auth/**").permitAll() // Login REST
-            .requestMatchers("/users", "/users/**").permitAll() // Registo de conta
+            .requestMatchers("/users", "/users/**", "/api/users/**").permitAll() // Registo de conta e perfis
             .requestMatchers("/api/register/**").permitAll() // Gerar/Verificar Tag REST
             .requestMatchers("/api/search/**").permitAll() // Pesquisa publica
             .requestMatchers(HttpMethod.GET, "/api/podcasts", "/api/podcasts/**").permitAll() // Listar e aceder a podcasts publicos
