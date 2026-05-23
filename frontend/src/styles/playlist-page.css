@@ -99,8 +99,8 @@
   text-align: center;
   padding: 3rem 1.5rem;
   background: #fff;
-  border-radius: 16px;
-  border: 2px dashed rgba(0, 0, 0, 0.15);
+  border-radius: 24px;
+  border: none;
   gap: 0.5rem;
 }
 
@@ -122,22 +122,35 @@
   align-items: center;
   gap: 0.75rem;
   padding: 1rem 1.25rem;
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid transparent;
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .playlist-card:hover {
-  border-color: #e05a2a;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: rgba(224, 90, 42, 0.22);
+  box-shadow: 0 4px 12px rgba(93, 46, 23, 0.08);
 }
 
 .playlist-card.active {
-  border-color: #e05a2a;
-  background: rgba(224, 90, 42, 0.05);
-  box-shadow: 0 4px 16px rgba(224, 90, 42, 0.12);
+  border-color: #a0522d;
+  background: #a0522d;
+  box-shadow: 0 8px 20px rgba(93, 46, 23, 0.18);
+}
+
+.playlist-card.active .playlist-card-title,
+.playlist-card.active .playlist-card-desc,
+.playlist-card.active .playlist-card-meta,
+.playlist-card.active .playlist-visibility.public,
+.playlist-card.active .playlist-visibility.private {
+  color: #fff6ef;
+}
+
+.playlist-card.active .playlist-card-icon {
+  background: rgba(255, 246, 239, 0.18);
+  color: #fff6ef;
 }
 
 .playlist-card-info {
@@ -194,12 +207,17 @@
 }
 
 .playlist-card.saved-playlist {
-  border: 1px solid rgba(224, 90, 42, 0.2);
-  background: rgba(224, 90, 42, 0.03);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 246, 239, 0.9));
+  border-color: transparent;
 }
 
 .playlist-card.saved-playlist:hover {
-  border-color: #e05a2a;
+  border-color: rgba(224, 90, 42, 0.22);
+}
+
+.playlist-card.saved-playlist.active {
+  border-color: #a0522d;
+  background: #a0522d;
 }
 
 .btn-delete-playlist {
@@ -223,6 +241,7 @@
   border-radius: 16px;
   padding: 1.5rem;
   min-height: 400px;
+  box-shadow: 0 4px 16px rgba(93, 46, 23, 0.06);
 }
 
 .detail-header {
