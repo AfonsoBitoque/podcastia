@@ -249,50 +249,60 @@ function PlaylistPage() {
   }
 
   // Playback controls
-  const playEpisode = useCallback(async (podcastId, queue = null, queueIdx = -1) => {
-    try {
-      const currentId = playingPodcast?.id || playingPodcast?.podcastId
-      if (currentId === podcastId) {
-        await togglePlayPause()
-        return
-      }
-
-      const res = await fetch(`${API_BASE_URL}/podcasts/${podcastId}`, {
-        headers: { Authorization: `Bearer ${getToken()}` },
-      })
-      if (!res.ok) throw new Error('Erro ao carregar podcast')
-      const podcast = await res.json()
-      await loadPodcast(podcast, 0)
-      await play()
-      if (queue) {
-        setPlayQueue(queue)
-        setPlayQueueIndex(queueIdx)
-
-        // Also set queue on the BackgroundAudioService so skip buttons work
-        try {
-          const fullPodcasts = await Promise.all(
-            queue.map(async (pid) => {
-              if (pid === podcastId) return podcast
-              try {
-                const r = await fetch(`${API_BASE_URL}/podcasts/${pid}`, {
-                  headers: { Authorization: `Bearer ${getToken()}` },
-                })
-                return r.ok ? await r.json() : null
-              } catch {
-                return null
-              }
-            }),
-          )
-          const validPodcasts = fullPodcasts.filter(Boolean)
-          setServiceQueue(validPodcasts, queueIdx >= 0 ? queueIdx : 0)
-        } catch (err) {
-          console.error('Erro ao preparar queue:', err)
+  const playEpisode = useCallback(
+    async (podcastId, queue = null, queueIdx = -1) => {
+      try {
+        const currentId = playingPodcast?.id || playingPodcast?.podcastId
+        if (currentId === podcastId) {
+          await togglePlayPause()
+          return
         }
+
+        const res = await fetch(`${API_BASE_URL}/podcasts/${podcastId}`, {
+          headers: { Authorization: `Bearer ${getToken()}` },
+        })
+        if (!res.ok) throw new Error('Erro ao carregar podcast')
+        const podcast = await res.json()
+        await loadPodcast(podcast, 0)
+        await play()
+        if (queue) {
+          setPlayQueue(queue)
+          setPlayQueueIndex(queueIdx)
+
+          // Also set queue on the BackgroundAudioService so skip buttons work
+          try {
+            const fullPodcasts = await Promise.all(
+              queue.map(async (pid) => {
+                if (pid === podcastId) return podcast
+                try {
+                  const r = await fetch(`${API_BASE_URL}/podcasts/${pid}`, {
+                    headers: { Authorization: `Bearer ${getToken()}` },
+                  })
+                  return r.ok ? await r.json() : null
+                } catch {
+                  return null
+                }
+              }),
+            )
+            const validPodcasts = fullPodcasts.filter(Boolean)
+            setServiceQueue(validPodcasts, queueIdx >= 0 ? queueIdx : 0)
+          } catch (err) {
+            console.error('Erro ao preparar queue:', err)
+          }
+        }
+      } catch (err) {
+        console.error(err)
       }
-    } catch (err) {
-      console.error(err)
-    }
-  }, [playingPodcast?.id, playingPodcast?.podcastId, togglePlayPause, loadPodcast, play, setServiceQueue])
+    },
+    [
+      playingPodcast?.id,
+      playingPodcast?.podcastId,
+      togglePlayPause,
+      loadPodcast,
+      play,
+      setServiceQueue,
+    ],
+  )
 
   const playAll = () => {
     if (!selectedPlaylist?.episodes?.length) return

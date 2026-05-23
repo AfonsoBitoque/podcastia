@@ -266,7 +266,7 @@ function HomePage() {
   }
 
   // Filter function by topic
-  // Note: declared OUTSIDE component logic that needs it in deps, or use useCallback, 
+  // Note: declared OUTSIDE component logic that needs it in deps, or use useCallback,
   // but for simplicity we will just put the logic inside useMemo or keep it out of deps if it doesn't use component state.
   // Actually, filterByTopic relies on `filters.topic`. So we can just define it as a plain function
   // and pass `filters.topic` to it.
@@ -306,7 +306,10 @@ function HomePage() {
   }
 
   // Filtered lists
-  const filteredMyPodcasts = useMemo(() => filterByTopic(myPodcasts, filters.topic), [myPodcasts, filters.topic])
+  const filteredMyPodcasts = useMemo(
+    () => filterByTopic(myPodcasts, filters.topic),
+    [myPodcasts, filters.topic],
+  )
   const filteredSavedPodcasts = useMemo(
     () => filterByTopic(savedPodcasts, filters.topic),
     [savedPodcasts, filters.topic],

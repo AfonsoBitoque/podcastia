@@ -2,7 +2,8 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import App from '../App'
 
-vi.mock('../contexts/AuthContext', () => ({
+// Mock do hook useAuth
+vi.mock('../hooks/useAuth', () => ({
   useAuth: () => ({
     isAuthenticated: true,
     hasCompletedOnboarding: true,

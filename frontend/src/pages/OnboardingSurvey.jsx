@@ -23,7 +23,6 @@ function OnboardingSurvey() {
   const remainingCount = Math.max(0, MIN_TOPICS - selectedCount)
   const isCompleteDisabled = selectedCount < MIN_TOPICS
 
-
   useEffect(() => {
     const storedUserRaw = localStorage.getItem('user')
     if (!storedUserRaw) {

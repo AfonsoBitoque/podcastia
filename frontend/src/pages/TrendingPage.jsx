@@ -69,7 +69,6 @@ function TrendingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-
   const isPodcastSaved = (podcastId) => savedPodcastIds.includes(podcastId)
 
   const handleSavePodcast = async (podcast) => {
@@ -124,7 +123,6 @@ function TrendingPage() {
     const secs = Math.floor(seconds % 60)
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
-
 
   const PodcastCard = ({ podcast }) => {
     const isCurrentPlaying =
