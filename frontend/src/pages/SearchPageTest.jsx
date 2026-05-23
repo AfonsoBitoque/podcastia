@@ -94,6 +94,22 @@ function SearchPageTest() {
     }
   }
 
+  const openPodcastInfo = async (podcast) => {
+    const podcastId = podcast.id || podcast.podcastId
+    if (!podcastId) return
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/podcasts/${podcastId}`)
+      if (!response.ok) throw new Error('Podcast nao encontrado')
+
+      const podcastDetails = await response.json()
+      window.dispatchEvent(new CustomEvent('podcastia-open-podcast', { detail: podcastDetails }))
+    } catch (err) {
+      console.error('Error opening podcast details:', err)
+      setError('Nao foi possivel abrir este podcast.')
+    }
+  }
+
   const typingTimeoutRef = useRef(null)
   const observerRef = useRef(null)
   const latestRequestRef = useRef(0)
@@ -248,6 +264,8 @@ function SearchPageTest() {
       <article
         key={`${id}-${index}`}
         className={`explore-podcast-card ${activePodcastId === actualId ? 'active-play' : ''}`}
+        onClick={() => openPodcastInfo(playablePodcast)}
+        style={{ cursor: 'pointer' }}
       >
         <div className="trending-card-cover">
           <div className="trending-cover-placeholder">
