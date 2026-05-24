@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useBackgroundAudio } from '../hooks/useBackgroundAudio'
-import PodcastSidebar from '../components/PodcastSidebar'
 import '../styles/playlist-page.css'
 import '../styles/home-page.css'
 
@@ -16,9 +15,6 @@ function PlaylistPage() {
   const [availablePodcasts, setAvailablePodcasts] = useState([])
   const [podcastSearch, setPodcastSearch] = useState('')
   const [newPlaylist, setNewPlaylist] = useState({ title: '', description: '', isPublic: true })
-  const [sidebarPodcast, setSidebarPodcast] = useState(null)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const [savedPodcastIds, setSavedPodcastIds] = useState([])
   const [savedPlaylist, setSavedPlaylist] = useState(null)
   const [playQueue, setPlayQueue] = useState([])
   const [playQueueIndex, setPlayQueueIndex] = useState(-1)
@@ -58,7 +54,6 @@ function PlaylistPage() {
       })
       if (!res.ok) return
       const podcasts = await res.json()
-      setSavedPodcastIds(podcasts.map((p) => p.id))
       setSavedPlaylist({
         id: '__saved__',
         title: 'Podcasts Guardados',
@@ -98,31 +93,14 @@ function PlaylistPage() {
     fetchSavedPodcasts()
   }, [fetchPlaylists, fetchSavedPodcasts])
 
-  const isPodcastSaved = (podcastId) => savedPodcastIds.includes(podcastId)
-
-  const handleSavePodcast = async (podcast) => {
-    try {
-      const id = podcast.id || podcast.podcastId
-      const res = await fetch(`${API_BASE_URL}/api/favorites/${id}/toggle`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${getToken()}` },
-      })
-      if (res.ok) {
-        await fetchSavedPodcasts()
-      }
-    } catch (err) {
-      console.error(err)
-    }
-  }
-
   const openEpisodeInfo = async (podcastId) => {
     try {
       const res = await fetch(`${API_BASE_URL}/podcasts/${podcastId}`, {
         headers: { Authorization: `Bearer ${getToken()}` },
       })
       if (!res.ok) return
-      setSidebarPodcast(await res.json())
-      setIsSidebarOpen(true)
+      const podcast = await res.json()
+      window.dispatchEvent(new CustomEvent('podcastia-open-podcast', { detail: podcast }))
     } catch (err) {
       console.error(err)
     }
@@ -678,28 +656,6 @@ function PlaylistPage() {
         </div>
       )}
 
-      {/* Podcast Sidebar */}
-      <PodcastSidebar
-        podcast={sidebarPodcast}
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-        onPlayNow={() => {
-          if (sidebarPodcast) {
-            playEpisode(sidebarPodcast.id || sidebarPodcast.podcastId)
-            setIsSidebarOpen(false)
-          }
-        }}
-        onSave={handleSavePodcast}
-        isSaved={
-          sidebarPodcast ? isPodcastSaved(sidebarPodcast.id || sidebarPodcast.podcastId) : false
-        }
-        isPlaying={
-          playingPodcast && sidebarPodcast && playingPodcast.id === sidebarPodcast.id
-            ? isPlaying
-            : false
-        }
-        API_BASE_URL={API_BASE_URL}
-      />
     </main>
   )
 }
