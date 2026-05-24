@@ -61,12 +61,16 @@ const getAvatarInitial = (username) => {
   return safeName.charAt(0).toUpperCase()
 }
 
-const resolveProfilePicture = (path) => {
+const resolveProfilePicture = (path, userId) => {
   const safePath = String(path || '').trim()
   if (!safePath) return ''
   if (/^https?:\/\//i.test(safePath)) return safePath
+  if (userId) {
+    return `${API_BASE_URL}/users/${userId}/profile-image?t=${Date.now()}`
+  }
   const normalizedPath = safePath.replace(/^\/+/, '')
-  return `${API_BASE_URL}/${normalizedPath}`
+  const separator = normalizedPath.includes('?') ? '&' : '?'
+  return `${API_BASE_URL}/${normalizedPath}${separator}t=${Date.now()}`
 }
 
 const TOPIC_LABELS = {

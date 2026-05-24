@@ -22,11 +22,18 @@ function TrendingPage() {
     togglePlayPause,
   } = useBackgroundAudio()
 
-  const getPodcastWithAudio = (podcast) => {
-    const podcastId = podcast.id || podcast.podcastId
-    return {
-      ...podcast,
-      audioUrl: podcast.audioUrl || `${API_BASE_URL}/api/podcasts/${podcastId}/audio`,
+  const getToken = () => localStorage.getItem('token')
+
+  const fetchSavedPodcasts = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/favorites`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      })
+      if (!res.ok) return
+      const podcasts = await res.json()
+      setSavedPodcastIds(podcasts.map((p) => p.id))
+    } catch (err) {
+      console.error(err)
     }
   }
 
@@ -57,7 +64,11 @@ function TrendingPage() {
   }, [])
 
   const handlePlayNow = async (podcast) => {
-    const podcastWithUrl = getPodcastWithAudio(podcast)
+    setIsSidebarOpen(false)
+    const podcastWithUrl = {
+      ...podcast,
+      audioUrl: `${API_BASE_URL}/api/podcasts/${podcast.id}/audio`,
+    }
 
     const podcastId = podcast.id || podcast.podcastId
     const currentId = playingPodcast?.id || playingPodcast?.podcastId
@@ -74,9 +85,13 @@ function TrendingPage() {
   }
 
   const openSidebar = (podcast) => {
-    window.dispatchEvent(
-      new CustomEvent('podcastia-open-podcast', { detail: getPodcastWithAudio(podcast) }),
-    )
+    setSelectedPodcast(podcast)
+    setIsSidebarOpen(true)
+  }
+
+  const closeSidebar = () => {
+    setIsSidebarOpen(false)
+    setSelectedPodcast(null)
   }
 
   const formatTime = (seconds) => {

@@ -75,11 +75,16 @@ const normalizeReactionsForViewer = (reactions, viewerId) => {
     .filter((reaction) => Number(reaction.count || 0) > 0)
 }
 
-const resolveMediaUrl = (path) => {
+const resolveMediaUrl = (path, userId) => {
   const safePath = String(path || '').trim()
   if (!safePath) return ''
   if (/^https?:\/\//i.test(safePath)) return safePath
-  return `${API_BASE_URL}/${safePath.replace(/^\/+/, '')}`
+  if (userId) {
+    return `${API_BASE_URL}/users/${userId}/profile-image?t=${Date.now()}`
+  }
+  const normalizedPath = safePath.replace(/^\/+/, '')
+  const separator = normalizedPath.includes('?') ? '&' : '?'
+  return `${API_BASE_URL}/${normalizedPath}${separator}t=${Date.now()}`
 }
 
 const createWsUrl = (token) => {
@@ -705,7 +710,7 @@ function MessagesPage() {
               >
                 <span className="conversation-avatar">
                   {friend.profilePicturePath ? (
-                    <img src={resolveMediaUrl(friend.profilePicturePath)} alt="" />
+                    <img src={resolveMediaUrl(friend.profilePicturePath, friend.id)} alt="" />
                   ) : (
                     getInitial(friend.username)
                   )}
@@ -730,7 +735,10 @@ function MessagesPage() {
                 >
                   <span className="chat-avatar">
                     {activeFriend.profilePicturePath ? (
-                      <img src={resolveMediaUrl(activeFriend.profilePicturePath)} alt="" />
+                      <img
+                        src={resolveMediaUrl(activeFriend.profilePicturePath, activeFriend.id)}
+                        alt=""
+                      />
                     ) : (
                       getInitial(activeFriend.username)
                     )}

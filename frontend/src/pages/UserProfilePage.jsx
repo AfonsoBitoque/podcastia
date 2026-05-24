@@ -62,12 +62,16 @@ const getAvatarInitial = (username) => {
   return safeName.charAt(0).toUpperCase()
 }
 
-const resolveProfilePicture = (path) => {
+const resolveProfilePicture = (path, userId) => {
   const safePath = String(path || '').trim()
   if (!safePath) return ''
   if (/^https?:\/\//i.test(safePath)) return safePath
+  if (userId) {
+    return `${API_BASE_URL}/users/${userId}/profile-image?t=${Date.now()}`
+  }
   const normalizedPath = safePath.replace(/^\/+/, '')
-  return `${API_BASE_URL}/${normalizedPath}`
+  const separator = normalizedPath.includes('?') ? '&' : '?'
+  return `${API_BASE_URL}/${normalizedPath}${separator}t=${Date.now()}`
 }
 
 const TOPIC_LABELS = {
@@ -104,7 +108,7 @@ function UserProfilePage() {
   const [avatarLoading, setAvatarLoading] = useState(false)
   const [showRemoveModal, setShowRemoveModal] = useState(false)
 
-  const avatarUrl = !avatarFailed ? resolveProfilePicture(user?.profilePicturePath) : ''
+  const avatarUrl = !avatarFailed ? resolveProfilePicture(user?.profilePicturePath, id) : ''
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -302,46 +306,6 @@ function UserProfilePage() {
 
   return (
     <main className="user-page" aria-labelledby="user-title">
-      {showRemoveModal && (
-        <div className="modal-backdrop">
-          <div
-            className="modal-content"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="modal-title"
-          >
-            <h2 id="modal-title" style={{ marginTop: 0 }}>
-              Remover Amigo
-            </h2>
-            <p>Tem a certeza que deseja remover {user.username} da sua lista de amigos?</p>
-            <div
-              style={{
-                display: 'flex',
-                gap: '1rem',
-                marginTop: '1.5rem',
-                justifyContent: 'flex-end',
-              }}
-            >
-              <button
-                className="user-action-btn"
-                onClick={() => setShowRemoveModal(false)}
-                disabled={relationLoading}
-              >
-                Cancelar
-              </button>
-              <button
-                className="user-action-btn user-action-btn--danger"
-                style={{ background: '#ef4444', color: 'white', border: 'none' }}
-                onClick={() => handleRelationAction('remove')}
-                disabled={relationLoading}
-              >
-                {relationLoading ? 'A remover...' : 'Remover'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <section className="user-profile-shell">
         <div className="user-banner" aria-hidden="true" />
 
@@ -411,19 +375,79 @@ function UserProfilePage() {
                   </>
                 )}
                 {relationStatus === 'FRIENDS' && (
-                  <button
-                    className="user-action-btn"
-                    style={{
-                      padding: '0.4rem 0.8rem',
-                      fontSize: '0.85rem',
-                      color: '#ef4444',
-                      borderColor: '#ef4444',
-                    }}
-                    onClick={() => setShowRemoveModal(true)}
-                    disabled={relationLoading}
-                  >
-                    Remover Amigo
-                  </button>
+                  <>
+                    {!showRemoveModal ? (
+                      <button
+                        className="user-action-btn"
+                        style={{
+                          padding: '0.4rem 0.8rem',
+                          fontSize: '0.85rem',
+                          color: '#ef4444',
+                          borderColor: '#ef4444',
+                        }}
+                        onClick={() => setShowRemoveModal(true)}
+                        disabled={relationLoading}
+                      >
+                        Remover Amigo
+                      </button>
+                    ) : (
+                      <div
+                        className="friend-remove-confirm-inline"
+                        role="dialog"
+                        aria-label="Confirmar remoção de amigo"
+                        style={{
+                          padding: '0.75rem',
+                          backgroundColor: 'rgba(244, 67, 54, 0.06)',
+                          border: '1px solid rgba(244, 67, 54, 0.15)',
+                          borderRadius: '6px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.5rem',
+                          width: '100%',
+                          maxWidth: '320px',
+                          animation: 'slideDown 0.2s ease-out',
+                        }}
+                      >
+                        <p
+                          style={{ margin: 0, fontSize: '0.85rem', color: '#333', fontWeight: 500 }}
+                        >
+                          Tem a certeza que deseja remover {formatText(user.username)} da sua lista
+                          de amigos?
+                        </p>
+                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                          <button
+                            className="user-action-btn"
+                            style={{
+                              padding: '0.25rem 0.6rem',
+                              fontSize: '0.8rem',
+                              minHeight: 'auto',
+                            }}
+                            onClick={() => setShowRemoveModal(false)}
+                            disabled={relationLoading}
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            className="user-action-btn"
+                            style={{
+                              padding: '0.25rem 0.6rem',
+                              fontSize: '0.8rem',
+                              minHeight: 'auto',
+                              background: '#ef4444',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                            }}
+                            onClick={() => handleRelationAction('remove')}
+                            disabled={relationLoading}
+                          >
+                            {relationLoading ? 'A remover...' : 'Remover'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
