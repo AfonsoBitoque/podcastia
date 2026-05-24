@@ -6,8 +6,8 @@ import AdminPodcastManagement from '../components/admin/AdminPodcastManagement'
 import AdminUserManagement from '../components/admin/AdminUserManagement'
 import AdminAnalytics from '../components/admin/AdminAnalytics'
 import AdminLogs from '../components/admin/AdminLogs'
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
+import { API_BASE_URL } from '../shared/config/env'
+import { getToken } from '../shared/storage/authStorage'
 
 const isAdminUser = (user) => {
   const type = user?.type || user?.userType
@@ -25,7 +25,7 @@ function AdminPage() {
     // Check if user is admin
     const checkAdminAccess = async () => {
       try {
-        const token = localStorage.getItem('token')
+        const token = getToken()
         if (!token) {
           navigate('/login')
           return

@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import '../styles/messages-page.css'
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
-const WS_BASE_URL = (import.meta.env.VITE_WS_BASE_URL || '').trim().replace(/\/$/, '')
+import { API_BASE_URL, WS_BASE_URL } from '../shared/config/env'
+import { getStoredUser, getToken } from '../shared/storage/authStorage'
+import { resolveProfilePicture } from '../shared/utils/media'
+import ChatHeader from '../features/messages/components/ChatHeader'
+import ConversationList from '../features/messages/components/ConversationList'
+import MessageComposer from '../features/messages/components/MessageComposer'
+import QuickReplies from '../features/messages/components/QuickReplies'
 
 const QUICK_REPLIES = [
   'Vou ouvir isto hoje.',
@@ -14,22 +18,7 @@ const QUICK_REPLIES = [
 const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥']
 const PENDING_REACTIONS_STORAGE_PREFIX = 'podcastia.pendingReactions'
 
-const parseStoredUser = () => {
-  try {
-    const storedUser = localStorage.getItem('user')
-    return storedUser ? JSON.parse(storedUser) : null
-  } catch {
-    return null
-  }
-}
-
-const getToken = () => localStorage.getItem('token') || ''
-
-const getInitial = (name) =>
-  String(name || '?')
-    .trim()
-    .charAt(0)
-    .toUpperCase()
+const parseStoredUser = () => getStoredUser()
 
 const getPendingReactionsStorageKey = (userId) =>
   `${PENDING_REACTIONS_STORAGE_PREFIX}.${userId || 'guest'}`
@@ -75,17 +64,7 @@ const normalizeReactionsForViewer = (reactions, viewerId) => {
     .filter((reaction) => Number(reaction.count || 0) > 0)
 }
 
-const resolveMediaUrl = (path, userId) => {
-  const safePath = String(path || '').trim()
-  if (!safePath) return ''
-  if (/^https?:\/\//i.test(safePath)) return safePath
-  if (userId) {
-    return `${API_BASE_URL}/users/${userId}/profile-image?t=${Date.now()}`
-  }
-  const normalizedPath = safePath.replace(/^\/+/, '')
-  const separator = normalizedPath.includes('?') ? '&' : '?'
-  return `${API_BASE_URL}/${normalizedPath}${separator}t=${Date.now()}`
-}
+const resolveMediaUrl = resolveProfilePicture
 
 const createWsUrl = (token) => {
   if (WS_BASE_URL) {
@@ -149,12 +128,15 @@ function MessagesPage() {
   const [friendsStatus, setFriendsStatus] = useState('loading')
   const [historyStatus, setHistoryStatus] = useState('idle')
   const [socketStatus, setSocketStatus] = useState('offline')
+  const [socketRetryKey, setSocketRetryKey] = useState(0)
   const [error, setError] = useState('')
   const [draft, setDraft] = useState('')
   const [activeReactionPickerId, setActiveReactionPickerId] = useState(null)
   const [reactionPulseMessageId, setReactionPulseMessageId] = useState(null)
 
   const socketRef = useRef(null)
+  const reconnectTimeoutRef = useRef(null)
+  const reconnectAttemptRef = useRef(0)
   const activeFriendRef = useRef(null)
   const userIdRef = useRef(sessionUser?.id || null)
   const messagesEndRef = useRef(null)
@@ -539,6 +521,7 @@ function MessagesPage() {
     socket.addEventListener('message', (event) => {
       parseStompFrames(String(event.data)).forEach((frame) => {
         if (frame.command === 'CONNECTED') {
+          reconnectAttemptRef.current = 0
           setSocketStatus('online')
           socket.send(
             encodeStompFrame('SUBSCRIBE', {
@@ -565,18 +548,32 @@ function MessagesPage() {
       })
     })
 
+    const scheduleReconnect = () => {
+      window.clearTimeout(reconnectTimeoutRef.current)
+      const delay = Math.min(1000 * 2 ** Math.min(reconnectAttemptRef.current, 4), 15000)
+      reconnectAttemptRef.current += 1
+      reconnectTimeoutRef.current = window.setTimeout(() => {
+        setSocketRetryKey((current) => current + 1)
+      }, delay)
+    }
+
     socket.addEventListener('close', () => {
       if (!isClosedByPage) {
         setSocketStatus('offline')
+        scheduleReconnect()
       }
     })
 
     socket.addEventListener('error', () => {
       setSocketStatus('error')
+      if (!isClosedByPage) {
+        socket.close()
+      }
     })
 
     return () => {
       isClosedByPage = true
+      window.clearTimeout(reconnectTimeoutRef.current)
       socket.close()
       if (socketRef.current === socket) {
         socketRef.current = null
@@ -584,7 +581,7 @@ function MessagesPage() {
     }
     // The realtime handler reads current refs/state helpers; reconnecting follows auth changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionUser?.id, token])
+  }, [sessionUser?.id, socketRetryKey, token])
 
   useEffect(() => {
     if (socketStatus !== 'online' || !sessionUser?.id) return
@@ -615,6 +612,7 @@ function MessagesPage() {
     () => () => {
       window.clearTimeout(reactionLongPressTimeoutRef.current)
       window.clearTimeout(reactionPulseTimeoutRef.current)
+      window.clearTimeout(reconnectTimeoutRef.current)
     },
     [],
   )
@@ -681,74 +679,26 @@ function MessagesPage() {
   return (
     <main className="messages-page" aria-labelledby="messages-title">
       <section className="messages-shell">
-        <aside className="conversation-list" aria-label="Conversas">
-          <div className="conversation-list__header">
-            <div>
-              <p className="messages-eyebrow">Podcastia</p>
-              <h1 id="messages-title">Mensagens</h1>
-            </div>
-            <span
-              className={`connection-status-dot connection-status-dot--${socketStatus}`}
-              aria-label={connectionLabel}
-              title={connectionLabel}
-            />
-          </div>
-
-          <div className="conversation-items">
-            <p className="messages-section-title">Conversas</p>
-            {friendsStatus === 'loading' && <p className="messages-muted">A carregar amigos...</p>}
-            {friendsStatus === 'error' && <p className="messages-warning">{error}</p>}
-            {friendsStatus === 'ready' && conversations.length === 0 && (
-              <p className="messages-muted">Ainda nao tens amigos para iniciar uma conversa.</p>
-            )}
-            {conversations.map((friend) => (
-              <button
-                key={friend.id}
-                type="button"
-                className={`conversation-item ${String(activeFriendId) === String(friend.id) ? 'active' : ''}`}
-                onClick={() => setActiveFriendId(friend.id)}
-              >
-                <span className="conversation-avatar">
-                  {friend.profilePicturePath ? (
-                    <img src={resolveMediaUrl(friend.profilePicturePath, friend.id)} alt="" />
-                  ) : (
-                    getInitial(friend.username)
-                  )}
-                </span>
-                <span className="conversation-copy">
-                  <strong>{friend.username}</strong>
-                  <span>{friend.lastMessage?.content || 'Abre a conversa para comecar.'}</span>
-                </span>
-              </button>
-            ))}
-          </div>
-        </aside>
+        <ConversationList
+          socketStatus={socketStatus}
+          connectionLabel={connectionLabel}
+          friendsStatus={friendsStatus}
+          error={error}
+          conversations={conversations}
+          activeFriendId={activeFriendId}
+          onSelectFriend={setActiveFriendId}
+          resolveMediaUrl={resolveMediaUrl}
+        />
 
         <section className="chat-panel" aria-label="Janela de chat">
           {activeFriend ? (
             <>
-              <header className="chat-header">
-                <div
-                  className="chat-user"
-                  onClick={() => navigate(`/user/${activeFriend.id}`)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <span className="chat-avatar">
-                    {activeFriend.profilePicturePath ? (
-                      <img
-                        src={resolveMediaUrl(activeFriend.profilePicturePath, activeFriend.id)}
-                        alt=""
-                      />
-                    ) : (
-                      getInitial(activeFriend.username)
-                    )}
-                  </span>
-                  <div>
-                    <h2>{activeFriend.username}</h2>
-                    <p>{chatSubtitle}</p>
-                  </div>
-                </div>
-              </header>
+              <ChatHeader
+                activeFriend={activeFriend}
+                chatSubtitle={chatSubtitle}
+                onOpenProfile={(friendId) => navigate(`/user/${friendId}`)}
+                resolveMediaUrl={resolveMediaUrl}
+              />
 
               <div className="chat-thread" aria-live="polite">
                 {historyStatus === 'loading' && (
@@ -891,47 +841,17 @@ function MessagesPage() {
                 <div ref={messagesEndRef} />
               </div>
 
-              <div className="quick-replies" aria-label="Sugestoes rapidas">
-                {QUICK_REPLIES.map((reply) => (
-                  <button key={reply} type="button" onClick={() => setDraft(reply)}>
-                    {reply}
-                  </button>
-                ))}
-              </div>
+              <QuickReplies replies={QUICK_REPLIES} onSelectReply={setDraft} />
 
               {error && <p className="messages-warning chat-warning">{error}</p>}
 
-              <form className="message-composer" onSubmit={handleSendMessage}>
-                <button type="button" className="composer-icon-btn" aria-label="Adicionar anexo">
-                  <svg
-                    className="composer-svg-icon"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-8.95 8.95a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-                  </svg>
-                </button>
-                <input
-                  type="text"
-                  value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
-                  placeholder={`Mensagem para ${activeFriend.username}`}
-                  maxLength={2000}
-                />
-                <button
-                  type="submit"
-                  className="send-message-btn"
-                  disabled={!draft.trim() || !canSendMessage}
-                >
-                  <span className="send-icon" aria-hidden="true" />
-                  <span className="visually-hidden">Enviar mensagem</span>
-                </button>
-              </form>
+              <MessageComposer
+                draft={draft}
+                activeFriend={activeFriend}
+                canSendMessage={canSendMessage}
+                onDraftChange={setDraft}
+                onSendMessage={handleSendMessage}
+              />
             </>
           ) : (
             <div className="chat-empty-state chat-empty-state--full">

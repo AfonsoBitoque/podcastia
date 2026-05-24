@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import '../styles/generate-page.css'
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
+import { API_BASE_URL } from '../shared/config/env'
+import { getToken } from '../shared/storage/authStorage'
+import { getPodcastId, resolvePodcastAudioUrl } from '../shared/utils/podcast'
 
 const TAG_OPTIONS = [
   { value: 'DESPORTO', label: 'Desporto' },
@@ -28,7 +29,7 @@ function GeneratePage() {
   const [generatedPodcast, setGeneratedPodcast] = useState(null)
   const [isTogglingVisibility, setIsTogglingVisibility] = useState(false)
 
-  const token = localStorage.getItem('token')
+  const token = getToken()
 
   useEffect(() => {
     if (!token) {
@@ -109,12 +110,18 @@ function GeneratePage() {
 
   const handleToggleVisibility = async () => {
     if (!generatedPodcast) return
+    const podcastId = getPodcastId(generatedPodcast)
+    if (!podcastId) {
+      setError('Nao foi possivel identificar o podcast para alterar a visibilidade.')
+      return
+    }
+
     setIsTogglingVisibility(true)
 
     try {
       const newPublico = !generatedPodcast.publico
       const response = await fetch(
-        `${API_BASE_URL}/api/podcasts/${generatedPodcast.podcastId}/visibility`,
+        `${API_BASE_URL}/api/podcasts/${podcastId}/visibility`,
         {
           method: 'PATCH',
           headers: {
@@ -245,7 +252,7 @@ function GeneratePage() {
                 </div>
 
                 <div className="result-player">
-                  <audio src={`${API_BASE_URL}${generatedPodcast.audioUrl}`} controls />
+                  <audio src={resolvePodcastAudioUrl(generatedPodcast)} controls />
                 </div>
 
                 <div className="result-actions">

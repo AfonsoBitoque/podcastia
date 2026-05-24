@@ -1,5 +1,12 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useState, useEffect, useCallback } from 'react'
+import {
+  clearSession,
+  getStoredUser,
+  getToken,
+  saveSession,
+  updateStoredUser,
+} from '../shared/storage/authStorage'
 
 export const AuthContext = createContext(null)
 
@@ -13,11 +20,10 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const loadAuthState = () => {
       try {
-        const token = localStorage.getItem('token')
-        const userRaw = localStorage.getItem('user')
+        const token = getToken()
+        const parsedUser = getStoredUser()
 
-        if (token && userRaw) {
-          const parsedUser = JSON.parse(userRaw)
+        if (token && parsedUser) {
           setUser(parsedUser)
           setIsAuthenticated(true)
           setHasCompletedOnboarding(parsedUser.hasCompletedOnboarding === true)
@@ -25,8 +31,7 @@ export function AuthProvider({ children }) {
       } catch (error) {
         console.error('Error loading auth state:', error)
         // Clear invalid state
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
+        clearSession()
       } finally {
         setIsLoading(false)
       }
@@ -38,12 +43,11 @@ export function AuthProvider({ children }) {
   // Listen for auth changes from other components
   useEffect(() => {
     const handleAuthChange = () => {
-      const token = localStorage.getItem('token')
-      const userRaw = localStorage.getItem('user')
+      const token = getToken()
+      const parsedUser = getStoredUser()
 
-      if (token && userRaw) {
+      if (token && parsedUser) {
         try {
-          const parsedUser = JSON.parse(userRaw)
           setUser(parsedUser)
           setIsAuthenticated(true)
           setHasCompletedOnboarding(parsedUser.hasCompletedOnboarding === true)
@@ -64,21 +68,17 @@ export function AuthProvider({ children }) {
   }, [])
 
   const login = useCallback((token, userData) => {
-    localStorage.setItem('token', token)
-    localStorage.setItem('user', JSON.stringify(userData))
+    saveSession(token, userData)
     setUser(userData)
     setIsAuthenticated(true)
     setHasCompletedOnboarding(userData.hasCompletedOnboarding === true)
-    window.dispatchEvent(new Event('auth-change'))
   }, [])
 
   const logout = useCallback(() => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
+    clearSession()
     setUser(null)
     setIsAuthenticated(false)
     setHasCompletedOnboarding(false)
-    window.dispatchEvent(new Event('auth-change'))
   }, [])
 
   const completeOnboarding = useCallback(
@@ -88,10 +88,12 @@ export function AuthProvider({ children }) {
         hasCompletedOnboarding: true,
         topics: topics || [],
       }
-      localStorage.setItem('user', JSON.stringify(updatedUser))
+      updateStoredUser({
+        hasCompletedOnboarding: true,
+        topics: topics || [],
+      })
       setUser(updatedUser)
       setHasCompletedOnboarding(true)
-      window.dispatchEvent(new Event('auth-change'))
     },
     [user],
   )
