@@ -195,6 +195,7 @@ public class DataSeeder implements CommandLineRunner {
         p.setConteudoPath("generated-podcasts/" + audioFileName);
         p.setCoverImagePath("/images/default-podcast-cover.svg");
         p.setTags(tags);
+        p.setPublico(true); // Make podcasts public so they appear in community/trending
         podcastRepository.save(p);
     }
 

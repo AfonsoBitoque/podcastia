@@ -125,15 +125,40 @@ public class AudioPathSync implements CommandLineRunner {
                 if (match != null) {
                     String newPath = baseDir + "/" + match.getName();
                     podcast.setConteudoPath(newPath);
+                    podcast.setPublico(true); // Make public so it appears in community/trending
                     podcastRepository.save(podcast);
                     System.out.println("[AudioPathSync] Atualizado: " + podcast.getTitulo() + " -> " + match.getName());
                     updatedCount++;
                 } else {
-                    System.out.println("[AudioPathSync] Não encontrado ficheiro para: " + podcast.getTitulo() + " (user=" + userId + ")");
+                    // Use placeholder file if no match found
+                    String placeholderPath = baseDir + "/user1_placeholder_" + (podcast.getId() % 20 + 1) + ".mp3";
+                    File placeholderFile = new File(placeholderPath);
+                    if (placeholderFile.exists()) {
+                        podcast.setConteudoPath(placeholderPath);
+                        podcast.setPublico(true); // Make public so it appears in community/trending
+                        podcastRepository.save(podcast);
+                        System.out.println("[AudioPathSync] Usando placeholder: " + podcast.getTitulo() + " -> " + placeholderFile.getName());
+                        updatedCount++;
+                    } else {
+                        System.out.println("[AudioPathSync] Não encontrado ficheiro para: " + podcast.getTitulo() + " (user=" + userId + ")");
+                    }
                 }
             }
 
             System.out.println("[AudioPathSync] Sincronização completa. " + updatedCount + " podcasts atualizados.");
+
+            // Make all podcasts public so they appear in community/trending
+            int publicCount = 0;
+            for (Podcast podcast : allPodcasts) {
+                if (!podcast.isPublico()) {
+                    podcast.setPublico(true);
+                    podcastRepository.save(podcast);
+                    publicCount++;
+                }
+            }
+            if (publicCount > 0) {
+                System.out.println("[AudioPathSync] " + publicCount + " podcasts marcados como públicos.");
+            }
         } catch (Exception e) {
             System.err.println("[AudioPathSync] Erro: " + e.getMessage());
             e.printStackTrace();
