@@ -1,7 +1,14 @@
 .friends-page {
-  padding: 2rem;
-  max-width: 1200px;
+  flex: 1;
+  width: min(100%, 1200px);
   margin: 0 auto;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(circle at 10% 20%, rgba(224, 90, 42, 0.14), transparent 36%),
+    radial-gradient(circle at 90% 80%, rgba(240, 137, 92, 0.17), transparent 36%),
+    linear-gradient(140deg, #fcf2d7, #fde6d8 56%, #ffe5c8);
 }
 
 .friends-header {
