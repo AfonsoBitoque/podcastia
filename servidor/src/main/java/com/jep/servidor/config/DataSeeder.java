@@ -136,7 +136,7 @@ public class DataSeeder implements CommandLineRunner {
                 user.setTag("1111");
                 user.setEmail("demo1@podcastia.com");
                 user.setPassword(passwordEncoder.encode("demo"));
-                user.setUserType(User.UserType.USER);
+                user.setUserType(User.UserType.USERNORMAL);
                 user.setBio("Utilizador de demonstração — Desporto e Finanças");
                 return userRepository.save(user);
             });
@@ -154,7 +154,7 @@ public class DataSeeder implements CommandLineRunner {
                 user.setTag("2222");
                 user.setEmail("demo2@podcastia.com");
                 user.setPassword(passwordEncoder.encode("demo"));
-                user.setUserType(User.UserType.USER);
+                user.setUserType(User.UserType.USERNORMAL);
                 user.setBio("Utilizador de demonstração — Política e Cultura");
                 return userRepository.save(user);
             });
@@ -195,7 +195,6 @@ public class DataSeeder implements CommandLineRunner {
         p.setConteudoPath("generated-podcasts/" + audioFileName);
         p.setCoverImagePath("/images/default-podcast-cover.svg");
         p.setTags(tags);
-        p.setVisivel(true);
         podcastRepository.save(p);
     }
 
