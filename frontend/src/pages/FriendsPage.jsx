@@ -16,6 +16,33 @@ const resolveProfilePicture = (path, userId) => {
   return `${API_BASE_URL}/${normalizedPath}${separator}t=${Date.now()}`
 }
 
+const UsersEmptyIcon = () => (
+  <svg
+    className="empty-state-icon"
+    viewBox="0 0 64 64"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <circle cx="25" cy="23" r="9" />
+    <path d="M10 50c1.8-10 8.1-16 15-16s13.2 6 15 16" />
+    <circle cx="44" cy="27" r="7" />
+    <path d="M38 39c6.4.8 11.1 4.9 13 11" />
+  </svg>
+)
+
+const RequestsEmptyIcon = () => (
+  <svg
+    className="empty-state-icon"
+    viewBox="0 0 64 64"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <path d="M18 29c0-8.5 5.8-15 14-15s14 6.5 14 15v8l5 8H13l5-8v-8Z" />
+    <path d="M27 49c1.1 3 2.8 4.5 5 4.5s3.9-1.5 5-4.5" />
+    <path d="M32 10v4" />
+  </svg>
+)
+
 function FriendsPage() {
   const [friends, setFriends] = useState([])
   const [pendingRequests, setPendingRequests] = useState([])
@@ -105,9 +132,15 @@ function FriendsPage() {
         <section className="friends-column">
           <h2>Os meus Amigos ({friends.length})</h2>
           {friends.length === 0 ? (
-            <p className="empty-message">
-              Ainda não tens amigos. Explora a app para te conectares!
-            </p>
+            <div className="empty-state">
+              <UsersEmptyIcon />
+              <p className="empty-message">
+                Ainda não tens amigos. Explora a app para te conectares!
+              </p>
+              <Link to="/explorar?tab=users" className="empty-action">
+                Procurar Amigos
+              </Link>
+            </div>
           ) : (
             <ul className="friend-list">
               {friends.map((friend) => {
@@ -175,7 +208,10 @@ function FriendsPage() {
         <section className="friends-column requests-column">
           <h2>Pedidos de Amizade ({pendingRequests.length})</h2>
           {pendingRequests.length === 0 ? (
-            <p className="empty-message">Não tens pedidos pendentes.</p>
+            <div className="empty-state">
+              <RequestsEmptyIcon />
+              <p className="empty-message">Não tens pedidos pendentes.</p>
+            </div>
           ) : (
             <ul className="friend-list">
               {pendingRequests.map((request) => (
