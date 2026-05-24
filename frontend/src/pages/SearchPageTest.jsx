@@ -5,7 +5,7 @@ import '../styles/search-page.css'
 import '../styles/trending-page.css'
 import '../styles/home-page.css'
 import { API_BASE_URL } from '../shared/config/env'
-import { resolveAssetUrl, resolveProfilePicture } from '../shared/utils/media'
+import { resolveProfilePicture } from '../shared/utils/media'
 import { getPodcastTags } from '../shared/utils/podcast'
 const PAGE_SIZE = 8
 
