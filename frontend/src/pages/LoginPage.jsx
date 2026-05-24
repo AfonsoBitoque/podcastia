@@ -64,6 +64,7 @@ function LoginPage() {
             id: data.userId,
             username: data.username,
             type: data.userType,
+            playbackSpeed: data.playbackSpeed,
             hasCompletedOnboarding: data.hasCompletedOnboarding,
             topics: data.topics || [],
           }),
