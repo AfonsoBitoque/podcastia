@@ -9,6 +9,11 @@ import AdminLogs from '../components/admin/AdminLogs'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
 
+const isAdminUser = (user) => {
+  const type = user?.type || user?.userType
+  return type === 'USERADMIN' || type === 'USER_ADMIN'
+}
+
 function AdminPage() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -45,7 +50,7 @@ function AdminPage() {
         const userData = await response.json()
 
         // Check if user has admin role
-        if (userData.userType !== 'USER_ADMIN') {
+        if (!isAdminUser(userData)) {
           navigate('/', { state: { error: 'Access denied. Admin privileges required.' } })
           return
         }
@@ -90,7 +95,7 @@ function AdminPage() {
   return (
     <div className="admin-page">
       <header className="admin-header">
-        <h1>Admin Dashboard</h1>
+        <h1 className="admin-page-title">Admin Dashboard</h1>
         <div className="admin-user-info">
           <span>Welcome, {user?.username}</span>
           <button

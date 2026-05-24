@@ -18,6 +18,11 @@ const getCategoryQuery = (value) => {
   return category?.query || value
 }
 
+const isAdminUser = (user) => {
+  const type = user?.type || user?.userType
+  return type === 'USERADMIN' || type === 'USER_ADMIN'
+}
+
 function Header() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
@@ -258,6 +263,7 @@ function Header() {
   }
 
   const profileName = user?.username || 'Maria'
+  const showAdminLink = isAdminUser(user)
 
   return (
     <header className="site-header">
@@ -372,6 +378,11 @@ function Header() {
         <div className="site-actions">
           {user ? (
             <>
+              {showAdminLink && (
+                <NavLink to="/admin" className="site-admin-cta">
+                  Admin
+                </NavLink>
+              )}
               <NavLink to="/generate" className="site-generate-cta">
                 Gerar Podcast
               </NavLink>
