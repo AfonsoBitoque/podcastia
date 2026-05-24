@@ -22,6 +22,14 @@ function TrendingPage() {
     togglePlayPause,
   } = useBackgroundAudio()
 
+  const getPodcastWithAudio = (podcast) => {
+    const podcastId = podcast.id || podcast.podcastId
+    return {
+      ...podcast,
+      audioUrl: podcast.audioUrl || `${API_BASE_URL}/api/podcasts/${podcastId}/audio`,
+    }
+  }
+
   const fetchAllPodcasts = async () => {
     setLoading(true)
     setError('')
@@ -49,10 +57,7 @@ function TrendingPage() {
   }, [])
 
   const handlePlayNow = async (podcast) => {
-    const podcastWithUrl = {
-      ...podcast,
-      audioUrl: `${API_BASE_URL}/api/podcasts/${podcast.id}/audio`,
-    }
+    const podcastWithUrl = getPodcastWithAudio(podcast)
 
     const podcastId = podcast.id || podcast.podcastId
     const currentId = playingPodcast?.id || playingPodcast?.podcastId
@@ -69,7 +74,9 @@ function TrendingPage() {
   }
 
   const openSidebar = (podcast) => {
-    window.dispatchEvent(new CustomEvent('podcastia-open-podcast', { detail: podcast }))
+    window.dispatchEvent(
+      new CustomEvent('podcastia-open-podcast', { detail: getPodcastWithAudio(podcast) }),
+    )
   }
 
   const formatTime = (seconds) => {
@@ -124,9 +131,10 @@ function TrendingPage() {
     )
   }
 
-  const SectionHeader = ({ title, subtitle, action }) => (
-    <div className="section-header">
+  const SectionHeader = ({ title, subtitle, action, badge }) => (
+    <div className={`section-header ${badge ? 'section-header-featured' : ''}`}>
       <div className="section-title-group">
+        {badge && <span className="section-context-badge">{badge}</span>}
         <h2 className="section-title">{title}</h2>
         <p className="section-subtitle">{subtitle}</p>
       </div>
@@ -141,9 +149,11 @@ function TrendingPage() {
   if (loading) {
     return (
       <main className="trending-page">
-        <div className="trending-loading">
-          <div className="trending-spinner" />
-          <p>A carregar tendências...</p>
+        <div className="trending-shell">
+          <div className="trending-loading">
+            <div className="trending-spinner" />
+            <p>A carregar tendências...</p>
+          </div>
         </div>
       </main>
     )
@@ -152,11 +162,13 @@ function TrendingPage() {
   if (error) {
     return (
       <main className="trending-page">
-        <div className="trending-error">
-          <p>{error}</p>
-          <button onClick={fetchAllPodcasts} className="retry-btn">
-            Tentar novamente
-          </button>
+        <div className="trending-shell">
+          <div className="trending-error">
+            <p>{error}</p>
+            <button onClick={fetchAllPodcasts} className="retry-btn">
+              Tentar novamente
+            </button>
+          </div>
         </div>
       </main>
     )
@@ -164,60 +176,65 @@ function TrendingPage() {
 
   return (
     <main className="trending-page">
-      {/* Hero Section - Podcasts do Dia */}
-      <section className="trending-section">
-        <SectionHeader title="Podcasts do Dia" subtitle="Escolhas personalizadas para ti" />
-        <div className="trending-row">
-          {dailyPodcasts.map((podcast) => (
-            <PodcastCard key={podcast.id} podcast={podcast} />
-          ))}
-        </div>
-      </section>
+      <div className="trending-shell">
+        {/* Hero Section - Podcasts do Dia */}
+        <section className="trending-section">
+          <SectionHeader
+            badge={'\uD83D\uDD25 EM DESTAQUE'}
+            title="Podcasts do Dia"
+            subtitle={'A tua curadoria di\u00E1ria baseada no que est\u00E1 em alta na Podcastia.'}
+          />
+          <div className="trending-row">
+            {dailyPodcasts.map((podcast) => (
+              <PodcastCard key={podcast.id} podcast={podcast} />
+            ))}
+          </div>
+        </section>
 
-      {/* Tendências - Horizontal Scroll */}
-      <section className="trending-section">
-        <SectionHeader
-          title="Tendências"
-          subtitle="O que está em alta esta semana"
-          action={() => navigate('/search-test')}
-        />
-        <div className="trending-row">
-          {trendingPodcasts.map((podcast) => (
-            <PodcastCard key={podcast.id} podcast={podcast} />
-          ))}
-        </div>
-      </section>
+        {/* Tendências - Horizontal Scroll */}
+        <section className="trending-section">
+          <SectionHeader
+            title="Tendências"
+            subtitle="O que está em alta esta semana"
+            action={() => navigate('/search-test')}
+          />
+          <div className="trending-row">
+            {trendingPodcasts.map((podcast) => (
+              <PodcastCard key={podcast.id} podcast={podcast} />
+            ))}
+          </div>
+        </section>
 
-      {/* Mais Populares - Lista */}
-      <section className="trending-section">
-        <SectionHeader title="Mais Populares" subtitle="Os mais ouvidos da comunidade" />
-        <div className="popular-list">
-          {popularPodcasts.map((podcast, index) => (
-            <div key={podcast.id} className="popular-item">
-              <span className="popular-rank">{index + 1}</span>
-              <div className="popular-cover">
-                <div className="popular-cover-placeholder">🎙</div>
+        {/* Mais Populares - Lista */}
+        <section className="trending-section">
+          <SectionHeader title="Mais Populares" subtitle="Os mais ouvidos da comunidade" />
+          <div className="popular-list">
+            {popularPodcasts.map((podcast, index) => (
+              <div key={podcast.id} className="popular-item">
+                <span className="popular-rank">{index + 1}</span>
+                <div className="popular-cover">
+                  <div className="popular-cover-placeholder">🎙</div>
+                </div>
+                <div className="popular-info">
+                  <h3 className="popular-title">{podcast.titulo}</h3>
+                  <p className="popular-author">{podcast.user?.username || 'Podcastia'}</p>
+                </div>
+                <span className="popular-duration">{formatTime(podcast.duracao * 60)}</span>
+                <button
+                  className="popular-info-btn"
+                  onClick={() => openSidebar(podcast)}
+                  title="Informações"
+                >
+                  ℹ
+                </button>
+                <button className="popular-play-btn" onClick={() => handlePlayNow(podcast)}>
+                  ▶
+                </button>
               </div>
-              <div className="popular-info">
-                <h3 className="popular-title">{podcast.titulo}</h3>
-                <p className="popular-author">{podcast.user?.username || 'Podcastia'}</p>
-              </div>
-              <span className="popular-duration">{formatTime(podcast.duracao * 60)}</span>
-              <button
-                className="popular-info-btn"
-                onClick={() => openSidebar(podcast)}
-                title="Informações"
-              >
-                ℹ
-              </button>
-              <button className="popular-play-btn" onClick={() => handlePlayNow(podcast)}>
-                ▶
-              </button>
-            </div>
-          ))}
-        </div>
-      </section>
-
+            ))}
+          </div>
+        </section>
+      </div>
     </main>
   )
 }

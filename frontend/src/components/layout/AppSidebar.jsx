@@ -5,7 +5,7 @@ import { useAuth } from '../../hooks/useAuth'
 const mainItems = [
   { to: '/home', label: 'Home', icon: 'home' },
   { to: '/explorar', label: 'Explorar', icon: 'compass' },
-  { to: '/trending', label: 'Tendencias', icon: 'trend' },
+  { to: '/trending', label: 'Tendências', icon: 'trend' },
 ]
 
 const libraryItems = [{ to: '/playlists', label: 'Playlists', icon: 'playlist' }]
