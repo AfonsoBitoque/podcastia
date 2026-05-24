@@ -76,6 +76,7 @@ function ProtectedRoute({ children }) {
 
 function App() {
   const location = useLocation()
+  const { isAuthenticated } = useAuth()
   const [selectedPodcast, setSelectedPodcast] = useState(null)
   const [isPodcastSidebarOpen, setIsPodcastSidebarOpen] = useState(false)
   const [isSelectedPodcastSaved, setIsSelectedPodcastSaved] = useState(false)
@@ -319,7 +320,7 @@ function App() {
         )}
         API_BASE_URL={API_BASE_URL}
       />
-      <PersistentPlayer />
+      {!isAuthPage && isAuthenticated && <PersistentPlayer />}
       <Footer />
     </div>
   )

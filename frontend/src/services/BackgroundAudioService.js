@@ -2,6 +2,33 @@
  * Background Audio Service for Podcastia
  * Handles background playback, media session, audio focus, and state persistence
  */
+const getCurrentAccountKey = () => {
+  try {
+    const token = localStorage.getItem('token')
+    const userRaw = localStorage.getItem('user')
+    if (!token || !userRaw) return null
+
+    const user = JSON.parse(userRaw)
+    const accountId = user?.id || user?.userId || user?.email || user?.username
+    return accountId ? String(accountId) : null
+  } catch {
+    return null
+  }
+}
+
+const getCurrentAccountPlaybackSpeed = () => {
+  try {
+    const userRaw = localStorage.getItem('user')
+    if (!userRaw) return 1.0
+
+    const user = JSON.parse(userRaw)
+    const speed = Number(user?.playbackSpeed)
+    return Number.isFinite(speed) && speed > 0 ? speed : 1.0
+  } catch {
+    return 1.0
+  }
+}
+
 class BackgroundAudioService {
   static instance = null
 
@@ -23,10 +50,12 @@ class BackgroundAudioService {
     this.currentTime = 0
     this.duration = 0
     this.playbackSpeed = 1.0
+    this.accountKey = getCurrentAccountKey()
     this.listeners = new Map()
     this.audioFocusManager = new AudioFocusManager()
     this.stateManager = new AudioStateManager()
     this.notificationManager = new NotificationManager()
+    this.handleAuthChange = null
 
     // Playlist/queue state
     this.queue = []
@@ -53,6 +82,9 @@ class BackgroundAudioService {
     // Initialize notification controls
     this.notificationManager.init()
 
+    // Keep playback scoped to the signed-in account
+    this.setupAuthHandling()
+
     // Handle page visibility changes
     this.setupVisibilityHandling()
 
@@ -77,6 +109,33 @@ class BackgroundAudioService {
     this.mediaSession.setActionHandler('seekto', (details) => {
       this.seek(details.seekTime)
     })
+  }
+
+  setupAuthHandling() {
+    this.handleAuthChange = () => {
+      const nextAccountKey = getCurrentAccountKey()
+      if (nextAccountKey === this.accountKey) return
+
+      const previousAccountKey = this.accountKey
+      if (previousAccountKey && this.currentPodcast) {
+        this.saveState({ accountKey: previousAccountKey, forcePaused: true })
+      }
+
+      this.clearPlayback()
+      this.accountKey = nextAccountKey
+
+      if (nextAccountKey) {
+        const restored = this.restoreState({ accountKey: nextAccountKey, autoPlay: false })
+        if (!restored) {
+          this.setPlaybackSpeed(getCurrentAccountPlaybackSpeed())
+        }
+      } else {
+        this.setPlaybackSpeed(1.0)
+      }
+    }
+
+    window.addEventListener('auth-change', this.handleAuthChange)
+    window.addEventListener('storage', this.handleAuthChange)
   }
 
   setupVisibilityHandling() {
@@ -126,6 +185,14 @@ class BackgroundAudioService {
   }
 
   async loadPodcast(podcast, startTime = 0) {
+    const accountKey = getCurrentAccountKey()
+    if (!accountKey) {
+      this.clearPlayback()
+      return false
+    }
+
+    this.accountKey = accountKey
+    this.clearState(accountKey)
     console.log(
       `[AudioService ID:${this.debugId}] loadPodcast called:`,
       podcast?.titulo,
@@ -144,9 +211,11 @@ class BackgroundAudioService {
     try {
       console.log(`[AudioService ID:${this.debugId}] Setting src to:`, podcast.audioUrl)
       this.audioElement.src = podcast.audioUrl
+      this.audioElement.playbackRate = this.playbackSpeed
 
       console.log(`[AudioService ID:${this.debugId}] Calling load()...`)
-      await this.audioElement.load()
+      this.audioElement.load()
+      this.applyStartTimeWhenReady(startTime)
 
       console.log(`[AudioService ID:${this.debugId}] Audio loaded successfully`)
 
@@ -165,6 +234,33 @@ class BackgroundAudioService {
     }
   }
 
+  applyStartTimeWhenReady(startTime) {
+    const seconds = Number(startTime) || 0
+    if (!this.audioElement || seconds <= 0) return
+
+    const applyStartTime = () => {
+      if (!this.audioElement) return
+
+      const targetTime =
+        this.duration > 0 ? Math.max(0, Math.min(seconds, this.duration)) : Math.max(0, seconds)
+
+      try {
+        this.currentTime = targetTime
+        this.audioElement.currentTime = targetTime
+        this.emit('timeupdate', { currentTime: this.currentTime, duration: this.duration })
+      } catch (error) {
+        console.warn('Failed to apply saved audio position:', error)
+      }
+    }
+
+    if (this.audioElement.readyState >= 1) {
+      applyStartTime()
+      return
+    }
+
+    this.audioElement.addEventListener('loadedmetadata', applyStartTime, { once: true })
+  }
+
   async play() {
     console.log(
       `[AudioService ID:${this.debugId}] play() called, audioElement:`,
@@ -172,6 +268,14 @@ class BackgroundAudioService {
       'currentPodcast:',
       !!this.currentPodcast,
     )
+
+    const accountKey = getCurrentAccountKey()
+    if (!accountKey) {
+      this.clearPlayback()
+      return false
+    }
+
+    this.accountKey = accountKey
 
     if (!this.audioElement || !this.currentPodcast) {
       throw new Error(`[AudioService ID:${this.debugId}] No podcast loaded`)
@@ -226,6 +330,52 @@ class BackgroundAudioService {
 
     this.emit('pause', { podcast: this.currentPodcast, currentTime: this.currentTime })
     this.saveState()
+  }
+
+  clearPlayback() {
+    if (this.audioElement) {
+      this.audioElement.pause()
+      this.audioElement.removeAttribute('src')
+      this.audioElement.load()
+    }
+
+    this.isPlaying = false
+    this.currentPodcast = null
+    this.currentTime = 0
+    this.duration = 0
+    this.playbackSpeed = 1.0
+    if (this.audioElement) {
+      this.audioElement.playbackRate = this.playbackSpeed
+    }
+    this.queue = []
+    this.queueIndex = -1
+    this.shufflePlayed = []
+
+    this.notificationManager.clear()
+    this.audioFocusManager.abandonFocus()
+    this.updateMediaSessionPlaybackState()
+    if (this.mediaSession) {
+      this.mediaSession.metadata = null
+    }
+    this.emit('speedChanged', { speed: this.playbackSpeed })
+    this.emit('cleared')
+    this.emit('queueChanged', {
+      queue: this.queue,
+      index: this.queueIndex,
+      shuffle: this.shuffleMode,
+    })
+  }
+
+  closePlayer() {
+    const accountKey = this.accountKey || getCurrentAccountKey()
+    const playbackSpeed = getCurrentAccountPlaybackSpeed()
+
+    this.clearPlayback()
+
+    if (accountKey) {
+      this.setPlaybackSpeed(playbackSpeed)
+      this.stateManager.saveClosedState(accountKey, playbackSpeed)
+    }
   }
 
   seek(time) {
@@ -431,45 +581,62 @@ class BackgroundAudioService {
     this.emit('error', { code: errorCode, message: errorMessage, originalError: error })
   }
 
-  saveState() {
-    if (!this.currentPodcast) return
+  saveState(options = {}) {
+    const accountKey = options.accountKey || this.accountKey || getCurrentAccountKey()
+    if (!this.currentPodcast || !accountKey) return
 
     const state = {
       podcast: this.currentPodcast,
       currentTime: this.currentTime,
-      isPlaying: this.isPlaying,
+      isPlaying: options.forcePaused ? false : this.isPlaying,
       playbackSpeed: this.playbackSpeed,
       timestamp: Date.now(),
     }
 
-    this.stateManager.saveState(state)
+    this.stateManager.saveState(state, accountKey)
   }
 
-  restoreState() {
-    const state = this.stateManager.getState()
-    if (!state || !state.podcast) return
+  restoreState(options = {}) {
+    const accountKey = options.accountKey || this.accountKey || getCurrentAccountKey()
+    if (!accountKey) {
+      this.clearPlayback()
+      return false
+    }
+
+    this.accountKey = accountKey
+    const state = this.stateManager.getState(accountKey)
+    if (!state) return false
 
     // Don't restore if state is too old (more than 24 hours)
     if (Date.now() - state.timestamp > 24 * 60 * 60 * 1000) {
-      this.clearState()
-      return
+      this.clearState(accountKey)
+      return false
     }
+
+    if (state.closed || !state.podcast) return false
 
     // Restore the podcast and position
     this.loadPodcast(state.podcast, state.currentTime).then(() => {
-      this.setPlaybackSpeed(state.playbackSpeed)
+      const savedSpeed = Number(state.playbackSpeed)
+      this.setPlaybackSpeed(
+        Number.isFinite(savedSpeed) && savedSpeed > 0
+          ? savedSpeed
+          : getCurrentAccountPlaybackSpeed(),
+      )
 
-      if (state.isPlaying) {
+      if (options.autoPlay !== false && state.isPlaying) {
         // Auto-restore playback if it was playing
         this.play().catch(() => {
           // Ignore errors - might not be able to auto-play
         })
       }
     })
+
+    return true
   }
 
-  clearState() {
-    this.stateManager.clearState()
+  clearState(accountKey = this.accountKey) {
+    this.stateManager.clearState(accountKey)
   }
 
   // Event emitter methods
@@ -505,6 +672,11 @@ class BackgroundAudioService {
     if (this.audioElement) {
       this.audioElement.pause()
       this.audioElement = null
+    }
+
+    if (this.handleAuthChange) {
+      window.removeEventListener('auth-change', this.handleAuthChange)
+      window.removeEventListener('storage', this.handleAuthChange)
     }
 
     this.audioFocusManager.destroy()
@@ -585,24 +757,46 @@ class AudioFocusManager {
 // Audio State Manager - handles persistence
 class AudioStateManager {
   constructor() {
-    this.storageKey = 'podcastia_audio_state'
+    this.storageKeyPrefix = 'podcastia_audio_state'
+    this.legacyStorageKey = 'podcastia_audio_state'
   }
 
   init() {
-    // No initialization needed
+    this.clearLegacyState()
   }
 
-  saveState(state) {
+  getStorageKey(accountKey) {
+    return accountKey ? `${this.storageKeyPrefix}:${accountKey}` : null
+  }
+
+  saveState(state, accountKey) {
+    const storageKey = this.getStorageKey(accountKey)
+    if (!storageKey) return
+
     try {
-      localStorage.setItem(this.storageKey, JSON.stringify(state))
+      localStorage.setItem(storageKey, JSON.stringify(state))
     } catch (error) {
       console.warn('Failed to save audio state:', error)
     }
   }
 
-  getState() {
+  saveClosedState(accountKey, playbackSpeed = 1.0) {
+    this.saveState(
+      {
+        closed: true,
+        playbackSpeed,
+        timestamp: Date.now(),
+      },
+      accountKey,
+    )
+  }
+
+  getState(accountKey) {
+    const storageKey = this.getStorageKey(accountKey)
+    if (!storageKey) return null
+
     try {
-      const state = localStorage.getItem(this.storageKey)
+      const state = localStorage.getItem(storageKey)
       return state ? JSON.parse(state) : null
     } catch (error) {
       console.warn('Failed to load audio state:', error)
@@ -610,11 +804,22 @@ class AudioStateManager {
     }
   }
 
-  clearState() {
+  clearState(accountKey) {
+    const storageKey = this.getStorageKey(accountKey)
+    if (!storageKey) return
+
     try {
-      localStorage.removeItem(this.storageKey)
+      localStorage.removeItem(storageKey)
     } catch (error) {
       console.warn('Failed to clear audio state:', error)
+    }
+  }
+
+  clearLegacyState() {
+    try {
+      localStorage.removeItem(this.legacyStorageKey)
+    } catch {
+      // Ignore storage cleanup errors.
     }
   }
 }

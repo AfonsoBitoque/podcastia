@@ -49,9 +49,15 @@ export function useBackgroundAudio() {
       setIsLoading(false)
     }
 
-    const handleLoaded = () => {
+    const handleLoaded = (data) => {
       setIsLoading(false)
       setError(null)
+      if (data?.podcast) {
+        setCurrentPodcast(data.podcast)
+      }
+      if (Number.isFinite(data?.duration)) {
+        setDuration(data.duration)
+      }
     }
 
     const handleEnded = () => {
@@ -73,6 +79,16 @@ export function useBackgroundAudio() {
       setShuffleModeState(data.shuffle)
     }
 
+    const handleCleared = () => {
+      setIsPlaying(false)
+      setCurrentTime(0)
+      setDuration(0)
+      setCurrentPodcast(null)
+      setIsLoading(false)
+      setError(null)
+      setShuffleModeState(false)
+    }
+
     globalAudioService.on('play', handlePlay)
     globalAudioService.on('pause', handlePause)
     globalAudioService.on('timeupdate', handleTimeUpdate)
@@ -82,6 +98,7 @@ export function useBackgroundAudio() {
     globalAudioService.on('speedChanged', handleSpeedChanged)
     globalAudioService.on('error', handleServiceError)
     globalAudioService.on('shuffleChanged', handleShuffleChanged)
+    globalAudioService.on('cleared', handleCleared)
 
     // Unsubscribe on unmount without destroying the global audio service
     return () => {
@@ -94,6 +111,7 @@ export function useBackgroundAudio() {
       globalAudioService.off('speedChanged', handleSpeedChanged)
       globalAudioService.off('error', handleServiceError)
       globalAudioService.off('shuffleChanged', handleShuffleChanged)
+      globalAudioService.off('cleared', handleCleared)
     }
   }, [])
 
@@ -135,6 +153,10 @@ export function useBackgroundAudio() {
   // Pause audio
   const pause = useCallback(() => {
     globalAudioService.pause()
+  }, [])
+
+  const closePlayer = useCallback(() => {
+    globalAudioService.closePlayer()
   }, [])
 
   // Toggle play/pause
@@ -211,6 +233,7 @@ export function useBackgroundAudio() {
     loadPodcast,
     play,
     pause,
+    closePlayer,
     togglePlayPause,
     seek,
     setSpeed,

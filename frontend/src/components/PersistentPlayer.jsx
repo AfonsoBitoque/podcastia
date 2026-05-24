@@ -11,6 +11,7 @@ function PersistentPlayer() {
     seek,
     playbackSpeed,
     setSpeed,
+    closePlayer,
     formattedCurrentTime,
     formattedDuration,
     skipForward,
@@ -127,6 +128,15 @@ function PersistentPlayer() {
           🔀
         </button>
         <PlaybackSpeedControl currentSpeed={playbackSpeed} onSpeedChange={handleSpeedChange} />
+        <button
+          className="btn-icon btn-close-player"
+          onClick={closePlayer}
+          title="Fechar player e parar audio"
+          aria-label="Fechar player e parar audio"
+          type="button"
+        >
+          x
+        </button>
       </div>
     </div>
   )

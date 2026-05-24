@@ -301,6 +301,23 @@ body {
   color: #e05a2a;
 }
 
+.btn-close-player {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(31, 41, 55, 0.06);
+  color: #6b7280;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.btn-close-player:hover {
+  background: rgba(224, 90, 42, 0.12);
+  color: #8b2f17;
+}
+
 @media (max-width: 720px) {
   .player-bar {
     bottom: 10px;
