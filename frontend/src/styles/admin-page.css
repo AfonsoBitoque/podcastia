@@ -1556,3 +1556,262 @@
     font-size: 0.7rem;
   }
 }
+
+/* Podcastia theme overrides */
+.admin-page {
+  flex: 1;
+  width: 100%;
+  min-height: calc(100vh - var(--header-height));
+  color: var(--ink-brown);
+  background:
+    radial-gradient(circle at 10% 20%, rgba(224, 90, 42, 0.14), transparent 36%),
+    radial-gradient(circle at 90% 80%, rgba(240, 137, 92, 0.17), transparent 36%),
+    linear-gradient(140deg, #fcf2d7, #fde6d8 56%, #ffe5c8);
+  font-family: inherit;
+}
+
+.admin-content {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 1.5rem;
+  box-sizing: border-box;
+}
+
+.admin-dashboard,
+.admin-podcast-management,
+.admin-user-management,
+.admin-analytics,
+.admin-logs {
+  width: 100%;
+}
+
+.admin-loading,
+.admin-error {
+  min-height: calc(100vh - var(--header-height));
+  color: var(--ink-brown);
+}
+
+.loading-spinner {
+  border-color: rgba(166, 75, 42, 0.18);
+  border-top-color: var(--brand-brown);
+}
+
+.admin-header {
+  background: rgba(255, 250, 246, 0.88);
+  border-bottom: 1px solid rgba(114, 71, 56, 0.14);
+  box-shadow: 0 8px 24px rgba(59, 35, 27, 0.06);
+}
+
+.admin-header h1,
+.admin-user-info,
+.admin-user-info span,
+.admin-card h2,
+.admin-card h3,
+.metric-value,
+.podcast-title,
+.stat-value,
+.health-status,
+.info-value,
+.admin-table th,
+.admin-table td,
+.username,
+.points-total,
+.analytics-value,
+.analytics-label,
+.podcast-title-large,
+.metric-value-large,
+.timestamp-date,
+.admin-name {
+  color: var(--ink-brown);
+}
+
+.admin-user-info span,
+.metric-label,
+.podcast-author,
+.stat-label,
+.health-label,
+.info-label,
+.admin-table td,
+.user-tag,
+.points-breakdown,
+.analytics-trend,
+.podcast-author-large,
+.chart-label,
+.chart-legend,
+.timestamp-time,
+.admin-email,
+.target-name {
+  color: rgba(59, 35, 27, 0.68);
+}
+
+.admin-nav {
+  background: rgba(255, 249, 241, 0.78);
+  border-bottom: 1px solid rgba(114, 71, 56, 0.12);
+}
+
+.nav-tab {
+  color: rgba(59, 35, 27, 0.68);
+}
+
+.nav-tab:hover {
+  color: var(--ink-brown);
+  background: rgba(166, 75, 42, 0.08);
+}
+
+.nav-tab.active {
+  color: #ffffff;
+  background: var(--brand-brown);
+  border-bottom-color: var(--brand-brown);
+}
+
+.admin-card,
+.modal-content {
+  background: rgba(255, 250, 246, 0.96);
+  border: 1px solid rgba(114, 71, 56, 0.14);
+  box-shadow: 0 14px 34px rgba(70, 38, 31, 0.09);
+}
+
+.metric-item,
+.top-podcast-item,
+.health-item,
+.admin-table,
+.admin-form,
+.analytics-item,
+.top-podcast-detailed,
+.report-info,
+.table-container,
+.user-details,
+.reset-info,
+.reset-warning,
+.reset-success {
+  background: rgba(255, 255, 255, 0.62);
+  border-color: rgba(114, 71, 56, 0.12);
+}
+
+.top-podcast-item:hover,
+.analytics-item:hover,
+.top-podcast-detailed:hover,
+.admin-table tr:hover {
+  background: rgba(166, 75, 42, 0.08);
+}
+
+.admin-table th {
+  background: rgba(166, 75, 42, 0.1);
+}
+
+.admin-table th,
+.admin-table td,
+.info-item {
+  border-bottom-color: rgba(114, 71, 56, 0.1);
+}
+
+.search-input,
+.filter-select,
+.admin-form input,
+.admin-form select,
+.admin-form textarea,
+.form-group input,
+.form-group select,
+.form-group textarea {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(114, 71, 56, 0.18);
+  color: var(--ink-brown);
+}
+
+.search-input::placeholder,
+.form-group input::placeholder,
+.form-group select::placeholder,
+.form-group textarea::placeholder {
+  color: rgba(59, 35, 27, 0.48);
+}
+
+.search-input:focus,
+.filter-select:focus,
+.admin-form input:focus,
+.admin-form select:focus,
+.admin-form textarea:focus,
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  background: #ffffff;
+  border-color: rgba(166, 75, 42, 0.5);
+  box-shadow: 0 0 0 3px rgba(166, 75, 42, 0.1);
+}
+
+.filter-select option {
+  background: #fff9f1;
+  color: var(--ink-brown);
+}
+
+.btn-primary {
+  background: var(--brand-brown);
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background: #8b2f17;
+  box-shadow: 0 8px 18px rgba(166, 75, 42, 0.22);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--brand-brown);
+  border-color: rgba(166, 75, 42, 0.28);
+}
+
+.btn-secondary:hover,
+.action-buttons .btn-secondary.active {
+  background: var(--brand-brown);
+  border-color: var(--brand-brown);
+  color: #ffffff;
+}
+
+.podcast-rank,
+.podcast-rank-large {
+  color: var(--brand-brown);
+}
+
+.tag-badge {
+  background: rgba(166, 75, 42, 0.08);
+  color: var(--brand-brown);
+  border-color: rgba(166, 75, 42, 0.16);
+}
+
+.modal-overlay {
+  background: rgba(59, 35, 27, 0.42);
+}
+
+.modal-header h2,
+.modal-close,
+.form-group label,
+.delete-warning p,
+.delete-warning strong,
+.reset-warning p,
+.reset-warning ul,
+.reset-success p,
+.temp-password-display label,
+.user-detail-item,
+.user-detail-item strong,
+.report-info p {
+  color: var(--ink-brown);
+}
+
+@media (max-width: 768px) {
+  .admin-content {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-content {
+    padding: 0.75rem;
+  }
+}
+
+.admin-header h1,
+.admin-page-title {
+  color: #8b2f17;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 800;
+}

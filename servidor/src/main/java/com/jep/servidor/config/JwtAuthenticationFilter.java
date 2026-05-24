@@ -1,11 +1,14 @@
 package com.jep.servidor.config;
 
+import com.jep.servidor.model.User;
+import com.jep.servidor.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -23,6 +26,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    @Autowired
+    private UserRepository userRepository;
 
     // Endpoints que não devem ser filtrados (públicos)
     private static final String[] PUBLIC_PATHS = {
@@ -51,6 +57,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
         return false;
+    }
+
+    private List<SimpleGrantedAuthority> buildAuthorities(String userEmail) {
+        List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+        authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+
+        userRepository.findByEmail(userEmail)
+                .filter(user -> user.getUserType() == User.UserType.USERADMIN)
+                .ifPresent(user -> {
+                    authorities.add(new SimpleGrantedAuthority("ROLE_USER_ADMIN"));
+                    authorities.add(new SimpleGrantedAuthority("ROLE_USERADMIN"));
+                });
+
+        return authorities;
     }
 
     @Override
@@ -91,7 +111,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userEmail,
                             null,
-                            Collections.singletonList(new SimpleGrantedAuthority("USER"))
+                            buildAuthorities(userEmail)
                     );
                     
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

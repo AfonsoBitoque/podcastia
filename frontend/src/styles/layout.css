@@ -394,6 +394,7 @@
   gap: 0.7rem;
 }
 
+.site-admin-cta,
 .site-generate-cta,
 .site-login-link {
   min-height: 42px;
@@ -409,13 +410,25 @@
   white-space: nowrap;
   transition:
     background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
     transform 0.2s ease;
 }
 
+.site-admin-cta {
+  border: 1px solid rgba(166, 75, 42, 0.28);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--brand-brown);
+}
+
 .site-generate-cta:hover,
+.site-admin-cta:hover,
 .site-login-link:hover,
-.site-generate-cta.active {
+.site-generate-cta.active,
+.site-admin-cta.active {
   background: #8b2f17;
+  border-color: #8b2f17;
+  color: #ffffff;
   transform: translateY(-1px);
 }
 
