@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import '../styles/home-page.css'
 import '../styles/trending-page.css'
-import PodcastSidebar from '../components/PodcastSidebar'
 import { useBackgroundAudio } from '../hooks/useBackgroundAudio'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
@@ -18,8 +17,6 @@ function HomePage() {
   const [currentUser, setCurrentUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [selectedPodcast, setSelectedPodcast] = useState(null)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [message, setMessage] = useState('')
   const [savedPodcasts, setSavedPodcasts] = useState([])
   const [filters, setFilters] = useState(DEFAULT_FEED_FILTERS)
@@ -142,7 +139,6 @@ function HomePage() {
   }
 
   const handlePlayNow = async (podcast) => {
-    setIsSidebarOpen(false)
     try {
       console.log('[HomePage] Playing podcast:', podcast.titulo)
 
@@ -152,7 +148,6 @@ function HomePage() {
       if (currentId === podcastId) {
         // Se já é o podcast atual, apenas alterna entre play e pause sem reiniciar
         await togglePlayPause()
-        setSelectedPodcast(podcast)
         return
       }
 
@@ -162,7 +157,6 @@ function HomePage() {
         await play()
         console.log('[HomePage] Playback started')
       }
-      setSelectedPodcast(podcast)
     } catch (err) {
       console.error('[HomePage] Error playing podcast:', err)
       setError('Failed to play podcast: ' + err.message)
@@ -248,17 +242,8 @@ function HomePage() {
     }
   }
 
-  const isPodcastSaved = (podcastId) => {
-    return savedPodcasts.some((p) => (p.id || p.podcastId) === podcastId)
-  }
-
-  const closeSidebar = () => {
-    setIsSidebarOpen(false)
-  }
-
   const openSidebar = (podcast) => {
-    setSelectedPodcast(podcast)
-    setIsSidebarOpen(true)
+    window.dispatchEvent(new CustomEvent('podcastia-open-podcast', { detail: podcast }))
   }
 
   const getActiveFilterCount = () => {
@@ -485,25 +470,6 @@ function HomePage() {
         </div>
       </section>
 
-      {/* Podcast Sidebar */}
-      <PodcastSidebar
-        podcast={selectedPodcast}
-        isOpen={isSidebarOpen}
-        onClose={closeSidebar}
-        onPlayNow={() => selectedPodcast && handlePlayNow(selectedPodcast)}
-        onSave={handleSaveToPodcasts}
-        isSaved={
-          selectedPodcast ? isPodcastSaved(selectedPodcast.id || selectedPodcast.podcastId) : false
-        }
-        isPlaying={
-          playingPodcast &&
-          (playingPodcast.id || playingPodcast.podcastId) ===
-            (selectedPodcast?.id || selectedPodcast?.podcastId)
-            ? isPlaying
-            : false
-        }
-        API_BASE_URL={API_BASE_URL}
-      />
     </main>
   )
 }
