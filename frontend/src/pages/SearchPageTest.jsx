@@ -4,8 +4,9 @@ import { useBackgroundAudio } from '../hooks/useBackgroundAudio'
 import '../styles/search-page.css'
 import '../styles/trending-page.css'
 import '../styles/home-page.css'
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
+import { API_BASE_URL } from '../shared/config/env'
+import { resolveAssetUrl, resolveProfilePicture } from '../shared/utils/media'
+import { getPodcastTags } from '../shared/utils/podcast'
 const PAGE_SIZE = 8
 
 const SEARCH_TABS = [
@@ -36,24 +37,6 @@ const TAG_UI = {
   },
   GERAL: { label: 'Geral', className: 'tag-geral', thumbClass: 'thumb-geral', short: 'GER' },
   DEFAULT: { label: 'Podcast', className: 'tag-geral', thumbClass: 'thumb-geral', short: 'POD' },
-}
-
-const getAssetUrl = (path) => {
-  if (!path) return ''
-  if (/^https?:\/\//i.test(path)) return path
-  return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`
-}
-
-const resolveProfilePicture = (path, userId) => {
-  const safePath = String(path || '').trim()
-  if (!safePath) return ''
-  if (/^https?:\/\//i.test(safePath)) return safePath
-  if (userId) {
-    return `${API_BASE_URL}/users/${userId}/profile-image?t=${Date.now()}`
-  }
-  const normalizedPath = safePath.replace(/^\/+/, '')
-  const separator = normalizedPath.includes('?') ? '&' : '?'
-  return `${API_BASE_URL}/${normalizedPath}${separator}t=${Date.now()}`
 }
 
 const getTagUi = (tag) => TAG_UI[String(tag || '').toUpperCase()] || TAG_UI.DEFAULT
@@ -256,12 +239,9 @@ function SearchPageTest() {
       podcast.user?.username ||
       podcast.subtitle?.replace('Criador: ', '') ||
       'Podcastia'
-    const tags = Array.isArray(podcast.tags) && podcast.tags.length > 0 ? podcast.tags : ['GERAL']
+    const podcastTags = getPodcastTags(podcast)
+    const tags = podcastTags.length > 0 ? podcastTags : ['GERAL']
     const duration = podcast.duracao ? `${podcast.duracao} min` : 'Podcast'
-    const progressPercent = Math.max(
-      8,
-      Math.min(100, Number(podcast.progressPercent) || ((index + 2) * 13) % 74),
-    )
     const currentPodcastId = playingPodcast?.id || playingPodcast?.podcastId
     const isCurrentPodcast = Boolean(actualId && currentPodcastId === actualId)
     const playablePodcast = {
@@ -325,9 +305,6 @@ function SearchPageTest() {
           <p>
             {duration} | Host: {host}
           </p>
-          <div className="explore-progress" aria-hidden="true">
-            <span style={{ width: `${progressPercent}%` }} />
-          </div>
         </div>
       </article>
     )

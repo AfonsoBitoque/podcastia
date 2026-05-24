@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import '../styles/topic-selection.css'
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
+import { API_BASE_URL } from '../shared/config/env'
+import { getStoredUser, getToken, updateStoredUser } from '../shared/storage/authStorage'
 const MIN_TOPICS = 3
 
 function TopicsPage() {
@@ -29,23 +29,13 @@ function TopicsPage() {
   }, [location.search, location.state])
 
   const getAuthHeaders = () => {
-    const token = localStorage.getItem('token')
+    const token = getToken()
     return token ? { Authorization: `Bearer ${token}` } : {}
   }
 
   const persistUserTopics = (topicIds) => {
     try {
-      const rawUser = localStorage.getItem('user')
-      if (!rawUser) return
-      const parsed = JSON.parse(rawUser)
-      localStorage.setItem(
-        'user',
-        JSON.stringify({
-          ...parsed,
-          topics: topicIds,
-        }),
-      )
-      window.dispatchEvent(new Event('auth-change'))
+      updateStoredUser({ topics: topicIds })
     } catch {
       // ignore invalid local storage
     }
@@ -103,14 +93,13 @@ function TopicsPage() {
   }, [])
 
   useEffect(() => {
-    const storedUserRaw = localStorage.getItem('user')
-    if (!storedUserRaw) {
+    const parsedUser = getStoredUser()
+    if (!parsedUser) {
       navigate('/login', { replace: true })
       return
     }
 
     try {
-      const parsedUser = JSON.parse(storedUserRaw)
       if (!parsedUser?.id) {
         navigate('/login', { replace: true })
         return

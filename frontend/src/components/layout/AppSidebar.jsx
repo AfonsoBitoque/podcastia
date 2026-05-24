@@ -1,6 +1,9 @@
 import { NavLink } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
+import { API_BASE_URL } from '../../shared/config/env'
+import { getToken } from '../../shared/storage/authStorage'
+import { toFiniteNumber } from '../../shared/utils/collection'
 
 const mainItems = [
   { to: '/home', label: 'Home', icon: 'home' },
@@ -115,8 +118,6 @@ function SidebarIcon({ type }) {
   return <span className={`sidebar-nav-icon sidebar-nav-icon--${type}`} aria-hidden="true" />
 }
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
-
 function AppSidebar() {
   const { isAuthenticated } = useAuth()
   const [unreadCount, setUnreadCount] = useState(0)
@@ -127,7 +128,7 @@ function AppSidebar() {
 
     const fetchCounts = async () => {
       try {
-        const token = localStorage.getItem('token')
+        const token = getToken()
         const [unreadRes, requestsRes] = await Promise.all([
           fetch(`${API_BASE_URL}/api/chats/unread-count`, {
             headers: { Authorization: `Bearer ${token}` },
@@ -139,7 +140,7 @@ function AppSidebar() {
 
         if (unreadRes.ok) {
           const data = await unreadRes.json()
-          setUnreadCount(data.count || 0)
+          setUnreadCount(Math.max(0, toFiniteNumber(data.count)))
         }
         if (requestsRes.ok) {
           const data = await requestsRes.json()

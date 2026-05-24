@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import '../styles/trending-page.css'
 import '../styles/home-page.css'
 import { useBackgroundAudio } from '../hooks/useBackgroundAudio'
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
+import { API_BASE_URL } from '../shared/config/env'
+import { asArray } from '../shared/utils/collection'
+import { getPodcastId } from '../shared/utils/podcast'
 
 function TrendingPage() {
   const navigate = useNavigate()
@@ -24,10 +25,13 @@ function TrendingPage() {
   } = useBackgroundAudio()
 
   const getPodcastWithAudio = (podcast) => {
-    const podcastId = podcast.id || podcast.podcastId
+    const safePodcast = podcast || {}
+    const podcastId = getPodcastId(podcast)
     return {
-      ...podcast,
-      audioUrl: podcast.audioUrl || `${API_BASE_URL}/api/podcasts/${podcastId}/audio`,
+      ...safePodcast,
+      audioUrl:
+        safePodcast.audioUrl ||
+        (podcastId ? `${API_BASE_URL}/api/podcasts/${podcastId}/audio` : ''),
     }
   }
 
@@ -41,7 +45,7 @@ function TrendingPage() {
 
       // Simular diferentes secções com os mesmos dados
       // Em produção, isto viria de endpoints diferentes
-      const shuffled = [...data].sort(() => Math.random() - 0.5)
+      const shuffled = [...asArray(data)].sort(() => Math.random() - 0.5)
 
       setDailyPodcasts(shuffled.slice(0, 6))
       setTrendingPodcasts(shuffled.slice(6, 12))
@@ -60,7 +64,8 @@ function TrendingPage() {
   const handlePlayNow = async (podcast, queue) => {
     const podcastWithUrl = getPodcastWithAudio(podcast)
 
-    const podcastId = podcast.id || podcast.podcastId
+    const podcastId = getPodcastId(podcast)
+    if (!podcastId) return
     const currentId = playingPodcast?.id || playingPodcast?.podcastId
 
     if (currentId === podcastId) {
@@ -92,9 +97,10 @@ function TrendingPage() {
   }
 
   const PodcastCard = ({ podcast, sectionQueue }) => {
+    const title = podcast?.titulo || podcast?.title || 'Podcast'
     const isCurrentPlaying =
       playingPodcast &&
-      (playingPodcast.id || playingPodcast.podcastId) === (podcast.id || podcast.podcastId) &&
+      (playingPodcast.id || playingPodcast.podcastId) === getPodcastId(podcast) &&
       isPlaying
 
     return (
@@ -110,9 +116,7 @@ function TrendingPage() {
               e.preventDefault()
               handlePlayNow(podcast, sectionQueue)
             }}
-            aria-label={
-              isCurrentPlaying ? `Pausar ${podcast.titulo}` : `Reproduzir ${podcast.titulo}`
-            }
+            aria-label={isCurrentPlaying ? `Pausar ${title}` : `Reproduzir ${title}`}
           >
             {isCurrentPlaying ? '⏸' : '▶'}
           </button>
@@ -123,14 +127,14 @@ function TrendingPage() {
               e.preventDefault()
               openSidebar(podcast)
             }}
-            aria-label={`Informações de ${podcast.titulo}`}
+            aria-label={`Informações de ${title}`}
           >
             ℹ
           </button>
         </div>
         <div className="trending-card-info">
-          <h3 className="trending-card-title">{podcast.titulo}</h3>
-          <p className="trending-card-author">{podcast.user?.username || 'Podcastia'}</p>
+          <h3 className="trending-card-title">{title}</h3>
+          <p className="trending-card-author">{podcast?.user?.username || 'Podcastia'}</p>
         </div>
       </article>
     )
@@ -190,8 +194,8 @@ function TrendingPage() {
             subtitle={'A tua curadoria di\u00E1ria baseada no que est\u00E1 em alta na Podcastia.'}
           />
           <div className="trending-row">
-            {dailyPodcasts.map((podcast) => (
-              <PodcastCard key={podcast.id} podcast={podcast} sectionQueue={dailyPodcasts} />
+            {dailyPodcasts.map((podcast, index) => (
+              <PodcastCard key={getPodcastId(podcast) || index} podcast={podcast} sectionQueue={dailyPodcasts} />
             ))}
           </div>
         </section>
@@ -204,8 +208,8 @@ function TrendingPage() {
             action={() => navigate('/search-test')}
           />
           <div className="trending-row">
-            {trendingPodcasts.map((podcast) => (
-              <PodcastCard key={podcast.id} podcast={podcast} sectionQueue={trendingPodcasts} />
+            {trendingPodcasts.map((podcast, index) => (
+              <PodcastCard key={getPodcastId(podcast) || index} podcast={podcast} sectionQueue={trendingPodcasts} />
             ))}
           </div>
         </section>
@@ -215,16 +219,16 @@ function TrendingPage() {
           <SectionHeader title="Mais Populares" subtitle="Os mais ouvidos da comunidade" />
           <div className="popular-list">
             {popularPodcasts.map((podcast, index) => (
-              <div key={podcast.id} className="popular-item">
+              <div key={getPodcastId(podcast) || index} className="popular-item">
                 <span className="popular-rank">{index + 1}</span>
                 <div className="popular-cover">
                   <div className="popular-cover-placeholder">🎙</div>
                 </div>
                 <div className="popular-info">
-                  <h3 className="popular-title">{podcast.titulo}</h3>
-                  <p className="popular-author">{podcast.user?.username || 'Podcastia'}</p>
+                  <h3 className="popular-title">{podcast.titulo || podcast.title || 'Podcast'}</h3>
+                  <p className="popular-author">{podcast?.user?.username || 'Podcastia'}</p>
                 </div>
-                <span className="popular-duration">{formatTime(podcast.duracao * 60)}</span>
+                <span className="popular-duration">{formatTime((Number(podcast.duracao) || 0) * 60)}</span>
                 <button
                   className="popular-info-btn"
                   onClick={() => openSidebar(podcast)}

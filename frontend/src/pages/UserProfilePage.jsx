@@ -3,53 +3,13 @@ import { useParams, Link } from 'react-router-dom'
 import '../styles/user-page.css'
 import FriendRequestButton from '../components/FriendRequestButton'
 import toast from 'react-hot-toast'
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
-
-const formatDateTime = (value) => {
-  if (!value) return 'Sem registo'
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return value
-
-  return parsed.toLocaleString('pt-PT', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  })
-}
-
-const formatMemberSince = (value) => {
-  if (!value) return 'Sem registo'
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return value
-
-  return parsed.toLocaleDateString('pt-PT', {
-    month: 'long',
-    year: 'numeric',
-  })
-}
-
-const formatRelativeTime = (value) => {
-  if (!value) return 'Sem registo'
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return value
-
-  const diffMs = Date.now() - parsed.getTime()
-  const diffMinutes = Math.floor(diffMs / 60000)
-  if (diffMinutes < 1) return 'Agora mesmo'
-  if (diffMinutes < 60) return `Ha ${diffMinutes} min`
-
-  const diffHours = Math.floor(diffMinutes / 60)
-  if (diffHours < 24) return `Ha ${diffHours} h`
-
-  const diffDays = Math.floor(diffHours / 24)
-  if (diffDays < 30) return `Ha ${diffDays} dias`
-
-  const diffMonths = Math.floor(diffDays / 30)
-  if (diffMonths < 12) return `Ha ${diffMonths} meses`
-
-  const diffYears = Math.floor(diffMonths / 12)
-  return `Ha ${diffYears} anos`
-}
+import { API_BASE_URL } from '../shared/config/env'
+import { getStoredUser, getToken } from '../shared/storage/authStorage'
+import { formatDateTime, formatMemberSince, formatRelativeTime } from '../shared/utils/date'
+import { resolveProfilePicture } from '../shared/utils/media'
+import { formatTopicLabel } from '../shared/utils/topics'
+import { getPodcastTags } from '../shared/utils/podcast'
+import UserStyleWheel from '../features/user/components/UserStyleWheel'
 
 const formatText = (value, fallback = 'Nao definido') => {
   if (value === null || value === undefined) return fallback
@@ -62,35 +22,8 @@ const getAvatarInitial = (username) => {
   return safeName.charAt(0).toUpperCase()
 }
 
-const resolveProfilePicture = (path, userId) => {
-  const safePath = String(path || '').trim()
-  if (!safePath) return ''
-  if (/^https?:\/\//i.test(safePath)) return safePath
-  if (userId) {
-    return `${API_BASE_URL}/users/${userId}/profile-image?t=${Date.now()}`
-  }
-  const normalizedPath = safePath.replace(/^\/+/, '')
-  const separator = normalizedPath.includes('?') ? '&' : '?'
-  return `${API_BASE_URL}/${normalizedPath}${separator}t=${Date.now()}`
-}
-
-const TOPIC_LABELS = {
-  DESPORTO: 'Desporto',
-  POLITICA: 'Politica',
-  FINANCAS: 'Financas',
-  GERAL: 'Geral',
-}
-
-const formatTopicLabel = (topic) => TOPIC_LABELS[String(topic || '').toUpperCase()] || topic
-
 const parseStoredUser = () => {
-  try {
-    const raw = localStorage.getItem('user')
-    if (!raw) return null
-    return JSON.parse(raw)
-  } catch {
-    return null
-  }
+  return getStoredUser()
 }
 
 function UserProfilePage() {
@@ -112,7 +45,7 @@ function UserProfilePage() {
 
   const fetchProfile = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       const response = await fetch(`${API_BASE_URL}/users/${id}/profile`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
@@ -133,7 +66,7 @@ function UserProfilePage() {
 
   const fetchRelationStatus = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       if (!token) return
 
       const response = await fetch(`${API_BASE_URL}/api/relations/status/${id}`, {
@@ -152,7 +85,7 @@ function UserProfilePage() {
   const fetchPodcasts = useCallback(async () => {
     setPodcastsLoading(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       const response = await fetch(`${API_BASE_URL}/podcasts/user/${id}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
@@ -182,7 +115,7 @@ function UserProfilePage() {
   const handleRelationAction = async (action) => {
     if (relationLoading) return
     setRelationLoading(true)
-    const token = localStorage.getItem('token')
+    const token = getToken()
     if (!token) {
       setRelationLoading(false)
       return
@@ -272,34 +205,7 @@ function UserProfilePage() {
     )
   }
 
-  const currentTopics = user.topics || []
-  const totalPoints =
-    (user.pontosDesporto || 0) +
-    (user.pontosPolitica || 0) +
-    (user.pontosFinancas || 0) +
-    (user.pontosGeral || 0)
-
-  let desportoPct = 0,
-    politicaPct = 0,
-    financasPct = 0,
-    geralPct = 0
-  if (totalPoints > 0) {
-    desportoPct = Math.round(((user.pontosDesporto || 0) / totalPoints) * 100)
-    politicaPct = Math.round(((user.pontosPolitica || 0) / totalPoints) * 100)
-    financasPct = Math.round(((user.pontosFinancas || 0) / totalPoints) * 100)
-    geralPct = 100 - desportoPct - politicaPct - financasPct
-  }
-
-  const conicGradient =
-    totalPoints > 0
-      ? `conic-gradient(
-        #3b82f6 0% ${desportoPct}%, 
-        #ef4444 ${desportoPct}% ${desportoPct + politicaPct}%, 
-        #10b981 ${desportoPct + politicaPct}% ${desportoPct + politicaPct + financasPct}%, 
-        #f59e0b ${desportoPct + politicaPct + financasPct}% 100%
-      )`
-      : ''
-
+  const currentTopics = Array.isArray(user.topics) ? user.topics : []
   const isOwnProfile = String(sessionUser?.id) === String(id)
 
   const safePodcasts = Array.isArray(podcasts) ? podcasts : []
@@ -505,40 +411,7 @@ function UserProfilePage() {
                 <p className="user-meta-detail">{formatDateTime(user.lastActiveAt)}</p>
               </div>
 
-              <div className="user-style-section">
-                <p className="info-title">A tua Roda de Estilo Percentual</p>
-                {totalPoints > 0 ? (
-                  <>
-                    <div
-                      className="user-style-wheel"
-                      style={{ background: conicGradient }}
-                      aria-label="Grafico percentual das escutas"
-                    ></div>
-                    <div className="style-legend">
-                      <div className="legend-item">
-                        <span className="legend-color" style={{ background: '#3b82f6' }}></span>
-                        Desporto ({desportoPct}%)
-                      </div>
-                      <div className="legend-item">
-                        <span className="legend-color" style={{ background: '#ef4444' }}></span>
-                        Politica ({politicaPct}%)
-                      </div>
-                      <div className="legend-item">
-                        <span className="legend-color" style={{ background: '#10b981' }}></span>
-                        Financas ({financasPct}%)
-                      </div>
-                      <div className="legend-item">
-                        <span className="legend-color" style={{ background: '#f59e0b' }}></span>
-                        Geral ({geralPct}%)
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="user-style-wheel user-style-empty">
-                    Ouve podcasts para revelar!
-                  </div>
-                )}
-              </div>
+              <UserStyleWheel profile={user} ariaLabel="Grafico percentual das escutas" />
             </section>
 
             <section className="user-podcasts-section" aria-label="Podcasts do utilizador">
@@ -558,36 +431,47 @@ function UserProfilePage() {
                   </p>
                 ) : (
                   <div className="user-podcasts-list">
-                    {safePodcasts.map((podcast) => (
-                      <div key={podcast.id} className="user-podcast-item">
-                        <div className="user-podcast-info">
-                          <h3 className="user-podcast-title">{podcast.titulo}</h3>
-                          <div className="user-podcast-meta">
-                            <span className="user-podcast-duration">{podcast.duracao} min</span>
-                            {podcast.tags && podcast.tags.length > 0 && (
-                              <span className="user-podcast-tags">{podcast.tags.join(', ')}</span>
-                            )}
+                    {safePodcasts.map((podcast, index) => {
+                      const tags = getPodcastTags(podcast)
+
+                      return (
+                        <div
+                          key={podcast.id || podcast.podcastId || index}
+                          className="user-podcast-item"
+                        >
+                          <div className="user-podcast-info">
+                            <h3 className="user-podcast-title">
+                              {podcast.titulo || podcast.title || 'Podcast'}
+                            </h3>
+                            <div className="user-podcast-meta">
+                              <span className="user-podcast-duration">
+                                {podcast.duracao || '--'} min
+                              </span>
+                              {tags.length > 0 && (
+                                <span className="user-podcast-tags">{tags.join(', ')}</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="user-podcast-actions">
+                            <button
+                              className="user-podcast-toggle-btn is-public"
+                              onClick={() => handleOpenPodcast(podcast)}
+                              style={{
+                                background: 'var(--brand-primary)',
+                                color: 'white',
+                                border: 'none',
+                                padding: '0.4rem 1rem',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontWeight: '500',
+                              }}
+                            >
+                              Ouvir Agora
+                            </button>
                           </div>
                         </div>
-                        <div className="user-podcast-actions">
-                          <button
-                            className="user-podcast-toggle-btn is-public"
-                            onClick={() => handleOpenPodcast(podcast)}
-                            style={{
-                              background: 'var(--brand-primary)',
-                              color: 'white',
-                              border: 'none',
-                              padding: '0.4rem 1rem',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontWeight: '500',
-                            }}
-                          >
-                            Ouvir Agora
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </div>

@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import '../../styles/admin-page.css'
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
+import { API_BASE_URL } from '../../shared/config/env'
+import { getToken } from '../../shared/storage/authStorage'
+import { asArray, safeText } from '../../shared/utils/collection'
 
 function AdminLogs() {
   const [logs, setLogs] = useState([])
@@ -12,23 +13,26 @@ function AdminLogs() {
   const [filter, setFilter] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
 
-  const fetchLogs = useCallback(async () => {
+  const fetchLogs = useCallback(async (targetPage = page) => {
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE_URL}/api/admin/logs?limit=50&offset=${page * 50}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+      const token = getToken()
+      const response = await fetch(
+        `${API_BASE_URL}/api/admin/logs?limit=50&offset=${targetPage * 50}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
         },
-      })
+      )
 
       if (!response.ok) {
         throw new Error('Failed to fetch logs')
       }
 
-      const data = await response.json()
+      const data = asArray(await response.json())
 
-      if (page === 0) {
+      if (targetPage === 0) {
         setLogs(data)
       } else {
         setLogs((prev) => [...prev, ...data])
@@ -84,7 +88,7 @@ function AdminLogs() {
   }
 
   const formatAction = (action) => {
-    return action
+    return safeText(action, 'UNKNOWN')
       .replace(/_/g, ' ')
       .toLowerCase()
       .replace(/\b\w/g, (l) => l.toUpperCase())
@@ -93,9 +97,9 @@ function AdminLogs() {
   const filteredLogs = logs.filter((log) => {
     const matchesSearch =
       searchTerm === '' ||
-      log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.adminUsername.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (log.targetName && log.targetName.toLowerCase().includes(searchTerm.toLowerCase()))
+      safeText(log.action).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      safeText(log.adminUsername).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      safeText(log.targetName).toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesFilter =
       filter === 'all' ||
@@ -107,10 +111,13 @@ function AdminLogs() {
   })
 
   const refreshLogs = () => {
-    setPage(0)
     setLogs([])
     setLoading(true)
-    fetchLogs()
+    if (page === 0) {
+      fetchLogs(0)
+    } else {
+      setPage(0)
+    }
   }
 
   if (loading && page === 0) {

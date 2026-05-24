@@ -1,7 +1,9 @@
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { API_BASE_URL } from '../../shared/config/env'
+import { clearSession, getStoredUser } from '../../shared/storage/authStorage'
+import { resolveProfilePicture } from '../../shared/utils/media'
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
 const SEARCH_PAGE_SIZE = 5
 const SEARCH_HISTORY_KEY = 'podcastiaRecentSearches'
 const CATEGORY_CHIPS = [
@@ -12,27 +14,16 @@ const CATEGORY_CHIPS = [
 ]
 
 const getCategoryQuery = (value) => {
+  const safeValue = String(value || '')
   const category = CATEGORY_CHIPS.find(
-    (chip) => chip.label.toLowerCase() === value.trim().toLowerCase(),
+    (chip) => chip.label.toLowerCase() === safeValue.trim().toLowerCase(),
   )
-  return category?.query || value
+  return category?.query || safeValue
 }
 
 const isAdminUser = (user) => {
   const type = user?.type || user?.userType
   return type === 'USERADMIN' || type === 'USER_ADMIN'
-}
-
-const resolveProfilePicture = (path, userId) => {
-  const safePath = String(path || '').trim()
-  if (!safePath) return ''
-  if (/^https?:\/\//i.test(safePath)) return safePath
-  if (userId) {
-    return `${API_BASE_URL}/users/${userId}/profile-image?t=${Date.now()}`
-  }
-  const normalizedPath = safePath.replace(/^\/+/, '')
-  const separator = normalizedPath.includes('?') ? '&' : '?'
-  return `${API_BASE_URL}/${normalizedPath}${separator}t=${Date.now()}`
 }
 
 function Header() {
@@ -54,14 +45,7 @@ function Header() {
   const observerRef = useRef(null)
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user')
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser))
-      } catch (e) {
-        console.error('Erro ao ler utilizador', e)
-      }
-    }
+    setUser(getStoredUser())
 
     try {
       const parsedRecent = JSON.parse(localStorage.getItem(SEARCH_HISTORY_KEY) || '[]')
@@ -73,12 +57,7 @@ function Header() {
 
   useEffect(() => {
     const handleAuthChange = () => {
-      const storedUser = localStorage.getItem('user')
-      if (storedUser) {
-        setUser(JSON.parse(storedUser))
-      } else {
-        setUser(null)
-      }
+      setUser(getStoredUser())
     }
 
     window.addEventListener('auth-change', handleAuthChange)
@@ -92,9 +71,13 @@ function Header() {
     setRecentSearches((prev) => {
       const next = [
         term,
-        ...prev.filter((item) => item.toLowerCase() !== term.toLowerCase()),
+        ...prev.filter((item) => String(item).toLowerCase() !== term.toLowerCase()),
       ].slice(0, 5)
-      localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(next))
+      try {
+        localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(next))
+      } catch {
+        // Search still works when storage is unavailable.
+      }
       return next
     })
   }, [])
@@ -267,10 +250,8 @@ function Header() {
   }, [])
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
+    clearSession()
     setUser(null)
-    window.dispatchEvent(new Event('auth-change'))
     navigate('/login')
   }
 

@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import '../styles/login-page.css'
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
+import { API_BASE_URL } from '../shared/config/env'
+import { saveSession } from '../shared/storage/authStorage'
 
 function LoginPage() {
   const navigate = useNavigate()
@@ -57,20 +57,17 @@ function LoginPage() {
       }
 
       if (response.ok && data?.token) {
-        localStorage.setItem('token', data.token)
-        localStorage.setItem(
-          'user',
-          JSON.stringify({
+        saveSession(
+          data.token,
+          {
             id: data.userId,
             username: data.username,
             type: data.userType,
             playbackSpeed: data.playbackSpeed,
             hasCompletedOnboarding: data.hasCompletedOnboarding,
             topics: data.topics || [],
-          }),
+          },
         )
-
-        window.dispatchEvent(new Event('auth-change'))
 
         // Redirecionar baseado no estado do onboarding
         if (data.hasCompletedOnboarding !== true) {

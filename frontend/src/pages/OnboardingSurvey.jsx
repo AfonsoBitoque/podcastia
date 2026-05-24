@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import '../styles/topic-selection.css'
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
+import { API_BASE_URL } from '../shared/config/env'
+import { getStoredUser, getToken, updateStoredUser } from '../shared/storage/authStorage'
 const MIN_TOPICS = 3
 
 const AVAILABLE_TOPICS = [
@@ -24,14 +24,13 @@ function OnboardingSurvey() {
   const isCompleteDisabled = selectedCount < MIN_TOPICS
 
   useEffect(() => {
-    const storedUserRaw = localStorage.getItem('user')
-    if (!storedUserRaw) {
+    const parsedUser = getStoredUser()
+    if (!parsedUser) {
       navigate('/login', { replace: true })
       return
     }
 
     try {
-      const parsedUser = JSON.parse(storedUserRaw)
       if (!parsedUser?.id) {
         navigate('/login', { replace: true })
         return
@@ -65,7 +64,7 @@ function OnboardingSurvey() {
     setSubmitError('')
     setIsSubmitting(true)
 
-    const token = localStorage.getItem('token')
+    const token = getToken()
 
     try {
       const headers = {
@@ -88,20 +87,13 @@ function OnboardingSurvey() {
       }
 
       // Atualizar localStorage
-      const rawUser = localStorage.getItem('user')
-      if (rawUser) {
-        const parsed = JSON.parse(rawUser)
-        localStorage.setItem(
-          'user',
-          JSON.stringify({
-            ...parsed,
-            hasCompletedOnboarding: true,
-            topics: Array.from(selectedTopics),
-          }),
-        )
+      if (getStoredUser()) {
+        updateStoredUser({
+          hasCompletedOnboarding: true,
+          topics: Array.from(selectedTopics),
+        })
       }
       // Notificar App.jsx da mudança de estado
-      window.dispatchEvent(new Event('auth-change'))
 
       // Redirecionar para home
       navigate('/home', { replace: true })
