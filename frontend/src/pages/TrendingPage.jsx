@@ -186,9 +186,11 @@ function TrendingPage() {
   if (loading) {
     return (
       <main className="trending-page">
-        <div className="trending-loading">
-          <div className="trending-spinner" />
-          <p>A carregar tendências...</p>
+        <div className="trending-shell">
+          <div className="trending-loading">
+            <div className="trending-spinner" />
+            <p>A carregar tendências...</p>
+          </div>
         </div>
       </main>
     )
@@ -197,11 +199,13 @@ function TrendingPage() {
   if (error) {
     return (
       <main className="trending-page">
-        <div className="trending-error">
-          <p>{error}</p>
-          <button onClick={fetchAllPodcasts} className="retry-btn">
-            Tentar novamente
-          </button>
+        <div className="trending-shell">
+          <div className="trending-error">
+            <p>{error}</p>
+            <button onClick={fetchAllPodcasts} className="retry-btn">
+              Tentar novamente
+            </button>
+          </div>
         </div>
       </main>
     )
@@ -209,71 +213,75 @@ function TrendingPage() {
 
   return (
     <main className="trending-page">
-      {/* Hero Section - Podcasts do Dia */}
-      <section className="trending-section">
-        <SectionHeader title="Podcasts do Dia" subtitle="Escolhas personalizadas para ti" />
-        <div className="trending-row">
-          {dailyPodcasts.map((podcast) => (
-            <PodcastCard key={podcast.id} podcast={podcast} />
-          ))}
-        </div>
-      </section>
+      <div className="trending-shell">
+        {/* Hero Section - Podcasts do Dia */}
+        <section className="trending-section">
+          <SectionHeader title="Podcasts do Dia" subtitle="Escolhas personalizadas para ti" />
+          <div className="trending-row">
+            {dailyPodcasts.map((podcast) => (
+              <PodcastCard key={podcast.id} podcast={podcast} />
+            ))}
+          </div>
+        </section>
 
-      {/* Tendências - Horizontal Scroll */}
-      <section className="trending-section">
-        <SectionHeader
-          title="Tendências"
-          subtitle="O que está em alta esta semana"
-          action={() => navigate('/search-test')}
+        {/* Tendências - Horizontal Scroll */}
+        <section className="trending-section">
+          <SectionHeader
+            title="Tendências"
+            subtitle="O que está em alta esta semana"
+            action={() => navigate('/search-test')}
+          />
+          <div className="trending-row">
+            {trendingPodcasts.map((podcast) => (
+              <PodcastCard key={podcast.id} podcast={podcast} />
+            ))}
+          </div>
+        </section>
+
+        {/* Mais Populares - Lista */}
+        <section className="trending-section">
+          <SectionHeader title="Mais Populares" subtitle="Os mais ouvidos da comunidade" />
+          <div className="popular-list">
+            {popularPodcasts.map((podcast, index) => (
+              <div key={podcast.id} className="popular-item">
+                <span className="popular-rank">{index + 1}</span>
+                <div className="popular-cover">
+                  <div className="popular-cover-placeholder">🎙</div>
+                </div>
+                <div className="popular-info">
+                  <h3 className="popular-title">{podcast.titulo}</h3>
+                  <p className="popular-author">{podcast.user?.username || 'Podcastia'}</p>
+                </div>
+                <span className="popular-duration">{formatTime(podcast.duracao * 60)}</span>
+                <button
+                  className="popular-info-btn"
+                  onClick={() => openSidebar(podcast)}
+                  title="Informações"
+                >
+                  ℹ
+                </button>
+                <button className="popular-play-btn" onClick={() => handlePlayNow(podcast)}>
+                  ▶
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Podcast Sidebar */}
+        <PodcastSidebar
+          podcast={selectedPodcast}
+          isOpen={isSidebarOpen}
+          onClose={closeSidebar}
+          onPlayNow={() => selectedPodcast && handlePlayNow(selectedPodcast)}
+          onSave={handleSavePodcast}
+          isSaved={selectedPodcast ? isPodcastSaved(selectedPodcast.id) : false}
+          isPlaying={
+            playingPodcast && playingPodcast.id === selectedPodcast?.id ? isPlaying : false
+          }
+          API_BASE_URL={API_BASE_URL}
         />
-        <div className="trending-row">
-          {trendingPodcasts.map((podcast) => (
-            <PodcastCard key={podcast.id} podcast={podcast} />
-          ))}
-        </div>
-      </section>
-
-      {/* Mais Populares - Lista */}
-      <section className="trending-section">
-        <SectionHeader title="Mais Populares" subtitle="Os mais ouvidos da comunidade" />
-        <div className="popular-list">
-          {popularPodcasts.map((podcast, index) => (
-            <div key={podcast.id} className="popular-item">
-              <span className="popular-rank">{index + 1}</span>
-              <div className="popular-cover">
-                <div className="popular-cover-placeholder">🎙</div>
-              </div>
-              <div className="popular-info">
-                <h3 className="popular-title">{podcast.titulo}</h3>
-                <p className="popular-author">{podcast.user?.username || 'Podcastia'}</p>
-              </div>
-              <span className="popular-duration">{formatTime(podcast.duracao * 60)}</span>
-              <button
-                className="popular-info-btn"
-                onClick={() => openSidebar(podcast)}
-                title="Informações"
-              >
-                ℹ
-              </button>
-              <button className="popular-play-btn" onClick={() => handlePlayNow(podcast)}>
-                ▶
-              </button>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Podcast Sidebar */}
-      <PodcastSidebar
-        podcast={selectedPodcast}
-        isOpen={isSidebarOpen}
-        onClose={closeSidebar}
-        onPlayNow={() => selectedPodcast && handlePlayNow(selectedPodcast)}
-        onSave={handleSavePodcast}
-        isSaved={selectedPodcast ? isPodcastSaved(selectedPodcast.id) : false}
-        isPlaying={playingPodcast && playingPodcast.id === selectedPodcast?.id ? isPlaying : false}
-        API_BASE_URL={API_BASE_URL}
-      />
+      </div>
     </main>
   )
 }
