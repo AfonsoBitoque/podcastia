@@ -75,6 +75,7 @@ function ProtectedRoute({ children }) {
 }
 
 function App() {
+  const location = useLocation()
   const [selectedPodcast, setSelectedPodcast] = useState(null)
   const [isPodcastSidebarOpen, setIsPodcastSidebarOpen] = useState(false)
   const [isSelectedPodcastSaved, setIsSelectedPodcastSaved] = useState(false)
@@ -174,11 +175,12 @@ function App() {
 
   const selectedPodcastId = getPodcastId(selectedPodcast)
   const playingPodcastId = getPodcastId(playingPodcast)
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/register'
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${isAuthPage ? 'app-shell--auth' : ''}`}>
       <Toaster position="bottom-center" />
-      <AppSidebar />
+      {!isAuthPage && <AppSidebar />}
       <Header />
       <div className="app-main">
         <Suspense fallback={<PageLoader />}>
