@@ -52,6 +52,7 @@
   margin: 0 0 0.7rem 0;
   font-size: clamp(1.8rem, 3vw, 2.4rem);
   line-height: 1.2;
+  color: #ffffff;
 }
 
 .topic-hero p {
