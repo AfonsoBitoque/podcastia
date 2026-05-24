@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import '../styles/trending-page.css'
 import '../styles/home-page.css'
-import PodcastSidebar from '../components/PodcastSidebar'
 import { useBackgroundAudio } from '../hooks/useBackgroundAudio'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
@@ -14,9 +13,6 @@ function TrendingPage() {
   const [popularPodcasts, setPopularPodcasts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [selectedPodcast, setSelectedPodcast] = useState(null)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const [savedPodcastIds, setSavedPodcastIds] = useState([])
 
   const {
     isPlaying,
@@ -26,18 +22,11 @@ function TrendingPage() {
     togglePlayPause,
   } = useBackgroundAudio()
 
-  const getToken = () => localStorage.getItem('token')
-
-  const fetchSavedPodcasts = async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/favorites`, {
-        headers: { Authorization: `Bearer ${getToken()}` },
-      })
-      if (!res.ok) return
-      const podcasts = await res.json()
-      setSavedPodcastIds(podcasts.map((p) => p.id))
-    } catch (err) {
-      console.error(err)
+  const getPodcastWithAudio = (podcast) => {
+    const podcastId = podcast.id || podcast.podcastId
+    return {
+      ...podcast,
+      audioUrl: podcast.audioUrl || `${API_BASE_URL}/api/podcasts/${podcastId}/audio`,
     }
   }
 
@@ -65,38 +54,16 @@ function TrendingPage() {
 
   useEffect(() => {
     fetchAllPodcasts()
-    fetchSavedPodcasts()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const isPodcastSaved = (podcastId) => savedPodcastIds.includes(podcastId)
-
-  const handleSavePodcast = async (podcast) => {
-    try {
-      const id = podcast.id || podcast.podcastId
-      const res = await fetch(`${API_BASE_URL}/api/favorites/${id}/toggle`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${getToken()}` },
-      })
-      if (res.ok) await fetchSavedPodcasts()
-    } catch (err) {
-      console.error(err)
-    }
-  }
-
   const handlePlayNow = async (podcast) => {
-    setIsSidebarOpen(false)
-    const podcastWithUrl = {
-      ...podcast,
-      audioUrl: `${API_BASE_URL}/api/podcasts/${podcast.id}/audio`,
-    }
+    const podcastWithUrl = getPodcastWithAudio(podcast)
 
     const podcastId = podcast.id || podcast.podcastId
     const currentId = playingPodcast?.id || playingPodcast?.podcastId
 
     if (currentId === podcastId) {
       await togglePlayPause()
-      setSelectedPodcast(podcast)
       return
     }
 
@@ -104,17 +71,12 @@ function TrendingPage() {
     if (success) {
       await play()
     }
-    setSelectedPodcast(podcast)
   }
 
   const openSidebar = (podcast) => {
-    setSelectedPodcast(podcast)
-    setIsSidebarOpen(true)
-  }
-
-  const closeSidebar = () => {
-    setIsSidebarOpen(false)
-    setSelectedPodcast(null)
+    window.dispatchEvent(
+      new CustomEvent('podcastia-open-podcast', { detail: getPodcastWithAudio(podcast) }),
+    )
   }
 
   const formatTime = (seconds) => {
@@ -272,20 +234,6 @@ function TrendingPage() {
             ))}
           </div>
         </section>
-
-        {/* Podcast Sidebar */}
-        <PodcastSidebar
-          podcast={selectedPodcast}
-          isOpen={isSidebarOpen}
-          onClose={closeSidebar}
-          onPlayNow={() => selectedPodcast && handlePlayNow(selectedPodcast)}
-          onSave={handleSavePodcast}
-          isSaved={selectedPodcast ? isPodcastSaved(selectedPodcast.id) : false}
-          isPlaying={
-            playingPodcast && playingPodcast.id === selectedPodcast?.id ? isPlaying : false
-          }
-          API_BASE_URL={API_BASE_URL}
-        />
       </div>
     </main>
   )
