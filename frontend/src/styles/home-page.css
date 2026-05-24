@@ -1,15 +1,16 @@
 .home-page {
   flex: 1;
-  width: min(100%, 1100px);
+  width: min(100%, 1200px);
   margin: 0 auto;
-  padding: 1.8rem 10rem 7rem;
+  padding: 2rem 2rem 7rem;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  min-height: calc(100vh - var(--header-height));
   background:
     radial-gradient(circle at 10% 20%, rgba(224, 90, 42, 0.14), transparent 36%),
     radial-gradient(circle at 90% 80%, rgba(240, 137, 92, 0.17), transparent 36%),
     linear-gradient(140deg, #fcf2d7, #fde6d8 56%, #ffe5c8);
+  color: var(--ink-brown);
 }
 
 .home-banner {
@@ -397,10 +398,11 @@
 
 /* Fixed width grid for sections that should always show 5 card width */
 .podcast-grid.fixed-width {
-  /* Largura fixa para 5 cards de 230px: (5 * 230px) + (4 * 24px) = 1246px */
-  width: 1246px;
-  min-width: 1246px;
+  /* Limita a largura máxima, mas não força overflow do container */
+  width: 100%;
   max-width: 1246px;
+  min-width: 0;
+  margin: 0 auto;
 }
 
 .content-section {
@@ -767,6 +769,7 @@
 
 /* Home Sections */
 .home-section {
+  width: 100%;
   margin-bottom: 2.5rem;
   min-height: 400px;
 }
