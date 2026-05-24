@@ -4,6 +4,18 @@ import '../styles/friends-page.css'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
 
+const resolveProfilePicture = (path, userId) => {
+  const safePath = String(path || '').trim()
+  if (!safePath) return ''
+  if (/^https?:\/\//i.test(safePath)) return safePath
+  if (userId) {
+    return `${API_BASE_URL}/users/${userId}/profile-image?t=${Date.now()}`
+  }
+  const normalizedPath = safePath.replace(/^\/+/, '')
+  const separator = normalizedPath.includes('?') ? '&' : '?'
+  return `${API_BASE_URL}/${normalizedPath}${separator}t=${Date.now()}`
+}
+
 function FriendsPage() {
   const [friends, setFriends] = useState([])
   const [pendingRequests, setPendingRequests] = useState([])
@@ -110,7 +122,7 @@ function FriendsPage() {
                         <div className="friend-avatar">
                           {friend.profilePicturePath ? (
                             <img
-                              src={`${API_BASE_URL}/${friend.profilePicturePath}`}
+                              src={resolveProfilePicture(friend.profilePicturePath, friend.id)}
                               alt={friend.username}
                             />
                           ) : (
@@ -170,9 +182,12 @@ function FriendsPage() {
                 <li key={request.id} className="friend-item request-item">
                   <div className="friend-info">
                     <div className="friend-avatar">
-                      {request.senderProfilePicturePath ? (
+                      {request.senderAvatarUrl || request.senderProfilePicturePath ? (
                         <img
-                          src={`${API_BASE_URL}/${request.senderProfilePicturePath}`}
+                          src={resolveProfilePicture(
+                            request.senderAvatarUrl || request.senderProfilePicturePath,
+                            request.senderId,
+                          )}
                           alt={request.senderUsername}
                         />
                       ) : (
