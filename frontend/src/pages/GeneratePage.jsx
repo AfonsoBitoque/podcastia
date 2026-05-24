@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import '../styles/generate-page.css'
 import { API_BASE_URL } from '../shared/config/env'
 import { getToken } from '../shared/storage/authStorage'
+import { getPodcastId, resolvePodcastAudioUrl } from '../shared/utils/podcast'
 
 const TAG_OPTIONS = [
   { value: 'DESPORTO', label: 'Desporto' },
@@ -109,12 +110,18 @@ function GeneratePage() {
 
   const handleToggleVisibility = async () => {
     if (!generatedPodcast) return
+    const podcastId = getPodcastId(generatedPodcast)
+    if (!podcastId) {
+      setError('Nao foi possivel identificar o podcast para alterar a visibilidade.')
+      return
+    }
+
     setIsTogglingVisibility(true)
 
     try {
       const newPublico = !generatedPodcast.publico
       const response = await fetch(
-        `${API_BASE_URL}/api/podcasts/${generatedPodcast.podcastId}/visibility`,
+        `${API_BASE_URL}/api/podcasts/${podcastId}/visibility`,
         {
           method: 'PATCH',
           headers: {
@@ -245,7 +252,7 @@ function GeneratePage() {
                 </div>
 
                 <div className="result-player">
-                  <audio src={`${API_BASE_URL}${generatedPodcast.audioUrl}`} controls />
+                  <audio src={resolvePodcastAudioUrl(generatedPodcast)} controls />
                 </div>
 
                 <div className="result-actions">

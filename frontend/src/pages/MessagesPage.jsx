@@ -128,12 +128,15 @@ function MessagesPage() {
   const [friendsStatus, setFriendsStatus] = useState('loading')
   const [historyStatus, setHistoryStatus] = useState('idle')
   const [socketStatus, setSocketStatus] = useState('offline')
+  const [socketRetryKey, setSocketRetryKey] = useState(0)
   const [error, setError] = useState('')
   const [draft, setDraft] = useState('')
   const [activeReactionPickerId, setActiveReactionPickerId] = useState(null)
   const [reactionPulseMessageId, setReactionPulseMessageId] = useState(null)
 
   const socketRef = useRef(null)
+  const reconnectTimeoutRef = useRef(null)
+  const reconnectAttemptRef = useRef(0)
   const activeFriendRef = useRef(null)
   const userIdRef = useRef(sessionUser?.id || null)
   const messagesEndRef = useRef(null)
@@ -518,6 +521,7 @@ function MessagesPage() {
     socket.addEventListener('message', (event) => {
       parseStompFrames(String(event.data)).forEach((frame) => {
         if (frame.command === 'CONNECTED') {
+          reconnectAttemptRef.current = 0
           setSocketStatus('online')
           socket.send(
             encodeStompFrame('SUBSCRIBE', {
@@ -544,18 +548,32 @@ function MessagesPage() {
       })
     })
 
+    const scheduleReconnect = () => {
+      window.clearTimeout(reconnectTimeoutRef.current)
+      const delay = Math.min(1000 * 2 ** Math.min(reconnectAttemptRef.current, 4), 15000)
+      reconnectAttemptRef.current += 1
+      reconnectTimeoutRef.current = window.setTimeout(() => {
+        setSocketRetryKey((current) => current + 1)
+      }, delay)
+    }
+
     socket.addEventListener('close', () => {
       if (!isClosedByPage) {
         setSocketStatus('offline')
+        scheduleReconnect()
       }
     })
 
     socket.addEventListener('error', () => {
       setSocketStatus('error')
+      if (!isClosedByPage) {
+        socket.close()
+      }
     })
 
     return () => {
       isClosedByPage = true
+      window.clearTimeout(reconnectTimeoutRef.current)
       socket.close()
       if (socketRef.current === socket) {
         socketRef.current = null
@@ -563,7 +581,7 @@ function MessagesPage() {
     }
     // The realtime handler reads current refs/state helpers; reconnecting follows auth changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionUser?.id, token])
+  }, [sessionUser?.id, socketRetryKey, token])
 
   useEffect(() => {
     if (socketStatus !== 'online' || !sessionUser?.id) return
@@ -594,6 +612,7 @@ function MessagesPage() {
     () => () => {
       window.clearTimeout(reactionLongPressTimeoutRef.current)
       window.clearTimeout(reactionPulseTimeoutRef.current)
+      window.clearTimeout(reconnectTimeoutRef.current)
     },
     [],
   )

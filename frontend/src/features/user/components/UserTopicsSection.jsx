@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom'
 import { formatTopicLabel } from '../../../shared/utils/topics'
 
-function UserTopicsSection({ currentTopics }) {
+function UserTopicsSection({ currentTopics = [] }) {
+  const safeTopics = Array.isArray(currentTopics) ? currentTopics : []
+
   return (
     <div className="info-block">
       <div className="info-block-header">
@@ -14,9 +16,9 @@ function UserTopicsSection({ currentTopics }) {
         </Link>
       </div>
 
-      {currentTopics.length > 0 ? (
+      {safeTopics.length > 0 ? (
         <div className="user-topic-list" aria-label="Temas selecionados">
-          {currentTopics.map((topic) => (
+          {safeTopics.map((topic) => (
             <span key={topic} className="user-topic-chip">
               {formatTopicLabel(topic)}
             </span>

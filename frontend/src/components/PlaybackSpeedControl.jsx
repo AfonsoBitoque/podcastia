@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import '../styles/playback-speed-control.css'
+import { toFiniteNumber } from '../shared/utils/collection'
 
 const MIN_SPEED = 0.25
 const MAX_SPEED = 2.0
@@ -9,6 +10,7 @@ function PlaybackSpeedControl({ currentSpeed, onSpeedChange }) {
   const [isOpen, setIsOpen] = useState(false)
   const popoverRef = useRef(null)
   const buttonRef = useRef(null)
+  const safeCurrentSpeed = toFiniteNumber(currentSpeed, 1)
 
   // Fechar popover ao clicar fora
   useEffect(() => {
@@ -32,7 +34,7 @@ function PlaybackSpeedControl({ currentSpeed, onSpeedChange }) {
   }, [isOpen])
 
   const changeSpeed = (delta) => {
-    let newSpeed = currentSpeed + delta
+    let newSpeed = safeCurrentSpeed + delta
 
     // Clamping com loop - se ultrapassar máximo, volta ao mínimo
     if (newSpeed > MAX_SPEED) {
@@ -78,7 +80,7 @@ function PlaybackSpeedControl({ currentSpeed, onSpeedChange }) {
         title="Ver opções de velocidade"
         aria-label="Alterar velocidade de reprodução"
       >
-        {currentSpeed % 1 === 0 ? Math.floor(currentSpeed) : currentSpeed.toFixed(2)}x
+        {safeCurrentSpeed % 1 === 0 ? Math.floor(safeCurrentSpeed) : safeCurrentSpeed.toFixed(2)}x
       </button>
 
       <button
@@ -96,7 +98,7 @@ function PlaybackSpeedControl({ currentSpeed, onSpeedChange }) {
             {[0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2].map((speed) => (
               <button
                 key={speed}
-                className={`speed-option ${currentSpeed === speed ? 'active' : ''}`}
+                className={`speed-option ${safeCurrentSpeed === speed ? 'active' : ''}`}
                 onClick={() => {
                   onSpeedChange(speed)
                   setIsOpen(false)

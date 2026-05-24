@@ -4,6 +4,7 @@ import '../styles/friends-page.css'
 import { API_BASE_URL } from '../shared/config/env'
 import { getToken } from '../shared/storage/authStorage'
 import { resolveProfilePicture } from '../shared/utils/media'
+import { asArray } from '../shared/utils/collection'
 
 const UsersEmptyIcon = () => (
   <svg
@@ -60,8 +61,8 @@ function FriendsPage() {
       const friendsData = await friendsRes.json()
       const requestsData = await requestsRes.json()
 
-      setFriends(friendsData)
-      setPendingRequests(requestsData)
+      setFriends(asArray(friendsData))
+      setPendingRequests(asArray(requestsData))
     } catch (err) {
       console.error('Error fetching friends:', err)
       setError('Não foi possível carregar a lista de amigos.')
@@ -75,8 +76,11 @@ function FriendsPage() {
   }, [])
 
   const handleAction = async (userId, action) => {
+    if (!userId) return
+
     try {
       const token = getToken()
+      if (!token) return
       let url = `${API_BASE_URL}/api/relations/friend-request/${userId}`
       let method = 'POST'
 

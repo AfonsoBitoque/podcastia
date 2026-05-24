@@ -1,11 +1,13 @@
 import { getInitial } from '../../../shared/utils/media'
 
 function ChatHeader({ activeFriend, chatSubtitle, onOpenProfile, resolveMediaUrl }) {
+  if (!activeFriend) return null
+
   return (
     <header className="chat-header">
       <div
         className="chat-user"
-        onClick={() => onOpenProfile(activeFriend.id)}
+        onClick={() => activeFriend.id && onOpenProfile?.(activeFriend.id)}
         style={{ cursor: 'pointer' }}
       >
         <span className="chat-avatar">

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import BackgroundAudioService from '../services/BackgroundAudioService'
-import { API_BASE_URL } from '../shared/config/env'
+import { resolvePodcastAudioUrl } from '../shared/utils/podcast'
 
 // Create a single global instance of the audio service to survive page transitions
 const globalAudioService = new BackgroundAudioService()
@@ -121,12 +121,17 @@ export function useBackgroundAudio() {
     setIsLoading(true)
     setError(null)
 
+    const audioUrl = resolvePodcastAudioUrl(podcast)
+    if (!audioUrl) {
+      setIsLoading(false)
+      setError('Failed to load podcast')
+      return false
+    }
+
     // Add audio URL to podcast object if not present
     const podcastWithUrl = {
-      ...podcast,
-      audioUrl:
-        podcast.audioUrl ||
-        `${API_BASE_URL}/api/podcasts/${podcast.id || podcast.podcastId}/audio`,
+      ...(podcast || {}),
+      audioUrl,
     }
 
     const success = await globalAudioService.loadPodcast(podcastWithUrl, startTime)

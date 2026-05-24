@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import '../../styles/admin-page.css'
 import { API_BASE_URL } from '../../shared/config/env'
 import { getToken } from '../../shared/storage/authStorage'
+import { asArray, toFiniteNumber } from '../../shared/utils/collection'
 
 function AdminDashboard() {
   const [analytics, setAnalytics] = useState(null)
@@ -27,7 +28,7 @@ function AdminDashboard() {
       }
 
       const data = await response.json()
-      setAnalytics(data)
+      setAnalytics(data && typeof data === 'object' ? data : {})
       setLoading(false)
     } catch (err) {
       console.error('Error fetching analytics:', err)
@@ -37,21 +38,23 @@ function AdminDashboard() {
   }
 
   const formatNumber = (num) => {
-    if (num >= 1000000) {
-      return (num / 1000000).toFixed(1) + 'M'
-    } else if (num >= 1000) {
-      return (num / 1000).toFixed(1) + 'K'
+    const safeNumber = toFiniteNumber(num)
+    if (safeNumber >= 1000000) {
+      return (safeNumber / 1000000).toFixed(1) + 'M'
+    } else if (safeNumber >= 1000) {
+      return (safeNumber / 1000).toFixed(1) + 'K'
     }
-    return num.toString()
+    return safeNumber.toString()
   }
 
   const formatTime = (minutes) => {
-    if (minutes >= 60) {
-      const hours = Math.floor(minutes / 60)
-      const mins = minutes % 60
+    const safeMinutes = toFiniteNumber(minutes)
+    if (safeMinutes >= 60) {
+      const hours = Math.floor(safeMinutes / 60)
+      const mins = safeMinutes % 60
       return `${hours}h ${mins}m`
     }
-    return `${minutes}m`
+    return `${safeMinutes}m`
   }
 
   if (loading) {
@@ -121,8 +124,12 @@ function AdminDashboard() {
             </div>
             <div className="metric-item">
               <div className="metric-value">
-                {analytics.totalUsers > 0
-                  ? Math.round((analytics.dailyActiveUsers / analytics.totalUsers) * 100)
+                {toFiniteNumber(analytics.totalUsers) > 0
+                  ? Math.round(
+                      (toFiniteNumber(analytics.dailyActiveUsers) /
+                        toFiniteNumber(analytics.totalUsers)) *
+                        100,
+                    )
                   : 0}
                 %
               </div>
@@ -134,10 +141,10 @@ function AdminDashboard() {
         {/* Top Podcasts */}
         <div className="admin-card">
           <h2>Top Podcasts</h2>
-          {analytics.topPodcasts && analytics.topPodcasts.length > 0 ? (
+          {asArray(analytics.topPodcasts).length > 0 ? (
             <div className="top-podcasts">
-              {analytics.topPodcasts.slice(0, 5).map((podcast, index) => (
-                <div key={podcast.podcastId} className="top-podcast-item">
+              {asArray(analytics.topPodcasts).slice(0, 5).map((podcast, index) => (
+                <div key={podcast.podcastId || index} className="top-podcast-item">
                   <div className="podcast-rank">#{index + 1}</div>
                   <div className="podcast-info">
                     <div className="podcast-title">{podcast.title}</div>

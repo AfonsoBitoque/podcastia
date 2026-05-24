@@ -4,6 +4,13 @@ import '../styles/playlist-page.css'
 import '../styles/home-page.css'
 import { API_BASE_URL } from '../shared/config/env'
 import { getToken } from '../shared/storage/authStorage'
+import { asArray } from '../shared/utils/collection'
+import { getPodcastId } from '../shared/utils/podcast'
+
+const normalizePlaylist = (playlist) => ({
+  ...(playlist || {}),
+  episodes: asArray(playlist?.episodes),
+})
 
 function PlaylistPage() {
   const [playlists, setPlaylists] = useState([])
@@ -51,21 +58,23 @@ function PlaylistPage() {
         headers: { Authorization: `Bearer ${getToken()}` },
       })
       if (!res.ok) return
-      const podcasts = await res.json()
+      const podcasts = asArray(await res.json())
       setSavedPlaylist({
         id: '__saved__',
         title: 'Podcasts Guardados',
         description: 'Os teus podcasts favoritos',
         isPublic: false,
         isSaved: true,
-        episodes: podcasts.map((p, i) => ({
-          position: i,
-          podcastId: p.id,
-          title: p.titulo,
-          duration: p.duracao,
-          host: p.user?.username || 'Desconhecido',
-          available: true,
-        })),
+        episodes: podcasts
+          .map((p, i) => ({
+            position: i,
+            podcastId: getPodcastId(p),
+            title: p.titulo,
+            duration: p.duracao,
+            host: p.user?.username || 'Desconhecido',
+            available: true,
+          }))
+          .filter((episode) => episode.podcastId),
       })
     } catch (err) {
       console.error('Erro ao carregar guardados:', err)
@@ -78,7 +87,7 @@ function PlaylistPage() {
         headers: { Authorization: `Bearer ${getToken()}` },
       })
       if (!res.ok) throw new Error('Erro ao carregar playlists')
-      setPlaylists(await res.json())
+      setPlaylists(asArray(await res.json()).map(normalizePlaylist))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -139,7 +148,7 @@ function PlaylistPage() {
       })
       if (!res.ok) throw new Error('Erro ao criar playlist')
       const created = await res.json()
-      setPlaylists((prev) => [...prev, created])
+      setPlaylists((prev) => [...prev, normalizePlaylist(created)])
       setShowCreateModal(false)
       setNewPlaylist({ title: '', description: '', isPublic: true })
     } catch (err) {
@@ -168,13 +177,15 @@ function PlaylistPage() {
         headers: { Authorization: `Bearer ${getToken()}` },
       })
       if (!res.ok) throw new Error('Erro ao carregar playlist')
-      setSelectedPlaylist(await res.json())
+      setSelectedPlaylist(normalizePlaylist(await res.json()))
     } catch (err) {
       alert(err.message)
     }
   }
 
   const removeEpisode = async (podcastId) => {
+    if (!selectedPlaylist?.id || !podcastId) return
+
     try {
       const res = await fetch(
         `${API_BASE_URL}/api/playlists/${selectedPlaylist.id}/episodes/${podcastId}`,
@@ -184,7 +195,7 @@ function PlaylistPage() {
         },
       )
       if (!res.ok) throw new Error('Erro ao remover episódio')
-      const updated = await res.json()
+      const updated = normalizePlaylist(await res.json())
       setSelectedPlaylist(updated)
       setPlaylists((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
     } catch (err) {
@@ -193,12 +204,14 @@ function PlaylistPage() {
   }
 
   const openAddPodcastModal = async () => {
+    if (!selectedPlaylist?.id) return
+
     try {
       const res = await fetch(`${API_BASE_URL}/api/podcasts`, {
         headers: { Authorization: `Bearer ${getToken()}` },
       })
       if (!res.ok) throw new Error('Erro ao carregar podcasts')
-      setAvailablePodcasts(await res.json())
+      setAvailablePodcasts(asArray(await res.json()))
       setShowAddPodcastModal(true)
     } catch (err) {
       alert(err.message)
@@ -206,6 +219,8 @@ function PlaylistPage() {
   }
 
   const addPodcastToPlaylist = async (podcastId) => {
+    if (!selectedPlaylist?.id || !podcastId) return
+
     try {
       const res = await fetch(`${API_BASE_URL}/api/playlists/${selectedPlaylist.id}/episodes`, {
         method: 'POST',
@@ -216,7 +231,7 @@ function PlaylistPage() {
         const errData = await res.json().catch(() => ({}))
         throw new Error(errData.error || 'Erro ao adicionar')
       }
-      const updated = await res.json()
+      const updated = normalizePlaylist(await res.json())
       setSelectedPlaylist(updated)
       setPlaylists((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
     } catch (err) {
@@ -227,6 +242,8 @@ function PlaylistPage() {
   // Playback controls
   const playEpisode = useCallback(
     async (podcastId, queue = null, queueIdx = -1) => {
+      if (!podcastId) return
+
       try {
         const currentId = playingPodcast?.id || playingPodcast?.podcastId
         if (currentId === podcastId) {
@@ -334,7 +351,7 @@ function PlaylistPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying, currentTime, duration, playQueue, playQueueIndex])
 
-  const filteredPodcasts = availablePodcasts.filter((p) => {
+  const filteredPodcasts = asArray(availablePodcasts).filter((p) => {
     const title = (p.titulo || '').toLowerCase()
     const search = podcastSearch.toLowerCase()
     const alreadyAdded = selectedPlaylist?.episodes?.some((ep) => ep.podcastId === p.id)

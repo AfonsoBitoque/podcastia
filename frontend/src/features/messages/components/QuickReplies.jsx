@@ -1,8 +1,10 @@
-function QuickReplies({ replies, onSelectReply }) {
+function QuickReplies({ replies = [], onSelectReply }) {
+  const safeReplies = Array.isArray(replies) ? replies : []
+
   return (
     <div className="quick-replies" aria-label="Sugestoes rapidas">
-      {replies.map((reply) => (
-        <button key={reply} type="button" onClick={() => onSelectReply(reply)}>
+      {safeReplies.map((reply) => (
+        <button key={reply} type="button" onClick={() => onSelectReply?.(reply)}>
           {reply}
         </button>
       ))}

@@ -191,6 +191,11 @@ class BackgroundAudioService {
       return false
     }
 
+    if (!podcast?.audioUrl) {
+      this.emit('error', { message: 'Podcast audio URL is missing' })
+      return false
+    }
+
     this.accountKey = accountKey
     this.clearState(accountKey)
     console.log(

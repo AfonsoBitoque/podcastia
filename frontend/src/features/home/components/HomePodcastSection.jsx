@@ -14,6 +14,7 @@ function HomePodcastSection({
   onEmptyAction,
   renderPodcast,
 }) {
+  const safePodcasts = Array.isArray(podcasts) ? podcasts : []
   const emptyStateClassName = ['empty-state', emptyClassName].filter(Boolean).join(' ')
 
   return (
@@ -43,8 +44,8 @@ function HomePodcastSection({
               Tentar novamente
             </button>
           </div>
-        ) : podcasts && podcasts.length > 0 ? (
-          podcasts.map((podcast) => renderPodcast(podcast))
+        ) : safePodcasts.length > 0 ? (
+          safePodcasts.map((podcast, index) => renderPodcast(podcast, index))
         ) : (
           <div className={emptyStateClassName}>
             <p>{emptyMessage}</p>

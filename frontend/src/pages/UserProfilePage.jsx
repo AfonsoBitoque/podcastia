@@ -8,6 +8,7 @@ import { getStoredUser, getToken } from '../shared/storage/authStorage'
 import { formatDateTime, formatMemberSince, formatRelativeTime } from '../shared/utils/date'
 import { resolveProfilePicture } from '../shared/utils/media'
 import { formatTopicLabel } from '../shared/utils/topics'
+import { getPodcastTags } from '../shared/utils/podcast'
 import UserStyleWheel from '../features/user/components/UserStyleWheel'
 
 const formatText = (value, fallback = 'Nao definido') => {
@@ -204,7 +205,7 @@ function UserProfilePage() {
     )
   }
 
-  const currentTopics = user.topics || []
+  const currentTopics = Array.isArray(user.topics) ? user.topics : []
   const isOwnProfile = String(sessionUser?.id) === String(id)
 
   const safePodcasts = Array.isArray(podcasts) ? podcasts : []
@@ -430,36 +431,47 @@ function UserProfilePage() {
                   </p>
                 ) : (
                   <div className="user-podcasts-list">
-                    {safePodcasts.map((podcast) => (
-                      <div key={podcast.id} className="user-podcast-item">
-                        <div className="user-podcast-info">
-                          <h3 className="user-podcast-title">{podcast.titulo}</h3>
-                          <div className="user-podcast-meta">
-                            <span className="user-podcast-duration">{podcast.duracao} min</span>
-                            {podcast.tags && podcast.tags.length > 0 && (
-                              <span className="user-podcast-tags">{podcast.tags.join(', ')}</span>
-                            )}
+                    {safePodcasts.map((podcast, index) => {
+                      const tags = getPodcastTags(podcast)
+
+                      return (
+                        <div
+                          key={podcast.id || podcast.podcastId || index}
+                          className="user-podcast-item"
+                        >
+                          <div className="user-podcast-info">
+                            <h3 className="user-podcast-title">
+                              {podcast.titulo || podcast.title || 'Podcast'}
+                            </h3>
+                            <div className="user-podcast-meta">
+                              <span className="user-podcast-duration">
+                                {podcast.duracao || '--'} min
+                              </span>
+                              {tags.length > 0 && (
+                                <span className="user-podcast-tags">{tags.join(', ')}</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="user-podcast-actions">
+                            <button
+                              className="user-podcast-toggle-btn is-public"
+                              onClick={() => handleOpenPodcast(podcast)}
+                              style={{
+                                background: 'var(--brand-primary)',
+                                color: 'white',
+                                border: 'none',
+                                padding: '0.4rem 1rem',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontWeight: '500',
+                              }}
+                            >
+                              Ouvir Agora
+                            </button>
                           </div>
                         </div>
-                        <div className="user-podcast-actions">
-                          <button
-                            className="user-podcast-toggle-btn is-public"
-                            onClick={() => handleOpenPodcast(podcast)}
-                            style={{
-                              background: 'var(--brand-primary)',
-                              color: 'white',
-                              border: 'none',
-                              padding: '0.4rem 1rem',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontWeight: '500',
-                            }}
-                          >
-                            Ouvir Agora
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </div>

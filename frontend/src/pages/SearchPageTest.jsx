@@ -6,6 +6,7 @@ import '../styles/trending-page.css'
 import '../styles/home-page.css'
 import { API_BASE_URL } from '../shared/config/env'
 import { resolveAssetUrl } from '../shared/utils/media'
+import { getPodcastTags } from '../shared/utils/podcast'
 const PAGE_SIZE = 8
 
 const SEARCH_TABS = [
@@ -238,7 +239,8 @@ function SearchPageTest() {
       podcast.user?.username ||
       podcast.subtitle?.replace('Criador: ', '') ||
       'Podcastia'
-    const tags = Array.isArray(podcast.tags) && podcast.tags.length > 0 ? podcast.tags : ['GERAL']
+    const podcastTags = getPodcastTags(podcast)
+    const tags = podcastTags.length > 0 ? podcastTags : ['GERAL']
     const duration = podcast.duracao ? `${podcast.duracao} min` : 'Podcast'
     const progressPercent = Math.max(
       8,

@@ -23,15 +23,15 @@ function MessageComposer({
       </button>
       <input
         type="text"
-        value={draft}
-        onChange={(event) => onDraftChange(event.target.value)}
-        placeholder={`Mensagem para ${activeFriend.username}`}
+        value={draft || ''}
+        onChange={(event) => onDraftChange?.(event.target.value)}
+        placeholder={`Mensagem para ${activeFriend?.username || 'utilizador'}`}
         maxLength={2000}
       />
       <button
         type="submit"
         className="send-message-btn"
-        disabled={!draft.trim() || !canSendMessage}
+        disabled={!String(draft || '').trim() || !canSendMessage}
       >
         <span className="send-icon" aria-hidden="true" />
         <span className="visually-hidden">Enviar mensagem</span>

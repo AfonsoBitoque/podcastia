@@ -180,7 +180,7 @@ function UserPage() {
       }
 
       setUser((previous) => ({
-        ...previous,
+        ...(previous || {}),
         profilePicturePath: null,
       }))
       updateStoredUser({ profilePicturePath: null })
@@ -274,7 +274,7 @@ function UserPage() {
       const returnedPath = (await response.text()).trim()
 
       setUser((previous) => ({
-        ...previous,
+        ...(previous || {}),
         profilePicturePath: returnedPath || previous?.profilePicturePath || 'uploaded',
       }))
       updateStoredUser({ profilePicturePath: returnedPath || 'uploaded' })
@@ -632,7 +632,7 @@ function UserPage() {
 
   const handleTogglePodcastVisibility = async (podcastId, currentPublico) => {
     const token = getToken()
-    if (!token) return
+    if (!token || !podcastId) return
     setTogglingPodcastId(podcastId)
     try {
       const response = await fetch(`${API_BASE_URL}/api/podcasts/${podcastId}/visibility`, {

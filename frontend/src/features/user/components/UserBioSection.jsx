@@ -10,6 +10,8 @@ function UserBioSection({
   onProfileInputChange,
   onCloseEditProfile,
 }) {
+  const safeBio = String(profileForm?.bio || '')
+
   return (
     <div className="info-block">
       <div className="info-block-header">
@@ -37,14 +39,14 @@ function UserBioSection({
             ref={bioTextareaRef}
             id="edit-bio"
             name="bio"
-            value={profileForm.bio}
+            value={safeBio}
             onChange={onProfileInputChange}
             rows={4}
             maxLength={160}
             disabled={isSavingProfile}
           />
 
-          <p className="user-edit-counter">{profileForm.bio.length}/160</p>
+          <p className="user-edit-counter">{safeBio.length}/160</p>
 
           {profileFormError && <p className="user-warning">{profileFormError}</p>}
 

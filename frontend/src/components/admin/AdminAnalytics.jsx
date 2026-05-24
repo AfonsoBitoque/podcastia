@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import '../../styles/admin-page.css'
 import { API_BASE_URL } from '../../shared/config/env'
 import { getToken } from '../../shared/storage/authStorage'
+import { asArray, toFiniteNumber } from '../../shared/utils/collection'
 
 function AdminAnalytics() {
   const [analytics, setAnalytics] = useState(null)
@@ -30,7 +31,7 @@ function AdminAnalytics() {
       }
 
       const data = await response.json()
-      setAnalytics(data)
+      setAnalytics(data && typeof data === 'object' ? data : {})
       setLoading(false)
     } catch (err) {
       console.error('Error fetching analytics:', err)
@@ -129,26 +130,36 @@ function AdminAnalytics() {
   }
 
   const formatNumber = (num) => {
-    if (num >= 1000000) {
-      return (num / 1000000).toFixed(1) + 'M'
-    } else if (num >= 1000) {
-      return (num / 1000).toFixed(1) + 'K'
+    const safeNumber = toFiniteNumber(num)
+    if (safeNumber >= 1000000) {
+      return (safeNumber / 1000000).toFixed(1) + 'M'
+    } else if (safeNumber >= 1000) {
+      return (safeNumber / 1000).toFixed(1) + 'K'
     }
-    return num.toString()
+    return safeNumber.toString()
   }
 
   const formatTime = (minutes) => {
-    if (minutes >= 60) {
-      const hours = Math.floor(minutes / 60)
-      const mins = minutes % 60
+    const safeMinutes = toFiniteNumber(minutes)
+    if (safeMinutes >= 60) {
+      const hours = Math.floor(safeMinutes / 60)
+      const mins = safeMinutes % 60
       return `${hours}h ${mins}m`
     }
-    return `${minutes}m`
+    return `${safeMinutes}m`
   }
 
   const formatPercentage = (num, total) => {
-    if (total === 0) return '0%'
-    return `${Math.round((num / total) * 100)}%`
+    const safeTotal = toFiniteNumber(total)
+    if (safeTotal === 0) return '0%'
+    return `${Math.round((toFiniteNumber(num) / safeTotal) * 100)}%`
+  }
+
+  const getUsageBarHeight = (value, values) => {
+    const safeValues = asArray(values).map((item) => Math.max(0, toFiniteNumber(item.activeUsers)))
+    const maxValue = Math.max(...safeValues, 0)
+    if (maxValue <= 0) return '5%'
+    return `${Math.max((Math.max(0, toFiniteNumber(value)) / maxValue) * 100, 5)}%`
   }
 
   if (loading) {
@@ -244,8 +255,11 @@ function AdminAnalytics() {
           </div>
           <div className="analytics-item">
             <div className="analytics-value">
-              {analytics.totalPodcasts > 0
-                ? Math.round(analytics.totalListeningTime / analytics.totalPodcasts)
+              {toFiniteNumber(analytics.totalPodcasts) > 0
+                ? Math.round(
+                    toFiniteNumber(analytics.totalListeningTime) /
+                      toFiniteNumber(analytics.totalPodcasts),
+                  )
                 : 0}
               m
             </div>
@@ -258,9 +272,9 @@ function AdminAnalytics() {
       {/* Top Podcasts */}
       <div className="admin-card">
         <h2>Top 10 Podcasts by Plays</h2>
-        {analytics.topPodcasts && analytics.topPodcasts.length > 0 ? (
+        {asArray(analytics.topPodcasts).length > 0 ? (
           <div className="top-podcasts-detailed">
-            {analytics.topPodcasts.map((podcast, index) => (
+            {asArray(analytics.topPodcasts).map((podcast, index) => (
               <div key={podcast.podcastId} className="top-podcast-detailed">
                 <div className="podcast-rank-large">#{index + 1}</div>
                 <div className="podcast-details">
@@ -279,7 +293,9 @@ function AdminAnalytics() {
                     <span className="metric-label">total time</span>
                   </div>
                   <div className="metric">
-                    <span className="metric-value-large">{podcast.averageRating.toFixed(1)}</span>
+                    <span className="metric-value-large">
+                      {toFiniteNumber(podcast.averageRating).toFixed(1)}
+                    </span>
                     <span className="metric-label">rating</span>
                   </div>
                 </div>
@@ -294,15 +310,15 @@ function AdminAnalytics() {
       {/* Weekly Usage Chart */}
       <div className="admin-card">
         <h2>Weekly Usage Trend</h2>
-        {analytics.weeklyUsage && analytics.weeklyUsage.length > 0 ? (
+        {asArray(analytics.weeklyUsage).length > 0 ? (
           <div className="usage-chart">
             <div className="chart-bars">
-              {analytics.weeklyUsage.map((day, index) => (
+              {asArray(analytics.weeklyUsage).map((day, index) => (
                 <div key={index} className="chart-bar-container">
                   <div
                     className="chart-bar"
                     style={{
-                      height: `${Math.max((day.activeUsers / Math.max(...analytics.weeklyUsage.map((d) => d.activeUsers))) * 100, 5)}%`,
+                      height: getUsageBarHeight(day.activeUsers, analytics.weeklyUsage),
                     }}
                     title={`${day.date}: ${day.activeUsers} active users`}
                   ></div>
@@ -324,15 +340,15 @@ function AdminAnalytics() {
       {/* Monthly Usage Chart */}
       <div className="admin-card">
         <h2>Monthly Usage Trend</h2>
-        {analytics.monthlyUsage && analytics.monthlyUsage.length > 0 ? (
+        {asArray(analytics.monthlyUsage).length > 0 ? (
           <div className="usage-chart">
             <div className="chart-bars">
-              {analytics.monthlyUsage.map((month, index) => (
+              {asArray(analytics.monthlyUsage).map((month, index) => (
                 <div key={index} className="chart-bar-container">
                   <div
                     className="chart-bar"
                     style={{
-                      height: `${Math.max((month.activeUsers / Math.max(...analytics.monthlyUsage.map((d) => d.activeUsers))) * 100, 5)}%`,
+                      height: getUsageBarHeight(month.activeUsers, analytics.monthlyUsage),
                     }}
                     title={`${month.date}: ${month.activeUsers} active users`}
                   ></div>

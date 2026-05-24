@@ -5,11 +5,13 @@ function ConversationList({
   connectionLabel,
   friendsStatus,
   error,
-  conversations,
+  conversations = [],
   activeFriendId,
   onSelectFriend,
   resolveMediaUrl,
 }) {
+  const safeConversations = Array.isArray(conversations) ? conversations : []
+
   return (
     <aside className="conversation-list" aria-label="Conversas">
       <div className="conversation-list__header">
@@ -28,15 +30,15 @@ function ConversationList({
         <p className="messages-section-title">Conversas</p>
         {friendsStatus === 'loading' && <p className="messages-muted">A carregar amigos...</p>}
         {friendsStatus === 'error' && <p className="messages-warning">{error}</p>}
-        {friendsStatus === 'ready' && conversations.length === 0 && (
+        {friendsStatus === 'ready' && safeConversations.length === 0 && (
           <p className="messages-muted">Ainda nao tens amigos para iniciar uma conversa.</p>
         )}
-        {conversations.map((friend) => (
+        {safeConversations.map((friend) => (
           <button
             key={friend.id}
             type="button"
             className={`conversation-item ${String(activeFriendId) === String(friend.id) ? 'active' : ''}`}
-            onClick={() => onSelectFriend(friend.id)}
+            onClick={() => onSelectFriend?.(friend.id)}
           >
             <span className="conversation-avatar">
               {friend.profilePicturePath ? (

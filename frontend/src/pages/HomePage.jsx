@@ -10,6 +10,8 @@ import { filterPodcastsByTopic } from '../features/podcasts/utils/filterPodcasts
 import { useBackgroundAudio } from '../hooks/useBackgroundAudio'
 import { API_BASE_URL } from '../shared/config/env'
 import { getStoredUser, getToken } from '../shared/storage/authStorage'
+import { asArray } from '../shared/utils/collection'
+import { getPodcastId } from '../shared/utils/podcast'
 
 function HomePage() {
   const navigate = useNavigate()
@@ -42,13 +44,14 @@ function HomePage() {
 
   useEffect(() => {
     if (podcastData && currentUser) {
+      const safePodcastData = asArray(podcastData)
       // Filter podcasts by current user
       const userId = currentUser.id || currentUser.userId
-      const myPods = podcastData.filter((p) => {
+      const myPods = safePodcastData.filter((p) => {
         const podcastUserId = p.user?.id || p.userId || p.user_id
         return podcastUserId && String(podcastUserId) === String(userId)
       })
-      const communityPods = podcastData.filter((p) => {
+      const communityPods = safePodcastData.filter((p) => {
         const podcastUserId = p.user?.id || p.userId || p.user_id
         return !podcastUserId || String(podcastUserId) !== String(userId)
       })
@@ -56,7 +59,7 @@ function HomePage() {
       setCommunityPodcasts(communityPods)
       setLoading(false)
     } else if (podcastData) {
-      setCommunityPodcasts(podcastData)
+      setCommunityPodcasts(asArray(podcastData))
       setMyPodcasts([])
       setLoading(false)
     }
@@ -69,7 +72,7 @@ function HomePage() {
         throw new Error('Failed to fetch podcasts')
       }
       const data = await response.json()
-      setPodcastData(data)
+      setPodcastData(asArray(data))
     } catch (err) {
       console.error('Error fetching podcasts:', err)
       setError('Failed to load podcasts')
@@ -81,7 +84,11 @@ function HomePage() {
     try {
       console.log('[HomePage] Playing podcast:', podcast.titulo)
 
-      const podcastId = podcast.id || podcast.podcastId
+      const podcastId = getPodcastId(podcast)
+      if (!podcastId) {
+        setError('Failed to play podcast: missing podcast id')
+        return
+      }
       const currentId = playingPodcast?.id || playingPodcast?.podcastId
 
       if (currentId === podcastId) {
@@ -125,7 +132,7 @@ function HomePage() {
 
       const data = await response.json()
       console.log('[fetchSavedPodcasts] Data:', data)
-      setSavedPodcasts(data)
+      setSavedPodcasts(asArray(data))
     } catch (err) {
       console.error('[fetchSavedPodcasts] Error:', err)
     }
@@ -164,9 +171,9 @@ function HomePage() {
     }
   }
 
-  const renderPodcastCard = (podcast) => (
+  const renderPodcastCard = (podcast, index) => (
     <PodcastCard
-      key={podcast.id}
+      key={getPodcastId(podcast) || `${podcast.titulo || podcast.title || 'podcast'}-${index}`}
       podcast={podcast}
       isPlaying={isPlaying}
       playingPodcast={playingPodcast}

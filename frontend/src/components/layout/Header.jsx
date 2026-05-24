@@ -14,10 +14,11 @@ const CATEGORY_CHIPS = [
 ]
 
 const getCategoryQuery = (value) => {
+  const safeValue = String(value || '')
   const category = CATEGORY_CHIPS.find(
-    (chip) => chip.label.toLowerCase() === value.trim().toLowerCase(),
+    (chip) => chip.label.toLowerCase() === safeValue.trim().toLowerCase(),
   )
-  return category?.query || value
+  return category?.query || safeValue
 }
 
 const isAdminUser = (user) => {
@@ -70,9 +71,13 @@ function Header() {
     setRecentSearches((prev) => {
       const next = [
         term,
-        ...prev.filter((item) => item.toLowerCase() !== term.toLowerCase()),
+        ...prev.filter((item) => String(item).toLowerCase() !== term.toLowerCase()),
       ].slice(0, 5)
-      localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(next))
+      try {
+        localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(next))
+      } catch {
+        // Search still works when storage is unavailable.
+      }
       return next
     })
   }, [])

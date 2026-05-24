@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { API_BASE_URL } from '../../shared/config/env'
 import { getToken } from '../../shared/storage/authStorage'
+import { toFiniteNumber } from '../../shared/utils/collection'
 
 const mainItems = [
   { to: '/home', label: 'Home', icon: 'home' },
@@ -139,7 +140,7 @@ function AppSidebar() {
 
         if (unreadRes.ok) {
           const data = await unreadRes.json()
-          setUnreadCount(data.count || 0)
+          setUnreadCount(Math.max(0, toFiniteNumber(data.count)))
         }
         if (requestsRes.ok) {
           const data = await requestsRes.json()

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import '../../styles/admin-page.css'
 import { API_BASE_URL } from '../../shared/config/env'
 import { getToken } from '../../shared/storage/authStorage'
+import { asArray, safeText } from '../../shared/utils/collection'
+import { getPodcastTags } from '../../shared/utils/podcast'
 
 function AdminPodcastManagement() {
   const [podcasts, setPodcasts] = useState([])
@@ -32,7 +34,7 @@ function AdminPodcastManagement() {
       }
 
       const data = await response.json()
-      setPodcasts(data)
+      setPodcasts(asArray(data))
       setLoading(false)
     } catch (err) {
       console.error('Error fetching podcasts:', err)
@@ -52,6 +54,8 @@ function AdminPodcastManagement() {
   }
 
   const handleToggleExplicit = async (podcast) => {
+    if (!podcast?.id) return
+
     try {
       const token = getToken()
       const response = await fetch(`${API_BASE_URL}/api/admin/podcasts/${podcast.id}/explicit`, {
@@ -75,6 +79,8 @@ function AdminPodcastManagement() {
   }
 
   const handleToggleHidden = async (podcast) => {
+    if (!podcast?.id) return
+
     try {
       const token = getToken()
       const response = await fetch(`${API_BASE_URL}/api/admin/podcasts/${podcast.id}/hidden`, {
@@ -98,6 +104,8 @@ function AdminPodcastManagement() {
   }
 
   const handleToggleFeatured = async (podcast) => {
+    if (!podcast?.id) return
+
     try {
       const token = getToken()
       const response = await fetch(`${API_BASE_URL}/api/admin/podcasts/${podcast.id}/featured`, {
@@ -121,6 +129,8 @@ function AdminPodcastManagement() {
   }
 
   const handleSavePodcast = async (updatedPodcast) => {
+    if (!updatedPodcast?.id) return
+
     try {
       const token = getToken()
       const response = await fetch(`${API_BASE_URL}/api/admin/podcasts/${updatedPodcast.id}`, {
@@ -146,6 +156,8 @@ function AdminPodcastManagement() {
   }
 
   const handleConfirmDelete = async (confirmation, adminPassword) => {
+    if (!selectedPodcast?.id) return
+
     try {
       const token = getToken()
       const response = await fetch(
@@ -174,10 +186,10 @@ function AdminPodcastManagement() {
     }
   }
 
-  const filteredPodcasts = podcasts.filter((podcast) => {
+  const filteredPodcasts = asArray(podcasts).filter((podcast) => {
     const matchesSearch =
-      podcast.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      podcast.author.toLowerCase().includes(searchTerm.toLowerCase())
+      safeText(podcast.titulo).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      safeText(podcast.author).toLowerCase().includes(searchTerm.toLowerCase())
 
     if (filterStatus === 'all') return matchesSearch
     if (filterStatus === 'hidden') return matchesSearch && podcast.hidden
@@ -242,13 +254,13 @@ function AdminPodcastManagement() {
               </tr>
             </thead>
             <tbody>
-              {filteredPodcasts.map((podcast) => (
-                <tr key={podcast.id}>
+              {filteredPodcasts.map((podcast, podcastIndex) => (
+                <tr key={podcast.id || podcastIndex}>
                   <td>
                     <div className="podcast-title-cell">
-                      <div className="podcast-title">{podcast.titulo}</div>
+                      <div className="podcast-title">{podcast.titulo || 'Untitled podcast'}</div>
                       <div className="podcast-tags">
-                        {podcast.tags.map((tag, index) => (
+                        {getPodcastTags(podcast).map((tag, index) => (
                           <span key={index} className="tag-badge">
                             {tag}
                           </span>
@@ -411,7 +423,7 @@ function EditPodcastModal({ podcast, onSave, onClose }) {
               type="text"
               id="tags"
               name="tags"
-              value={formData.tags ? formData.tags.join(', ') : ''}
+              value={getPodcastTags(formData).join(', ')}
               onChange={(e) =>
                 setFormData((prev) => ({
                   ...prev,
@@ -445,7 +457,9 @@ function DeletePodcastModal({ podcast, onConfirm, onClose }) {
   const [adminPassword, setAdminPassword] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const expectedConfirmation = `DELETE_${podcast.titulo.toUpperCase().replace(/\s+/g, '_')}`
+  const expectedConfirmation = `DELETE_${safeText(podcast.titulo, 'PODCAST')
+    .toUpperCase()
+    .replace(/\s+/g, '_')}`
 
   const handleSubmit = async (e) => {
     e.preventDefault()

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import '../../styles/admin-page.css'
 import { API_BASE_URL } from '../../shared/config/env'
 import { getToken } from '../../shared/storage/authStorage'
+import { asArray, safeText, toFiniteNumber } from '../../shared/utils/collection'
 
 function AdminUserManagement() {
   const [users, setUsers] = useState([])
@@ -32,7 +33,7 @@ function AdminUserManagement() {
       }
 
       const data = await response.json()
-      setUsers(data)
+      setUsers(asArray(data))
       setLoading(false)
     } catch (err) {
       console.error('Error fetching users:', err)
@@ -53,6 +54,8 @@ function AdminUserManagement() {
   }
 
   const handleConfirmReset = async () => {
+    if (!selectedUser?.id) return
+
     try {
       const token = getToken()
       const response = await fetch(
@@ -79,6 +82,8 @@ function AdminUserManagement() {
   }
 
   const handleConfirmDelete = async (confirmation, adminPassword) => {
+    if (!selectedUser?.id) return
+
     try {
       const token = getToken()
       const response = await fetch(`${API_BASE_URL}/api/admin/users/${selectedUser.id}/confirm`, {
@@ -104,10 +109,10 @@ function AdminUserManagement() {
     }
   }
 
-  const filteredUsers = users.filter(
+  const filteredUsers = asArray(users).filter(
     (user) =>
-      user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()),
+      safeText(user.username).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      safeText(user.email).toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
   const getUserTypeColor = (userType) => {
@@ -211,7 +216,7 @@ function AdminUserManagement() {
                         borderColor: `${getUserTypeColor(user.userType)}40`,
                       }}
                     >
-                      {user.userType.replace('USER_', '')}
+                      {safeText(user.userType, 'UNKNOWN').replace('USER_', '')}
                     </span>
                   </td>
                   <td>
@@ -229,14 +234,16 @@ function AdminUserManagement() {
                   <td>
                     <div className="points-display">
                       <div className="points-total">
-                        {user.pontosGeral +
-                          user.pontosDesporto +
-                          user.pontosFinanca +
-                          user.pontosPolitica}
+                        {toFiniteNumber(user.pontosGeral) +
+                          toFiniteNumber(user.pontosDesporto) +
+                          toFiniteNumber(user.pontosFinanca) +
+                          toFiniteNumber(user.pontosPolitica)}
                       </div>
                       <div className="points-breakdown">
-                        G:{user.pontosGeral} S:{user.pontosDesporto} F:{user.pontosFinanca} P:
-                        {user.pontosPolitica}
+                        G:{toFiniteNumber(user.pontosGeral)} S:
+                        {toFiniteNumber(user.pontosDesporto)} F:
+                        {toFiniteNumber(user.pontosFinanca)} P:
+                        {toFiniteNumber(user.pontosPolitica)}
                       </div>
                     </div>
                   </td>
@@ -334,7 +341,7 @@ function ResetPasswordModal({ user, tempPassword, onReset, onClose }) {
               <strong>Email:</strong> {user.email}
             </div>
             <div className="user-detail-item">
-              <strong>Type:</strong> {user.userType.replace('USER_', '')}
+              <strong>Type:</strong> {safeText(user.userType, 'UNKNOWN').replace('USER_', '')}
             </div>
           </div>
         </div>
@@ -361,7 +368,7 @@ function ResetPasswordModal({ user, tempPassword, onReset, onClose }) {
                 {tempPassword}
                 <button
                   className="btn-secondary"
-                  onClick={() => navigator.clipboard.writeText(tempPassword)}
+                  onClick={() => navigator.clipboard?.writeText?.(tempPassword)}
                 >
                   Copy
                 </button>
@@ -392,7 +399,9 @@ function DeleteUserModal({ user, onConfirm, onClose }) {
   const [adminPassword, setAdminPassword] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const expectedConfirmation = `DELETE_${user.username.toUpperCase().replace(/\s+/g, '_')}`
+  const expectedConfirmation = `DELETE_${safeText(user.username, 'USER')
+    .toUpperCase()
+    .replace(/\s+/g, '_')}`
 
   const handleSubmit = async (e) => {
     e.preventDefault()

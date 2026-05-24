@@ -1,9 +1,12 @@
 const getListeningStylePercentages = (profile) => {
+  const points = {
+    desporto: Math.max(0, Number(profile?.pontosDesporto) || 0),
+    politica: Math.max(0, Number(profile?.pontosPolitica) || 0),
+    financas: Math.max(0, Number(profile?.pontosFinancas) || 0),
+    geral: Math.max(0, Number(profile?.pontosGeral) || 0),
+  }
   const totalPoints =
-    (profile?.pontosDesporto || 0) +
-    (profile?.pontosPolitica || 0) +
-    (profile?.pontosFinancas || 0) +
-    (profile?.pontosGeral || 0)
+    points.desporto + points.politica + points.financas + points.geral
 
   if (totalPoints <= 0) {
     return {
@@ -15,16 +18,16 @@ const getListeningStylePercentages = (profile) => {
     }
   }
 
-  const desportoPct = Math.round(((profile.pontosDesporto || 0) / totalPoints) * 100)
-  const politicaPct = Math.round(((profile.pontosPolitica || 0) / totalPoints) * 100)
-  const financasPct = Math.round(((profile.pontosFinancas || 0) / totalPoints) * 100)
+  const desportoPct = Math.round((points.desporto / totalPoints) * 100)
+  const politicaPct = Math.round((points.politica / totalPoints) * 100)
+  const financasPct = Math.round((points.financas / totalPoints) * 100)
 
   return {
     totalPoints,
     desportoPct,
     politicaPct,
     financasPct,
-    geralPct: 100 - desportoPct - politicaPct - financasPct,
+    geralPct: Math.max(0, 100 - desportoPct - politicaPct - financasPct),
   }
 }
 
