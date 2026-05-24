@@ -21,7 +21,22 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Entidade que representa uma mensagem privada entre dois utilizadores.
+ * Entidade JPA de uma mensagem de chat privado entre dois utilizadores.
+ *
+ * <p>O ciclo de vida de uma mensagem segue o enum {@link MessageStatus}:
+ * {@code SENT} → {@code DELIVERED} → {@code READ}, atualizado
+ * via STOMP acks em {@link com.jep.servidor.controller.ChatWebSocketController}.
+ *
+ * <p>O campo {@code metadata} é um objeto embedido ({@link ChatMessageMetadata})
+ * que permite anexar referências a podcasts ou episódios.
+ *
+ * <p><b>Tabela:</b> {@code chat_messages} com índices em {@code sender_id},
+ * {@code recipient_id}, {@code created_at} e {@code status} para
+ * eficiência nas queries de paginação e contagem de não lidos.
+ *
+ * @see ChatMessageMetadata
+ * @see ChatMessageReaction
+ * @see com.jep.servidor.repository.ChatMessageRepository
  */
 @Entity
 @Table(name = "chat_messages", indexes = {
@@ -32,6 +47,14 @@ import java.util.List;
 })
 public class ChatMessage {
 
+  /**
+   * Ciclo de vida de uma mensagem de chat.
+   * <ul>
+   *   <li>{@code SENT} — mensagem enviada pelo remetente, ainda não entregue.</li>
+   *   <li>{@code DELIVERED} — mensagem entregue ao destinatário (WebSocket ativo).</li>
+   *   <li>{@code READ} — mensagem lida pelo destinatário.</li>
+   * </ul>
+   */
   public enum MessageStatus {
     SENT, DELIVERED, READ
   }
@@ -70,6 +93,10 @@ public class ChatMessage {
   @Column
   private Instant readAt;
 
+  /**
+   * Callback JPA executado antes de persistir a entidade.
+   * Preenche {@code createdAt} e garante o estado inicial {@code SENT}.
+   */
   @PrePersist
   protected void onCreate() {
     if (createdAt == null) {

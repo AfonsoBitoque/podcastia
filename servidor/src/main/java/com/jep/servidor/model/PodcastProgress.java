@@ -3,6 +3,22 @@ package com.jep.servidor.model;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
+/**
+ * Entidade JPA que regista o progresso de audição de um utilizador num podcast.
+ *
+ * <p>Armazena o útimo ponto de audição em segundos ({@code progressSeconds})
+ * e a data/hora da última audição ({@code lastListenedAt}), usados por:
+ * <ul>
+ *   <li>{@link com.jep.servidor.controller.PodcastController#continueListening}
+ *       — para devolver os 10 podcasts mais recentemente ouvidos.</li>
+ *   <li>{@link com.jep.servidor.service.AdminService}
+ *       — para calcular métricas de tempo de audição no painel admin.</li>
+ * </ul>
+ *
+ * <p><b>Tabela:</b> {@code podcast_progress}
+ *
+ * @see com.jep.servidor.repository.PodcastProgressRepository
+ */
 @Entity
 @Table(name = "podcast_progress")
 public class PodcastProgress {

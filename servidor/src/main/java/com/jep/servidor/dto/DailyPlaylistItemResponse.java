@@ -3,7 +3,14 @@ package com.jep.servidor.dto;
 import com.jep.servidor.model.DailyPlaylistItem;
 
 /**
- * DTO para resposta de item da playlist diária.
+ * DTO de resposta para um item individual de uma playlist diária.
+ *
+ * <p>Representa um podcast incluído numa {@link com.jep.servidor.model.DailyPlaylist},
+ * com dados resumidos do podcast e a sua posição e pontuação de relevância
+ * calculada pelo {@link com.jep.servidor.service.DailyPlaylistService}.
+ *
+ * @see DailyPlaylistResponse
+ * @see com.jep.servidor.model.DailyPlaylistItem
  */
 public class DailyPlaylistItemResponse {
 
@@ -14,14 +21,19 @@ public class DailyPlaylistItemResponse {
   private int podcastDuration; // em segundos
   private float relevanceScore;
 
-  /**
-   * Construtor padrão.
-   */
+  /** Construtor padrão para deserialização. */
   public DailyPlaylistItemResponse() {
   }
 
   /**
-   * Construtor com dados.
+   * Construtor completo.
+   *
+   * @param id             ID do item da playlist.
+   * @param podcastId      ID do podcast.
+   * @param podcastTitle   Título do podcast.
+   * @param position       Posição na playlist (1-indexed).
+   * @param podcastDuration Duração do podcast em segundos.
+   * @param relevanceScore Pontuação de relevância calculada (0.0–1.0).
    */
   public DailyPlaylistItemResponse(Long id, Long podcastId, String podcastTitle, int position,
       int podcastDuration, float relevanceScore) {
@@ -34,7 +46,10 @@ public class DailyPlaylistItemResponse {
   }
 
   /**
-   * Cria um DTO a partir de uma entidade DailyPlaylistItem.
+   * Método factory que cria um DTO a partir da entidade {@link DailyPlaylistItem}.
+   *
+   * @param item entidade JPA do item de playlist diária.
+   * @return DTO preenchido com dados do item e do podcast associado.
    */
   public static DailyPlaylistItemResponse fromEntity(DailyPlaylistItem item) {
     return new DailyPlaylistItemResponse(

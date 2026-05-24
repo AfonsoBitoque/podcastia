@@ -23,6 +23,7 @@ function PlaylistPage() {
   const [podcastSearch, setPodcastSearch] = useState('')
   const [newPlaylist, setNewPlaylist] = useState({ title: '', description: '', isPublic: true })
   const [savedPlaylist, setSavedPlaylist] = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(null)
   const [playQueue, setPlayQueue] = useState([])
   const [playQueueIndex, setPlayQueueIndex] = useState(-1)
   const [isRepeat, setIsRepeat] = useState(false)
@@ -156,8 +157,13 @@ function PlaylistPage() {
     }
   }
 
-  const deletePlaylist = async (id) => {
-    if (!confirm('Eliminar esta playlist?')) return
+  const deletePlaylist = (id) => {
+    setConfirmDelete(id)
+  }
+
+  const confirmDeletePlaylist = async () => {
+    const id = confirmDelete
+    setConfirmDelete(null)
     try {
       const res = await fetch(`${API_BASE_URL}/api/playlists/${id}`, {
         method: 'DELETE',
@@ -665,6 +671,30 @@ function PlaylistPage() {
                 }}
               >
                 Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirmar Eliminação */}
+      {confirmDelete !== null && (
+        <div className="modal-overlay" onClick={() => setConfirmDelete(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2 className="modal-title">Eliminar Playlist</h2>
+            <p style={{ marginBottom: '1.5rem', color: 'var(--text-secondary, #aaa)' }}>
+              Tens a certeza que queres eliminar esta playlist? Esta ação não pode ser desfeita.
+            </p>
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={() => setConfirmDelete(null)}>
+                Cancelar
+              </button>
+              <button
+                className="btn-confirm"
+                style={{ background: '#e53e3e' }}
+                onClick={confirmDeletePlaylist}
+              >
+                Eliminar
               </button>
             </div>
           </div>

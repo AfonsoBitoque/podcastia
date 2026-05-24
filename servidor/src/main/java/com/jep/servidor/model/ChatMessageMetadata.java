@@ -4,7 +4,15 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 
 /**
- * Metadados opcionais de um anexo de mensagem.
+ * Objeto embutido ({@code @Embeddable}) com metadados de anexo de uma mensagem de chat.
+ *
+ * <p>Persiste nas colunas {@code attachment_type}, {@code attachment_podcast_id}
+ * e {@code attachment_episode_id} da tabela {@code chat_messages}.
+ * Todos os campos são opcionais — são {@code null} quando a mensagem não
+ * tem anexo.
+ *
+ * @see ChatMessage
+ * @see com.jep.servidor.dto.ChatMessageAttachmentRequest
  */
 @Embeddable
 public class ChatMessageMetadata {

@@ -20,8 +20,26 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 /**
- * Entidade que representa uma relação entre utilizadores. No contexto de um PEDIDO, 'user' é o
- * remetente e 'friend' é o destinatário.
+ * Entidade JPA de relação direcional entre dois utilizadores.
+ *
+ * <p><b>Modelo direcional:</b> {@code user} (campo {@code user_id}) é sempre o
+ * remetente/iniciador, e {@code friend} (campo {@code friend_id}) é o destinatário.
+ * Uma amizade aceite cria <em>dois registos</em> (A→B e B→A).
+ *
+ * <p><b>Ciclo de vida de um pedido:</b>
+ * <ol>
+ *   <li>Utilizador A envia pedido: registo {@code A→B, PEDIDO}.</li>
+ *   <li>B aceita: registo {@code A→B} passa a {@code AMIGO} e é criado {@code B→A, AMIGO}.</li>
+ *   <li>B rejeita: registo {@code A→B} passa a {@code PEDIDO_REJEITADO}.</li>
+ *   <li>A cancela: registo {@code A→B} passa a {@code CANCELADO}.</li>
+ * </ol>
+ *
+ * <p>O cooldown de 7 dias após rejeção/cancelamento é forçado pelo
+ * {@link com.jep.servidor.service.impl.UserRelationshipServiceImpl}.
+ *
+ * <p><b>Tabela:</b> {@code user_relations}
+ *
+ * @see com.jep.servidor.repository.UserRelationRepository
  */
 @Entity
 @EntityListeners(AuditingEntityListener.class)
@@ -58,7 +76,16 @@ public class UserRelation {
   @Column(nullable = false)
   private LocalDateTime updatedAt;
 
-  /** Tipos de relação possíveis. */
+  /**
+   * Estado da relação entre dois utilizadores.
+   * <ul>
+   *   <li>{@code PEDIDO} — pedido enviado, aguarda aceitação.</li>
+   *   <li>{@code AMIGO} — amizade aceite (existe registo inverso).</li>
+   *   <li>{@code PEDIDO_REJEITADO} — pedido rejeitado pelo destinatário.</li>
+   *   <li>{@code CANCELADO} — pedido cancelado pelo remetente.</li>
+   *   <li>{@code BLOQUEADO} — utilizador bloqueado.</li>
+   * </ul>
+   */
   public enum RelationType {
     AMIGO,
     BLOQUEADO,

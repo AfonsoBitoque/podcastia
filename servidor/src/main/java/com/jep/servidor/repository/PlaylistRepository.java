@@ -8,14 +8,39 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 /**
- * Repositório para operações de base de dados relacionadas com playlists.
+ * Repositório Spring Data JPA para playlists de utilizadores.
+ *
+ * <p>Fornece consultas para o {@link com.jep.servidor.service.PlaylistService}
+ * e para o feed social de playlists públicas de amigos.
  */
 public interface PlaylistRepository extends JpaRepository<Playlist, Long> {
 
+  /**
+   * Devolve todas as playlists de um utilizador, ordenadas pela data de atualização.
+   *
+   * @param owner utilizador dono das playlists.
+   * @return lista ordenada por {@code updatedAt} descendente.
+   */
   List<Playlist> findByOwnerOrderByUpdatedAtDesc(User owner);
 
+  /**
+   * Devolve as playlists públicas de um utilizador específico.
+   *
+   * @param ownerId ID do dono das playlists.
+   * @return playlists públicas ordenadas por {@code updatedAt} descendente.
+   */
   List<Playlist> findByOwnerIdAndIsPublicTrueOrderByUpdatedAtDesc(Long ownerId);
 
+  /**
+   * Devolve as playlists públicas de todos os amigos do utilizador.
+   *
+   * <p>Usa uma sub-query JPQL para obter os IDs dos amigos (registos
+   * {@link com.jep.servidor.model.UserRelation.RelationType#AMIGO})
+   * e filtra as playlists públicas cujo dono é um desses amigos.
+   *
+   * @param userId ID do utilizador autenticado.
+   * @return playlists públicas dos amigos, ordenadas por {@code updatedAt} descendente.
+   */
   @Query("SELECT p FROM Playlist p "
       + "WHERE p.isPublic = true "
       + "AND p.owner.id IN ("

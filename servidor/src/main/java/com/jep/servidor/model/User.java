@@ -24,7 +24,23 @@ import java.util.List;
 import java.time.LocalDateTime;
 
 /**
- * Entidade que representa um utilizador no sistema.
+ * Entidade JPA central que representa um utilizador da plataforma Podcastia.
+ *
+ * <p>A identidade única de um utilizador é composta por ({@code username}, {@code tag}),
+ * sendo a {@code tag} um sufixo de 4 dígitos gerado automaticamente pelo
+ * {@link com.jep.servidor.controller.RegistrationApiController}.
+ *
+ * <p>Os pontos de afinidade por categoria ({@code pontosDesporto}, etc.) são
+ * incrementados pelo {@link com.jep.servidor.service.RecommendationService}
+ * cada vez que o utilizador ouve um podcast de uma dada categoria, e
+ * usam-se para personalizar o feed e a playlist diária.
+ *
+ * <p>A password é armazenada com BCrypt e validada pelo filtro JWT
+ * ({@link com.jep.servidor.config.JwtAuthenticationFilter}).
+ *
+ * <p><b>Tabela:</b> {@code users}
+ *
+ * @see com.jep.servidor.repository.UserRepository
  */
 @Entity
 @Table(name = "users", uniqueConstraints = {
@@ -34,14 +50,24 @@ import java.time.LocalDateTime;
 public class User {
 
   /**
-   * Tipos de utilizador disponíveis.
+   * Tipo de conta do utilizador.
+   * <ul>
+   *   <li>{@code USERNORMAL} — utilizador regular sem privilégios administrativos.</li>
+   *   <li>{@code USERADMIN} — administrador com acesso ao painel {@code /api/admin}.
+   *       Verificado via {@code hasRole('USER_ADMIN')} no Spring Security.</li>
+   * </ul>
    */
   public enum UserType {
     USERNORMAL, USERADMIN
   }
 
   /**
-   * Estados possíveis para um utilizador.
+   * Estado da conta do utilizador.
+   * <ul>
+   *   <li>{@code ACTIVE} — conta ativa, acesso normal.</li>
+   *   <li>{@code SUSPENDED} — conta suspensa temporariamente por administrador.</li>
+   *   <li>{@code BANNED} — conta banida permanentemente.</li>
+   * </ul>
    */
   public enum UserStatus {
     ACTIVE, SUSPENDED, BANNED

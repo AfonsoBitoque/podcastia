@@ -67,6 +67,13 @@ Para criar a versão otimizada e final do frontend (os ficheiros gerados ficarã
 npm run build
 ```
 
+### 7. Pré-visualizar Build de Produção
+Para servir localmente a pasta `dist/` gerada pelo build:
+```bash
+npm run preview
+```
+*Útil para testar a build final antes de fazer deploy.*
+
 ---
 
 ## ⚙️ Comandos do Servidor (Backend)
@@ -129,6 +136,59 @@ Como o projeto usa uma base de dados H2 em memória, podes aceder à consola de 
 
 ---
 
+## 🔑 Variáveis de Ambiente e Configuração
+
+### Backend — Chave da API Gemini
+A geração de podcasts por IA requer uma chave da Google Gemini API. Cria o ficheiro `servidor/env.properties` (não versionado) com o seguinte conteúdo:
+```properties
+GEMINI_API_KEY=a_tua_chave_aqui
+```
+Em alternativa, define a variável de ambiente do sistema antes de arrancar o servidor:
+```bash
+export GEMINI_API_KEY=a_tua_chave_aqui
+./mvnw spring-boot:run
+```
+*Sem esta chave, o servidor arranca normalmente mas a funcionalidade de geração de podcasts retorna erro.*
+
+### Frontend — URL do Backend
+Se o backend não estiver em `http://localhost:8080`, cria o ficheiro `frontend/.env.local` com:
+```
+VITE_API_BASE_URL=http://localhost:8080
+```
+*Por defeito, o frontend assume `http://localhost:8080` se esta variável não estiver definida.*
+
+---
+
+## 🐍 Dependência Python — edge-tts (Síntese de Voz)
+
+O servidor usa o Python para sintetizar áudio MP3 com a voz portuguesa. É necessário ter Python 3 e pip instalados.
+
+Para instalar o `edge-tts`:
+```bash
+pip install edge-tts
+```
+Verificar se está disponível:
+```bash
+edge-tts --version
+```
+*Sem o `edge-tts`, o servidor arranca mas a geração de áudio falha com erro no processo de síntese.*
+
+---
+
+## 👤 Credenciais Padrão
+
+No primeiro arranque, o sistema cria automaticamente um utilizador administrador:
+
+| Campo    | Valor                   |
+|----------|-------------------------|
+| Email    | `admin@podcastia.com`   |
+| Password | `admin`                 |
+| Papel    | `USER_ADMIN`            |
+
+---
+
 ## ⚠️ Notas Importantes
 - Se o comando `./mvnw` der erro de permissão no Linux/Mac, executa: `chmod +x mvnw`.
 - Certifica-te de que estás na diretoria correta (`podcastia/servidor` ou `podcastia/frontend`) antes de executar os respetivos comandos.
+- O backend guarda os dados em `servidor/data/podcastia.mv.db` (H2 ficheiro local). Este ficheiro persiste entre arranques.
+- As imagens de perfil são guardadas em `servidor/profile-images/` e os podcasts gerados em `servidor/generated-podcasts/`.

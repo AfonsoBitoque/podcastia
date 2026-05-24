@@ -1,0 +1,26 @@
+# Segredos e configuração local
+servidor/env.properties
+
+# Ficheiros de áudio gerados
+servidor/generated-podcasts/
+servidor/profile-images/
+
+# Base de dados H2 local
+servidor/data/
+
+# Build Maven
+servidor/target/
+
+# Build Node
+frontend/node_modules/
+frontend/dist/
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+.windsurf/
+
+# OS
+.DS_Store
+Thumbs.db

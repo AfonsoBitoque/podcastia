@@ -72,20 +72,27 @@ Os endpoints da API foram criados e/ou refatorados para expor a nova funcionalid
   POST   /api/relations/friend-request/{friendId}
   GET    /api/relations/status/{targetUserId}
   DELETE /api/relations/friend-request/{friendId}/cancel
+  POST   /api/relations/accept/{senderId}
+  POST   /api/relations/reject/{senderId}
+  POST   /api/relations/block/{blockedId}
+  DELETE /api/relations/remove/{friendId}
+  GET    /api/relations/friends
+  GET    /api/relations/pending
   ```
 - **Melhorias:**
     - O controller foi refatorado para usar exclusivamente a `UserRelationshipService`.
-    - A segurança foi implementada usando `@AuthenticationPrincipal Jwt jwt` para obter o ID do utilizador autenticado a partir do token, em vez de o passar como parâmetro.
+    - A segurança é implementada com `@AuthenticationPrincipal UserDetails` + `userRepository.findByEmail(principal.getUsername())` para obter o utilizador autenticado a partir do token JWT.
       
 ### 6. Qualidade e Correção de Erros
 
 Durante o desenvolvimento, foi realizado um ciclo iterativo de testes e correções para garantir a qualidade e robustez do código.
 
-- **Correção de Dependências:** Adicionada a dependência `spring-boot-starter-oauth2-resource-server` ao `pom.xml` para suportar a extração de JWT nos controllers.
+- **Correção de Dependências:** A autenticação nos controllers usa `spring-security-core` (já incluído no starter web), não requerendo `spring-boot-starter-oauth2-resource-server`.
 - **Resolução de Erros de Teste:**
     - Corrigidos erros de `NullPointerException` e `PotentialStubbingProblem` no `UserRelationshipServiceTest` através da adição de mocks em falta e da configuração correta do comportamento bidirecional das chamadas.
     - Resolvido um erro de `DataIntegrityViolationException` em `PlaylistIntegrationTest`, que foi causado pelas novas restrições `NOT NULL` na entidade `UserRelation`.
-      
+- **Teste de Integração Adicional:** Foi criado o `UserRelationIntegrationTest.java`, que cobre o ciclo completo de amizade (pedido → aceitar → listar amigos → remover) via chamadas HTTP reais com MockMvc e JWT gerado programaticamente.
+
  ---
 
 Com a conclusão destas tarefas, a User Story `Backend-US-6-1` foi totalmente implementada, testada e está pronta para ser integrada.

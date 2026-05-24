@@ -21,6 +21,7 @@ function TrendingPage() {
     loadPodcast,
     play,
     togglePlayPause,
+    setQueue,
   } = useBackgroundAudio()
 
   const getPodcastWithAudio = (podcast) => {
@@ -60,7 +61,7 @@ function TrendingPage() {
     fetchAllPodcasts()
   }, [])
 
-  const handlePlayNow = async (podcast) => {
+  const handlePlayNow = async (podcast, queue) => {
     const podcastWithUrl = getPodcastWithAudio(podcast)
 
     const podcastId = getPodcastId(podcast)
@@ -74,6 +75,10 @@ function TrendingPage() {
 
     const success = await loadPodcast(podcastWithUrl, 0)
     if (success) {
+      if (queue && queue.length > 0) {
+        const idx = queue.findIndex((p) => (p.id || p.podcastId) === podcastId)
+        setQueue(queue, idx >= 0 ? idx : 0)
+      }
       await play()
     }
   }
@@ -91,7 +96,7 @@ function TrendingPage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  const PodcastCard = ({ podcast }) => {
+  const PodcastCard = ({ podcast, sectionQueue }) => {
     const title = podcast?.titulo || podcast?.title || 'Podcast'
     const isCurrentPlaying =
       playingPodcast &&
@@ -109,7 +114,7 @@ function TrendingPage() {
             onClick={(e) => {
               e.stopPropagation()
               e.preventDefault()
-              handlePlayNow(podcast)
+              handlePlayNow(podcast, sectionQueue)
             }}
             aria-label={isCurrentPlaying ? `Pausar ${title}` : `Reproduzir ${title}`}
           >
@@ -190,7 +195,7 @@ function TrendingPage() {
           />
           <div className="trending-row">
             {dailyPodcasts.map((podcast, index) => (
-              <PodcastCard key={getPodcastId(podcast) || index} podcast={podcast} />
+              <PodcastCard key={getPodcastId(podcast) || index} podcast={podcast} sectionQueue={dailyPodcasts} />
             ))}
           </div>
         </section>
@@ -204,7 +209,7 @@ function TrendingPage() {
           />
           <div className="trending-row">
             {trendingPodcasts.map((podcast, index) => (
-              <PodcastCard key={getPodcastId(podcast) || index} podcast={podcast} />
+              <PodcastCard key={getPodcastId(podcast) || index} podcast={podcast} sectionQueue={trendingPodcasts} />
             ))}
           </div>
         </section>
@@ -231,7 +236,7 @@ function TrendingPage() {
                 >
                   ℹ
                 </button>
-                <button className="popular-play-btn" onClick={() => handlePlayNow(podcast)}>
+                <button className="popular-play-btn" onClick={() => handlePlayNow(podcast, popularPodcasts)}>
                   ▶
                 </button>
               </div>

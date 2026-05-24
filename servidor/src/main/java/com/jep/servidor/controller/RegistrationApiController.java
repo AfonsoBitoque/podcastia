@@ -10,8 +10,21 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Controlador REST para operações relacionadas com o registo de utilizadores,
- * como verificação e geração de tags.
+ * Controller REST de suporte ao registo de novos utilizadores — verificação e geração de tags.
+ *
+ * <p>Na plataforma Podcastia, cada utilizador é identificado de forma única pelo par
+ * {@code (username, tag)}, onde a tag é um código numérico de 4 dígitos (0000–9999).
+ * Dois utilizadores podem ter o mesmo {@code username} desde que as tags sejam diferentes.
+ *
+ * <p>Este controller é usado pelo frontend durante o fluxo de registo para:
+ * <ol>
+ *   <li>Verificar se uma tag específica está disponível para o username pretendido.</li>
+ *   <li>Gerar automaticamente a primeira tag disponível para um dado username.</li>
+ * </ol>
+ *
+ * <p><b>Base path:</b> {@code /api/register} (público, sem autenticação JWT)
+ *
+ * @see com.jep.servidor.repository.UserRepository#existsByUsernameAndTag
  */
 @RestController
 @RequestMapping("/api/register")
@@ -21,11 +34,14 @@ public class RegistrationApiController {
     private UserRepository userRepository;
 
     /**
-     * Verifica se uma tag está disponível para um determinado username.
+     * Verifica se uma tag específica está disponível para um dado username.
      *
-     * @param username Nome de utilizador.
-     * @param tag Tag a verificar.
-     * @return Mensagem indicando se a tag está disponível ou ocupada.
+     * <p>A tag deve ter exatamente 4 caracteres; caso contrário devolve {@code 400 Bad Request}.
+     *
+     * @param username nome de utilizador a verificar.
+     * @param tag      tag de 4 dígitos a verificar (ex: {@code "0042"}).
+     * @return {@code 200 OK} com {@code "Tag disponível"} ou {@code "Tag ocupada"};
+     *         {@code 400 Bad Request} se a tag não tiver exatamente 4 caracteres.
      */
     @GetMapping("/check-tag")
     public ResponseEntity<String> checkTag(@RequestParam("username") String username,
@@ -38,10 +54,16 @@ public class RegistrationApiController {
     }
 
     /**
-     * Gera uma tag disponível para um determinado username.
+     * Gera automaticamente a primeira tag disponível para o username indicado.
      *
-     * @param username Nome de utilizador.
-     * @return Uma tag disponível ou mensagem de erro.
+     * <p>Itera sequencialmente de {@code 0000} a {@code 9999} e devolve a primeira tag
+     * que não esteja em uso para o username fornecido. Se todas as 10 000 tags estiverem
+     * ocupadas (cenário extremamente improvavável), devolve {@code 404 Not Found}.
+     *
+     * @param username nome de utilizador para o qual gerar a tag.
+     * @return {@code 200 OK} com a tag gerada (ex: {@code "0007"});
+     *         {@code 400 Bad Request} se o username for nulo ou vazio;
+     *         {@code 404 Not Found} se não houver tags disponíveis.
      */
     @GetMapping("/generate-tag")
     public ResponseEntity<String> generateTag(@RequestParam("username") String username) {

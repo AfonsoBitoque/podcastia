@@ -32,7 +32,7 @@ Cria 20 podcasts distribuídos por 4 categorias:
 
 3. **Corre o script**
    ```bash
-   cd /home/predm/Git/University/LES/try5/podcastia/scripts
+   cd /home/predm/Git/University/podcastia_final/scripts
    chmod +x seed_initial_podcasts.sh
    ./seed_initial_podcasts.sh eyJhbGciOiJIUzUxMiJ9...
    ```

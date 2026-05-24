@@ -20,11 +20,13 @@ A integração do SpringDoc OpenAPI visa gerar a documentação da nossa API RES
    Foi criada a classe de configuração `OpenApiConfig.java` em `com.jep.servidor.config` para customizar as informações principais exibidas no Swagger UI, como o Título, Descrição, e Versão da nossa aplicação.
    
 3. **Ajuste de Segurança (Spring Security)**
-   Como o sistema utiliza proteção via JSON Web Token (JWT) e bloqueia o acesso anónimo por predefinição, atualizou-se as regras no `SecurityConfig.java`. Adicionaram-se as rotas relativas à documentação do Swagger UI na `whitelist` (permitidas para acessos públicos). Desta forma, programadores do frontend (e backend) podem inspecionar os *endpoints* sem necessidade de se autenticarem primeiro.
-   As seguintes rotas foram autorizadas:
+   Como o sistema utiliza proteção via JSON Web Token (JWT) e bloqueia o acesso anónimo por predefinição, atualizou-se as regras no `SecurityConfig.java`. Adicionaram-se as rotas relativas à documentação do Swagger UI na lista de endpoints públicos (whitelist). Desta forma, programadores do frontend (e backend) podem inspecionar os *endpoints* sem necessidade de se autenticarem primeiro.
+   As seguintes rotas foram autorizadas (ver `SecurityConfig.securityFilterChain`):
    * `/v3/api-docs/**`
    * `/swagger-ui/**`
    * `/swagger-ui.html`
+   
+   > **Nota:** A configuração CORS do projeto está centralizada **exclusivamente** em `SecurityConfig.java` (método `corsConfigurationSource`). Não existe uma classe `CorsConfig.java` separada.
 
 4. **Implementação de Testes Automatizados**
    Criou-se a suite de testes `OpenApiIntegrationTest.java` com a finalidade de garantir que os acessos ao Swagger e à documentação JSON nativa devolvem respostas HTTP `200 OK` em vez de falhas por proteção restrita de segurança (ex: `401 Unauthorized` / `403 Forbidden`).

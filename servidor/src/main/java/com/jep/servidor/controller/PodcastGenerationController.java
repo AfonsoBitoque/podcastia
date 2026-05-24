@@ -16,6 +16,36 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+/**
+ * Controller REST para geração de podcasts com IA e streaming/download de áudio.
+ *
+ * <p>Integra com o {@link PodcastGenerationService} que orquestra:
+ * <ol>
+ *   <li>Geração do script via <b>Google Gemini API</b>.</li>
+ *   <li>Síntese de voz do script via <b>Python edge-tts</b>.</li>
+ *   <li>Persistência do podcast e do ficheiro MP3 em {@code generated-podcasts/}.</li>
+ * </ol>
+ *
+ * <p><b>Base path:</b> {@code /api/podcasts} (requer autenticação JWT, exceto endpoints públicos)
+ *
+ * <p><b>Endpoints disponíveis:</b>
+ * <ul>
+ *   <li>{@code POST /generate} — gera um novo podcast para o utilizador autenticado.</li>
+ *   <li>{@code PATCH /{id}/visibility} — altera a visibilidade pública/privada.</li>
+ *   <li>{@code GET /mine} — lista os podcasts gerados pelo utilizador autenticado.</li>
+ *   <li>{@code GET /} — lista todos os podcasts públicos e disponíveis.</li>
+ *   <li>{@code GET /{id}/audio} — faz streaming do ficheiro MP3 ({@code audio/mpeg}).</li>
+ *   <li>{@code GET /{id}/download} — descarrega o ficheiro MP3 como attachment.</li>
+ * </ul>
+ *
+ * <p><b>Resolução de ficheiros MP3:</b> Os endpoints {@code /audio} e {@code /download}
+ * tentam localizar o ficheiro por caminho exato, depois via {@code java.nio.file.Paths}
+ * (para compatibilidade UTF-8) e finalmente por busca heurística no diretório
+ * {@code generated-podcasts/} por prefixo do título.
+ *
+ * @see PodcastGenerationService
+ * @see com.jep.servidor.controller.PodcastController
+ */
 @RestController
 @RequestMapping("/api/podcasts")
 public class PodcastGenerationController {
@@ -24,6 +54,13 @@ public class PodcastGenerationController {
     private final UserRepository userRepository;
     private final PodcastRepository podcastRepository;
 
+    /**
+     * Cria o controller com as dependências necessárias.
+     *
+     * @param generationService serviço de geração de podcasts (Gemini + edge-tts).
+     * @param userRepository    repositório JPA de utilizadores.
+     * @param podcastRepository repositório JPA de podcasts.
+     */
     public PodcastGenerationController(PodcastGenerationService generationService,
                                         UserRepository userRepository,
                                         PodcastRepository podcastRepository) {
@@ -32,6 +69,11 @@ public class PodcastGenerationController {
         this.podcastRepository = podcastRepository;
     }
 
+    /**
+     * Resolve o utilizador autenticado a partir do contexto de segurança Spring.
+     *
+     * @return {@link Optional} com o utilizador, ou vazio se não autenticado.
+     */
     private Optional<User> getAuthenticatedUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || authentication.getName() == null) {
@@ -40,6 +82,27 @@ public class PodcastGenerationController {
         return userRepository.findByEmail(authentication.getName());
     }
 
+    /**
+     * Gera um novo podcast para o utilizador autenticado usando IA.
+     *
+     * <p>O payload JSON deve conter:
+     * <ul>
+     *   <li>{@code "tema"} (String, obrigatório) — tema/assunto do podcast a gerar.</li>
+     *   <li>{@code "tags"} (List&lt;String&gt;, opcional) — lista de tags de categorização
+     *       (valores de {@link PodcastTag}); fallback para {@code GERAL} se inválidas.</li>
+     * </ul>
+     *
+     * <p>O processo de geração é síncrono e pode demorar vários segundos (chamada Gemini
+     * + síntese TTS). Em caso de sucesso, o podcast é persistido e o URL de áudio
+     * é incluído na resposta.
+     *
+     * @param payload mapa JSON com {@code tema} e {@code tags} opcionais.
+     * @return {@code 200 OK} com {@code podcastId}, {@code titulo}, {@code audioUrl},
+     *         {@code duracao} e {@code publico};
+     *         {@code 400 Bad Request} se o tema for omitido;
+     *         {@code 401 Unauthorized} se não autenticado;
+     *         {@code 500 Internal Server Error} se a geração falhar.
+     */
     @PostMapping("/generate")
     public ResponseEntity<?> generate(@RequestBody Map<String, Object> payload) {
         System.out.println("=== GENERATE ENDPOINT CALLED ===");
@@ -88,6 +151,18 @@ public class PodcastGenerationController {
         }
     }
 
+    /**
+     * Altera a visibilidade (pública/privada) de um podcast do utilizador autenticado.
+     *
+     * <p>Apenas o dono do podcast pode alterar a sua visibilidade.
+     *
+     * @param id      ID do podcast a modificar.
+     * @param payload mapa JSON com {@code {"publico": true/false}}.
+     * @return {@code 200 OK} com {@code {"id": ..., "publico": ...}};
+     *         {@code 400 Bad Request} se o campo {@code publico} for omitido;
+     *         {@code 403 Forbidden} se o utilizador não for o dono;
+     *         {@code 404 Not Found} se o podcast não existir.
+     */
     @PatchMapping("/{id}/visibility")
     public ResponseEntity<?> toggleVisibility(@PathVariable("id") Long id,
                                                @RequestBody Map<String, Boolean> payload) {
@@ -121,6 +196,13 @@ public class PodcastGenerationController {
         ));
     }
 
+    /**
+     * Retorna todos os podcasts gerados pelo utilizador autenticado, ordenados por data de criação
+     * descendente (mais recentes primeiro).
+     *
+     * @return {@code 200 OK} com lista de podcasts do utilizador (públicos e privados);
+     *         {@code 401 Unauthorized} se não autenticado.
+     */
     @GetMapping("/mine")
     public ResponseEntity<List<Podcast>> getMyPodcasts() {
         Optional<User> authUser = getAuthenticatedUser();
@@ -131,12 +213,42 @@ public class PodcastGenerationController {
         return ResponseEntity.ok(podcasts);
     }
 
+    /**
+     * Retorna todos os podcasts públicos e disponíveis na plataforma.
+     *
+     * <p>Usa {@code findAllByPublicoTrueAndAvailableTrue()} — exclui podcasts privados
+     * e os marcados como indisponíveis (soft-deleted).
+     *
+     * @return {@code 200 OK} com lista de podcasts públicos e disponíveis.
+     */
     @GetMapping
     public ResponseEntity<List<Podcast>> getAllPublicPodcasts() {
-        List<Podcast> podcasts = podcastRepository.findAllByPublicoTrueAndAvailableTrue();
+        List<Podcast> podcasts = podcastRepository.findAllByPublicoTrueAndAvailableTrue()
+                .stream()
+                .filter(p -> !p.isHidden())
+                .collect(java.util.stream.Collectors.toList());
         return ResponseEntity.ok(podcasts);
     }
 
+    /**
+     * Faz streaming do ficheiro MP3 de um podcast diretamente para o cliente.
+     *
+     * <p>A resposta é devolvida com {@code Content-Type: audio/mpeg}, permitindo
+     * reprodução inline no browser ou player de áudio sem forcçar download.
+     *
+     * <p>O ficheiro é localizado em três tentativas por ordem crescente de custo:
+     * <ol>
+     *   <li>Caminho exato de {@code podcast.getConteudoPath()}.</li>
+     *   <li>Resolução via {@code java.nio.file.Paths} (lida com encoding UTF-8).</li>
+     *   <li>Busca heurística em {@code generated-podcasts/} por padrão
+     *       {@code user{userId}_*.mp3} e correspondência de prefixo do título.</li>
+     * </ol>
+     *
+     * @param id ID do podcast cujo áudio se pretende reproduzir.
+     * @return {@code 200 OK} com o recurso de áudio como {@code Resource};
+     *         {@code 404 Not Found} se o podcast ou ficheiro não existir;
+     *         {@code 500 Internal Server Error} se ocorrer erro de I/O.
+     */
     @GetMapping("/{id}/audio")
     public ResponseEntity<?> streamAudio(@PathVariable("id") Long id) {
         Optional<Podcast> podcastOpt = podcastRepository.findById(id);
@@ -204,6 +316,21 @@ public class PodcastGenerationController {
         }
     }
 
+    /**
+     * Faz download do ficheiro MP3 de um podcast como attachment.
+     *
+     * <p>Usa a mesma lógica de resolução de ficheiro que {@link #streamAudio}.
+     * O nome do ficheiro no {@code Content-Disposition} é sanitizado a partir do
+     * título do podcast (apenas alfanuméricos, espaços e hífens; espaços substituídos por {@code _}).
+     *
+     * <p><b>Nota:</b> O ficheiro é carregado integralmente em memória antes de ser enviado.
+     * Para ficheiros grandes, seria preferível usar streaming com {@code Resource}.
+     *
+     * @param id ID do podcast a descarregar.
+     * @return {@code 200 OK} com o MP3 como {@code byte[]} e cabeçalho de download;
+     *         {@code 404 Not Found} se o podcast ou ficheiro não existir;
+     *         {@code 500 Internal Server Error} se ocorrer erro de I/O.
+     */
     @GetMapping("/{id}/download")
     public ResponseEntity<?> downloadAudio(@PathVariable("id") Long id) {
         Optional<Podcast> podcastOpt = podcastRepository.findById(id);

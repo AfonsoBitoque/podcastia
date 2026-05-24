@@ -18,6 +18,7 @@ function PersistentPlayer() {
     skipBackward,
     shuffleMode,
     setShuffleMode,
+    hasQueue,
   } = useBackgroundAudio()
 
   if (!playingPodcast) return null
@@ -50,6 +51,7 @@ function PersistentPlayer() {
               onClick={skipBackward}
               title="Podcast anterior"
               aria-label="Podcast anterior"
+              disabled={!hasQueue}
             >
               ⏮
             </button>
@@ -82,6 +84,7 @@ function PersistentPlayer() {
               onClick={skipForward}
               title="Próximo podcast"
               aria-label="Próximo podcast"
+              disabled={!hasQueue}
             >
               ⏭
             </button>

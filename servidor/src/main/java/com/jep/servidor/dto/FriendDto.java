@@ -1,5 +1,13 @@
 package com.jep.servidor.dto;
 
+/**
+ * DTO de representação resumida de um amigo na lista de amizades.
+ *
+ * <p>Devolvido pelo endpoint {@code GET /api/relations/friends} em
+ * {@link com.jep.servidor.controller.UserRelationController}.
+ * Contém apenas os dados necessários para exibir o amigo na UI
+ * (ID, nome de utilizador e caminho da foto de perfil).
+ */
 public class FriendDto {
     private Long id;
     private String username;

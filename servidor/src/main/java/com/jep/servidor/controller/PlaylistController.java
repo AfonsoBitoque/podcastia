@@ -29,7 +29,42 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Controlador REST para gestão de playlists de utilizadores.
+ * Controller REST para gestão completa de playlists de utilizadores.
+ *
+ * <p>Permite criar, listar, atualizar e eliminar playlists, bem como gerir os seus
+ * episódios (adicionar, remover e reordenar). Inclui também suporte para feed social
+ * (playlists públicas de amigos) e download de playlist em formato ZIP.
+ *
+ * <p><b>Base path:</b> {@code /api/playlists} (requer autenticação JWT)
+ *
+ * <p><b>Endpoints disponíveis:</b>
+ * <ul>
+ *   <li>{@code POST /} — criar nova playlist.</li>
+ *   <li>{@code GET /mine} — listar playlists do utilizador autenticado.</li>
+ *   <li>{@code GET /user/{userId}} — listar playlists de um utilizador (públicas ou todas se próprio).</li>
+ *   <li>{@code GET /{id}} — obter playlist por ID (respeita visibilidade).</li>
+ *   <li>{@code PUT /{id}} — atualizar metadados da playlist.</li>
+ *   <li>{@code DELETE /{id}} — eliminar playlist.</li>
+ *   <li>{@code POST /{id}/episodes} — adicionar episódio à playlist.</li>
+ *   <li>{@code DELETE /{id}/episodes/{podcastId}} — remover episódio da playlist.</li>
+ *   <li>{@code PUT /{id}/episodes/order} — reordenar episódios da playlist.</li>
+ *   <li>{@code GET /feed} — feed de playlists públicas dos amigos.</li>
+ *   <li>{@code GET /{id}/download} — descarregar playlist como ficheiro ZIP de MP3s.</li>
+ * </ul>
+ *
+ * <p><b>Visibilidade:</b> Playlists podem ser públicas ou privadas. Utilizadores não
+ * autorizados só veem playlists públicas. O dono vê sempre todas as suas playlists.
+ *
+ * <p><b>Tratamento de erros:</b>
+ * <ul>
+ *   <li>{@link SecurityException} → {@code 403 Forbidden} (operação não autorizada).</li>
+ *   <li>{@link IllegalArgumentException} → {@code 400 Bad Request} (dados inválidos).</li>
+ *   <li>{@link IllegalStateException} → {@code 409 Conflict} (episódio já na playlist).</li>
+ * </ul>
+ *
+ * @see PlaylistService
+ * @see com.jep.servidor.dto.PlaylistCreateRequest
+ * @see com.jep.servidor.dto.PlaylistUpdateRequest
  */
 @RestController
 @RequestMapping("/api/playlists")
@@ -39,7 +74,10 @@ public class PlaylistController {
   private final UserRepository userRepository;
 
   /**
-   * Construtor para injeção de dependências.
+   * Cria o controller com as dependências necessárias.
+   *
+   * @param playlistService serviço com a lógica de negócio de playlists.
+   * @param userRepository  repositório para resolver o utilizador autenticado.
    */
   public PlaylistController(PlaylistService playlistService,
                             UserRepository userRepository) {
@@ -49,6 +87,9 @@ public class PlaylistController {
 
   /**
    * Cria uma nova playlist para o utilizador autenticado.
+   *
+   * @param request dados da nova playlist (título, descrição, visibilidade).
+   * @return {@code 201 Created} com a playlist criada; {@code 401 Unauthorized} se não autenticado.
    */
   @PostMapping
   public ResponseEntity<?> create(@Valid @RequestBody PlaylistCreateRequest request) {
@@ -63,7 +104,9 @@ public class PlaylistController {
   }
 
   /**
-   * Lista playlists do utilizador autenticado (públicas e privadas).
+   * Lista todas as playlists do utilizador autenticado (públicas e privadas).
+   *
+   * @return {@code 200 OK} com lista de playlists; {@code 401 Unauthorized} se não autenticado.
    */
   @GetMapping("/mine")
   public ResponseEntity<?> mine() {
@@ -80,7 +123,13 @@ public class PlaylistController {
   }
 
   /**
-   * Lista playlists de um utilizador: se for o próprio inclui privadas, caso contrário apenas públicas.
+   * Lista playlists de um utilizador específico.
+   *
+   * <p>Se o utilizador autenticado for o próprio dono, inclui playlists privadas.
+   * Caso contrário, retorna apenas as playlists públicas.
+   *
+   * @param userId ID do utilizador cujas playlists se pretendem listar.
+   * @return {@code 200 OK} com lista de playlists visíveis; {@code 401 Unauthorized} se não autenticado.
    */
   @GetMapping("/user/{userId}")
   public ResponseEntity<?> listByUser(@PathVariable Long userId) {
@@ -97,7 +146,12 @@ public class PlaylistController {
   }
 
   /**
-   * Retorna uma playlist específica, respeitando regras de visibilidade.
+   * Retorna uma playlist por ID, respeitando as regras de visibilidade.
+   *
+   * <p>Playlists privadas só são visíveis para o seu dono.
+   *
+   * @param playlistId ID da playlist a obter.
+   * @return {@code 200 OK} com a playlist; {@code 404 Not Found} se não existir ou não for visível.
    */
   @GetMapping("/{playlistId}")
   public ResponseEntity<?> getById(@PathVariable Long playlistId) {
@@ -114,7 +168,12 @@ public class PlaylistController {
   }
 
   /**
-   * Atualiza metadados da playlist (nome, descrição, capa, visibilidade).
+   * Atualiza os metadados de uma playlist (nome, descrição, imagem de capa, visibilidade).
+   *
+   * @param playlistId ID da playlist a atualizar.
+   * @param request    novos valores dos metadados.
+   * @return {@code 200 OK} com a playlist atualizada; {@code 403 Forbidden} se não for o dono;
+   *         {@code 404 Not Found} se não existir.
    */
   @PutMapping("/{playlistId}")
   public ResponseEntity<?> update(@PathVariable Long playlistId,
@@ -136,7 +195,11 @@ public class PlaylistController {
   }
 
   /**
-   * Elimina uma playlist.
+   * Elimina permanentemente uma playlist do utilizador autenticado.
+   *
+   * @param playlistId ID da playlist a eliminar.
+   * @return {@code 204 No Content} se eliminada; {@code 403 Forbidden} se não for o dono;
+   *         {@code 404 Not Found} se não existir.
    */
   @DeleteMapping("/{playlistId}")
   public ResponseEntity<?> delete(@PathVariable Long playlistId) {
@@ -159,7 +222,15 @@ public class PlaylistController {
   }
 
   /**
-   * Adiciona um episódio (podcast) à playlist.
+   * Adiciona um episódio (podcast) à playlist do utilizador autenticado.
+   *
+   * <p>Lança {@link IllegalStateException} se o episódio já estiver na playlist
+   * (retornado como {@code 409 Conflict}).
+   *
+   * @param playlistId ID da playlist.
+   * @param request    corpo com o ID do podcast a adicionar.
+   * @return {@code 200 OK} com a playlist atualizada; {@code 403 Forbidden}, {@code 404 Not Found}
+   *         ou {@code 400 Bad Request} consoante o erro.
    */
   @PostMapping("/{playlistId}/episodes")
   public ResponseEntity<?> addEpisode(@PathVariable Long playlistId,
@@ -185,7 +256,12 @@ public class PlaylistController {
   }
 
   /**
-   * Remove um episódio (podcast) da playlist.
+   * Remove um episódio (podcast) da playlist do utilizador autenticado.
+   *
+   * @param playlistId ID da playlist.
+   * @param podcastId  ID do podcast a remover.
+   * @return {@code 200 OK} com a playlist atualizada; {@code 403}, {@code 404} ou {@code 400}
+   *         consoante o erro.
    */
   @DeleteMapping("/{playlistId}/episodes/{podcastId}")
   public ResponseEntity<?> removeEpisode(@PathVariable Long playlistId,
@@ -209,7 +285,12 @@ public class PlaylistController {
   }
 
   /**
-   * Atualiza a ordem dos episódios de uma playlist.
+   * Reordena os episódios de uma playlist, atualizando os valores de {@code position}.
+   *
+   * @param playlistId ID da playlist.
+   * @param request    lista ordenada de IDs de podcasts na nova ordem desejada.
+   * @return {@code 200 OK} com a playlist reordenada; {@code 403}, {@code 404} ou {@code 400}
+   *         consoante o erro.
    */
   @PutMapping("/{playlistId}/episodes/order")
   public ResponseEntity<?> reorderEpisodes(@PathVariable Long playlistId,
@@ -233,7 +314,13 @@ public class PlaylistController {
   }
 
   /**
-   * Feed de playlists públicas dos amigos do utilizador autenticado.
+   * Retorna o feed social de playlists públicas dos amigos do utilizador autenticado.
+   *
+   * <p>Usa {@link com.jep.servidor.repository.PlaylistRepository#findPublicPlaylistsFromFriends}
+   * para obter playlists públicas apenas de utilizadores com relação de amizade aceite.
+   *
+   * @return {@code 200 OK} com lista de playlists públicas dos amigos;
+   *         {@code 401 Unauthorized} se não autenticado.
    */
   @GetMapping("/feed")
   public ResponseEntity<?> friendsFeed() {
@@ -249,6 +336,24 @@ public class PlaylistController {
     return ResponseEntity.ok(playlists);
   }
 
+  /**
+   * Gera e devolve um ficheiro ZIP com todos os MP3s da playlist para download.
+   *
+   * <p>Itera pelos {@link PlaylistItem}s da playlist e localiza o ficheiro de áudio de cada
+   * {@link Podcast} via {@link #findAudioFile(Podcast)}. Episódios sem ficheiro de áudio
+   * disponível são silenciosamente ignorados. O nome de cada ficheiro no ZIP segue o formato
+   * {@code NN_Titulo_do_Podcast.mp3} (com número de ordem de 2 dígitos).
+   *
+   * <p><b>Nota:</b> A geração do ZIP ocorre em memória ({@link java.io.ByteArrayOutputStream}),
+   * pelo que playlists muito grandes podem consumir memória significativa.
+   *
+   * @param playlistId ID da playlist a descarregar.
+   * @return {@code 200 OK} com o ZIP como array de bytes e cabeçalho
+   *         {@code Content-Disposition: attachment};
+   *         {@code 400 Bad Request} se a playlist estiver vazia;
+   *         {@code 404 Not Found} se não existir ou não for visível;
+   *         {@code 500 Internal Server Error} em caso de erro de I/O.
+   */
   @GetMapping("/{playlistId}/download")
   public ResponseEntity<?> downloadPlaylistZip(@PathVariable("playlistId") Long playlistId) {
     Optional<User> authUser = getAuthenticatedUser();
@@ -304,6 +409,11 @@ public class PlaylistController {
     }
   }
 
+  /**
+   * Resolve o utilizador autenticado a partir do contexto de segurança Spring.
+   *
+   * @return {@link Optional} com o utilizador, ou vazio se não autenticado.
+   */
   private Optional<User> getAuthenticatedUser() {
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     if (authentication == null || authentication.getName() == null) {
@@ -312,6 +422,19 @@ public class PlaylistController {
     return userRepository.findByEmail(authentication.getName());
   }
 
+  /**
+   * Localiza o ficheiro MP3 de um podcast no sistema de ficheiros.
+   *
+   * <p>Tenta resolver o ficheiro por ordem de prioridade:
+   * <ol>
+   *   <li>Caminho absoluto {@code podcast.getConteudoPath()} diretamente.</li>
+   *   <li>Caminho via {@code java.nio.file.Paths}.</li>
+   *   <li>Busca heurística no diretório {@code generated-podcasts/} por nome parcial do título.</li>
+   * </ol>
+   *
+   * @param podcast entidade {@link Podcast} cujo ficheiro de áudio se pretende localizar.
+   * @return {@link java.io.File} se encontrado; {@code null} caso contrário.
+   */
   private java.io.File findAudioFile(Podcast podcast) {
     String conteudoPath = podcast.getConteudoPath();
     if (conteudoPath == null || conteudoPath.isEmpty()) return null;
@@ -344,6 +467,15 @@ public class PlaylistController {
     return null;
   }
 
+  /**
+   * Converte a entidade {@link Playlist} para um mapa de resposta JSON.
+   *
+   * <p>Inclui dados do dono (id, username, tag) e lista de episódios via
+   * {@link #toEpisodeResponse(PlaylistItem)}.
+   *
+   * @param playlist entidade a converter.
+   * @return mapa com os campos da playlist serializáveis para JSON.
+   */
   private Map<String, Object> toPlaylistResponse(Playlist playlist) {
     Map<String, Object> owner = new LinkedHashMap<>();
     owner.put("id", playlist.getOwner().getId());
@@ -368,6 +500,13 @@ public class PlaylistController {
     return response;
   }
 
+  /**
+   * Converte um {@link PlaylistItem} para um mapa de resposta JSON com dados do episódio.
+   *
+   * @param item item da playlist a converter.
+   * @return mapa com {@code position}, {@code podcastId}, {@code title}, {@code duration},
+   *         {@code host}, {@code hostId} e {@code available}.
+   */
   private Map<String, Object> toEpisodeResponse(PlaylistItem item) {
     Podcast podcast = item.getPodcast();
 

@@ -4,7 +4,12 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 /**
- * DTO para criação de playlists.
+ * DTO de pedido de criação de uma nova playlist.
+ *
+ * <p>Usado pelo endpoint {@code POST /api/playlists} em
+ * {@link com.jep.servidor.controller.PlaylistController}.
+ * O campo {@code initialPodcastId} permite criar a playlist e adicionar
+ * imediatamente o primeiro podcast numa única operação.
  */
 public class PlaylistCreateRequest {
 

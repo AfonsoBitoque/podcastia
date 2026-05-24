@@ -19,6 +19,7 @@ export function useBackgroundAudio() {
   const [playbackSpeed, setPlaybackSpeed] = useState(globalAudioService.playbackSpeed)
   const [currentPodcast, setCurrentPodcast] = useState(globalAudioService.currentPodcast)
   const [shuffleMode, setShuffleModeState] = useState(globalAudioService.shuffleMode || false)
+  const [hasQueue, setHasQueue] = useState(globalAudioService.queue?.length > 0)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
 
@@ -80,6 +81,10 @@ export function useBackgroundAudio() {
       setShuffleModeState(data.shuffle)
     }
 
+    const handleQueueChanged = (data) => {
+      setHasQueue(Array.isArray(data?.queue) && data.queue.length > 0)
+    }
+
     const handleCleared = () => {
       setIsPlaying(false)
       setCurrentTime(0)
@@ -100,6 +105,7 @@ export function useBackgroundAudio() {
     globalAudioService.on('error', handleServiceError)
     globalAudioService.on('shuffleChanged', handleShuffleChanged)
     globalAudioService.on('cleared', handleCleared)
+    globalAudioService.on('queueChanged', handleQueueChanged)
 
     // Unsubscribe on unmount without destroying the global audio service
     return () => {
@@ -113,6 +119,7 @@ export function useBackgroundAudio() {
       globalAudioService.off('error', handleServiceError)
       globalAudioService.off('shuffleChanged', handleShuffleChanged)
       globalAudioService.off('cleared', handleCleared)
+      globalAudioService.off('queueChanged', handleQueueChanged)
     }
   }, [])
 
@@ -251,6 +258,8 @@ export function useBackgroundAudio() {
     setShuffleMode,
     handlePodcastSelect,
     handlePodcastResume,
+
+    hasQueue,
 
     // Computed values
     progressPercent: duration ? (currentTime / duration) * 100 : 0,

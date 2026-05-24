@@ -15,9 +15,40 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import java.util.List;
 
 /**
- * Componente responsável por popular a base de dados com dados iniciais (seeding)
- * para facilitar testes e desenvolvimento local.
- * Só executa caso a propriedade seeder.enabled seja true ou esteja em falta.
+ * Componente de arranque responsável por popular a base de dados com dados iniciais
+ * (seed data) para facilitar o desenvolvimento local e os testes da plataforma.
+ *
+ * <p>Implementa {@link CommandLineRunner}, sendo executado automaticamente pelo Spring
+ * Boot após o contexto da aplicação estar completamente inicializado. É executado
+ * com prioridade por omissão (sem {@code @Order}), após o {@code DataSeeder} ter prioridade 1.
+ *
+ * <p><b>Condição de ativação:</b> A anotação {@link ConditionalOnProperty} garante que
+ * este bean só é criado se a propriedade {@code seeder.enabled} tiver o valor {@code true},
+ * ou se a propriedade não estiver definida ({@code matchIfMissing = true}). Para desativar
+ * o seeder em produção, basta definir {@code seeder.enabled=false} no
+ * {@code application.properties}.
+ *
+ * <p><b>Dados populados:</b>
+ * <ul>
+ *   <li><b>Utilizador admin:</b> Cria o utilizador {@code admin@podcastia.com} com tipo
+ *       {@code USERADMIN} caso ainda não exista. Credenciais por omissão:
+ *       email {@code admin@podcastia.com}, password {@code admin} (hash BCrypt).</li>
+ *   <li><b>10 podcasts de exemplo:</b> Criados associados ao utilizador admin, cobrindo
+ *       todas as categorias disponíveis ({@code DESPORTO}, {@code POLITICA},
+ *       {@code FINANCAS}, {@code GERAL}). Só são criados se existirem menos de 10
+ *       podcasts na base de dados.</li>
+ *   <li><b>4 fontes RSS:</b> Populadas caso não existam quaisquer fontes RSS na base de
+ *       dados (Observador, Público Desporto, TechCrunch, BBC News World).</li>
+ * </ul>
+ *
+ * <p><b>Idempotência:</b> O seeder verifica condições antes de inserir dados
+ * ({@code podcastRepository.count() < 10} e {@code rssSourceRepository.count() == 0}),
+ * tornando-o seguro para reinicializações da aplicação sem duplicação de dados.
+ *
+ * @see AudioPathSync
+ * @see com.jep.servidor.model.User
+ * @see com.jep.servidor.model.Podcast
+ * @see com.jep.servidor.model.RssSource
  */
 @Component
 @ConditionalOnProperty(name="seeder.enabled", havingValue="true", matchIfMissing=true)
@@ -29,12 +60,12 @@ public class DataSeeder implements CommandLineRunner {
     private final RssSourceRepository rssSourceRepository;
 
     /**
-     * Construtor para injeção de dependências.
+     * Cria uma instância de {@code DataSeeder} com injeção das dependências necessárias.
      *
-     * @param userRepository Repositório de utilizadores.
-     * @param podcastRepository Repositório de podcasts.
-     * @param passwordEncoder Codificador de palavras-passe.
-     * @param rssSourceRepository Repositório de fontes de feed RSS.
+     * @param userRepository      repositório JPA para persistência de utilizadores.
+     * @param podcastRepository   repositório JPA para persistência de podcasts.
+     * @param passwordEncoder     codificador BCrypt para hash de palavras-passe.
+     * @param rssSourceRepository repositório JPA para persistência de fontes RSS.
      */
     public DataSeeder(UserRepository userRepository, PodcastRepository podcastRepository, PasswordEncoder passwordEncoder, RssSourceRepository rssSourceRepository) {
         this.userRepository = userRepository;
@@ -44,10 +75,21 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     /**
-     * Método executado automaticamente no arranque da aplicação para inserir os dados.
+     * Ponto de execução do {@link CommandLineRunner}.
      *
-     * @param args Argumentos da linha de comandos.
-     * @throws Exception Caso ocorra algum erro durante a execução.
+     * <p>Fluxo:
+     * <ol>
+     *   <li>Se existirem menos de 10 podcasts na BD:
+     *     <ul>
+     *       <li>Cria (ou obtém) o utilizador admin com email {@code admin@podcastia.com}.</li>
+     *       <li>Cria 10 podcasts de exemplo com diferentes tags e durações.</li>
+     *     </ul>
+     *   </li>
+     *   <li>Se não existirem fontes RSS, cria 4 fontes parceiras predefinidas.</li>
+     * </ol>
+     *
+     * @param args argumentos da linha de comando (não utilizados).
+     * @throws Exception se ocorrer erro durante a persistência (propagado ao Spring Boot).
      */
     @Override
     public void run(String... args) throws Exception {
@@ -85,12 +127,17 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     /**
-     * Cria um novo podcast associado a um utilizador e guarda-o na base de dados.
+     * Cria e persiste um novo podcast de exemplo associado ao utilizador indicado.
      *
-     * @param user Utilizador proprietário (host) do podcast.
-     * @param title Título do podcast.
-     * @param duration Duração em minutos.
-     * @param tags Lista de categorias/tags do podcast.
+     * <p>O caminho do ficheiro de áudio ({@code conteudoPath}) é gerado como um
+     * caminho de teste no formato {@code test/titulonormalizado.mp3}, sem ficheiro
+     * real associado — serve apenas como placeholder para testes.
+     * A capa é definida com a imagem por omissão {@code /images/default-podcast-cover.svg}.
+     *
+     * @param user     utilizador proprietário (host) do podcast.
+     * @param title    título do podcast.
+     * @param duration duração do podcast em minutos.
+     * @param tags     lista de categorias/tags ({@link PodcastTag}) associadas ao podcast.
      */
     private void createPodcast(User user, String title, int duration, List<PodcastTag> tags) {
         Podcast p = new Podcast();
@@ -104,10 +151,13 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     /**
-     * Cria uma nova fonte RSS parceira e guarda-a na base de dados.
+     * Cria e persiste uma nova fonte RSS parceira.
      *
-     * @param name Nome de apresentação da fonte.
-     * @param url Link original do feed XML/RSS.
+     * <p>Delega para o construtor {@link RssSource#RssSource(String, String)} que
+     * inicializa a fonte com o estado {@code ativa = true} por omissão.
+     *
+     * @param name nome de apresentação da fonte (ex: {@code "BBC News - World"}).
+     * @param url  URL do feed RSS/Atom (ex: {@code "https://feeds.bbci.co.uk/news/world/rss.xml"}).
      */
     private void createRssSource(String name, String url) {
         RssSource source = new RssSource(name, url);

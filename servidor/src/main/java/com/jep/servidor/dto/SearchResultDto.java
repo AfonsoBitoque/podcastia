@@ -3,14 +3,36 @@ package com.jep.servidor.dto;
 import com.jep.servidor.model.PodcastTag;
 import java.util.List;
 
+/**
+ * DTO polimórfico de resultado de pesquisa unificada.
+ *
+ * <p>Devolvido pelo {@link com.jep.servidor.controller.SearchController} e
+ * gerado pelo {@link com.jep.servidor.service.SearchService}. Representa tanto
+ * um utilizador como um podcast num formato normalizado para o frontend.
+ *
+ * <p>O campo {@code type} discrimina o tipo de resultado:
+ * <ul>
+ *   <li>{@code "USER"} — representa um utilizador; {@code extraInfo} contém a tag.</li>
+ *   <li>{@code "PODCAST"} — representa um podcast; {@code duracao} e {@code tags}
+ *       estão preenchidos.</li>
+ * </ul>
+ */
 public class SearchResultDto {
+  /** ID da entidade (utilizador ou podcast). */
   private Long id;
-  private String type; // "USER" or "PODCAST"
+  /** Tipo do resultado: {@code "USER"} ou {@code "PODCAST"}. */
+  private String type;
+  /** Título principal (username ou título do podcast). */
   private String title;
+  /** Sub-título (email para USER, autor para PODCAST). */
   private String subtitle;
+  /** URL da imagem de perfil ou capa do podcast. */
   private String imageUrl;
-  private String extraInfo; // Ex: tag do user
+  /** Informação extra: tag do utilizador ({@code "#0042"}) ou {@code null} para podcasts. */
+  private String extraInfo;
+  /** Duração em segundos (apenas para PODCAST; {@code null} para USER). */
   private Integer duracao;
+  /** Tags de categorização (apenas para PODCAST; {@code null} para USER). */
   private List<PodcastTag> tags;
 
   public SearchResultDto() {

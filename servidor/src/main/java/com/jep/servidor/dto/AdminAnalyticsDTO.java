@@ -5,33 +5,45 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * DTO for Admin Analytics Dashboard
+ * DTO principal do painel de analytics para administradores.
+ *
+ * <p>Agrega métricas de utilizadores, podcasts, evolução de uso temporal
+ * e saúde do sistema, gerado pelo {@link com.jep.servidor.service.AdminService}.
+ *
+ * <p>Contém duas inner classes:
+ * <ul>
+ *   <li>{@link PodcastRankingDTO} — dados de ranking de podcasts mais reproduzidos.</li>
+ *   <li>{@link UsageDataPointDTO} — ponto de dados de uso para gráficos de evolução.</li>
+ * </ul>
  */
 public class AdminAnalyticsDTO {
     
-    // User Metrics
+    /** Número de utilizadores ativos nas últimas 24 horas. */
     private long dailyActiveUsers;
+    /** Número de utilizadores ativos no último mês. */
     private long monthlyActiveUsers;
+    /** Total de utilizadores registados na plataforma. */
     private long totalUsers;
+    /** Novos registos hoje. */
     private long newRegistrationsToday;
+    /** Novos registos no mês atual. */
     private long newRegistrationsThisMonth;
-    
-    // Podcast Metrics
+    /** Total de podcasts na plataforma. */
     private long totalPodcasts;
-    private long totalListeningTime; // in minutes
+    /** Tempo total de audição acumulado em minutos. */
+    private long totalListeningTime;
+    /** Lista dos podcasts mais reproduzidos, ordenados por ranking. */
     private List<PodcastRankingDTO> topPodcasts;
-    
-    // Usage Evolution Data
+    /** Dados de uso diário/semanal para gráfico de evolução semanal. */
     private List<UsageDataPointDTO> weeklyUsage;
+    /** Dados de uso diário/mensal para gráfico de evolução mensal. */
     private List<UsageDataPointDTO> monthlyUsage;
-    
-    // System Health
+    /** Mapa de métricas de saúde do sistema (CPU, memória, BD, etc.). */
     private Map<String, Object> systemHealth;
-    
-    // Timestamp
+    /** Data e hora em que este snapshot foi gerado. */
     private LocalDateTime generatedAt;
     
-    // Constructors
+    /** Construtor padrão para deserialização. */
     public AdminAnalyticsDTO() {}
     
     public AdminAnalyticsDTO(long dailyActiveUsers, long monthlyActiveUsers, long totalUsers,
@@ -93,15 +105,25 @@ public class AdminAnalyticsDTO {
     public void setGeneratedAt(LocalDateTime generatedAt) { this.generatedAt = generatedAt; }
     
     /**
-     * DTO for Podcast Ranking
+     * DTO de ranking de um podcast no painel de analytics.
+     *
+     * <p>Exposta na lista {@link AdminAnalyticsDTO#getTopPodcasts()},
+     * ordenada pelo campo {@link #rank}.
      */
     public static class PodcastRankingDTO {
+        /** ID do podcast. */
         private Long podcastId;
+        /** Título do podcast. */
         private String title;
+        /** Nome do autor/criador. */
         private String author;
+        /** Número total de reproduções. */
         private long totalPlays;
-        private long totalListeningTime; // in minutes
+        /** Tempo total de audição em minutos. */
+        private long totalListeningTime;
+        /** Classificação média (0.0–5.0). */
         private double averageRating;
+        /** Posição no ranking (1 = mais reproduzido). */
         private int rank;
         
         public PodcastRankingDTO() {}
@@ -142,12 +164,20 @@ public class AdminAnalyticsDTO {
     }
     
     /**
-     * DTO for Usage Data Points (for charts)
+     * Ponto de dados de uso para construção de gráficos de evolução.
+     *
+     * <p>Cada instância representa um dia ou período agrupado, usada nas
+     * listas {@link AdminAnalyticsDTO#getWeeklyUsage()} e
+     * {@link AdminAnalyticsDTO#getMonthlyUsage()}.
      */
     public static class UsageDataPointDTO {
+        /** Data do ponto (formato {@code yyyy-MM-dd} ou descrição do período). */
         private String date;
+        /** Utilizadores ativos neste período. */
         private long activeUsers;
+        /** Novos utilizadores registados neste período. */
         private long newUsers;
+        /** Tempo de audição total neste período (em minutos). */
         private long listeningTime;
         
         public UsageDataPointDTO() {}

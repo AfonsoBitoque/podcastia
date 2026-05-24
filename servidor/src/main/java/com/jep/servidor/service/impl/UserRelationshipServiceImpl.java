@@ -19,9 +19,24 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Implementação do serviço de gestão de relações entre utilizadores.
+ *
+ * <p>Regras de negócio aplicadas:
+ * <ul>
+ *   <li>Não é permitido enviar pedido a si mesmo.</li>
+ *   <li>Não é permitido enviar pedido a quem bloqueou o remetente.</li>
+ *   <li>Após rejeição, o remetente deve aguardar {@link #COOLDOWN_DAYS} (7) dias.</li>
+ *   <li>Aceitar um pedido cria dois registos {@code AMIGO} (bidirecional).</li>
+ *   <li>Remover amizade elimina ambos os registos {@code AMIGO}.</li>
+ * </ul>
+ *
+ * @see com.jep.servidor.service.UserRelationshipService
+ */
 @Service
 public class UserRelationshipServiceImpl implements UserRelationshipService {
 
+  /** Número de dias de cooldown após rejeição de um pedido de amizade. */
   private static final int COOLDOWN_DAYS = 7;
 
   private final UserRelationRepository userRelationRepository;

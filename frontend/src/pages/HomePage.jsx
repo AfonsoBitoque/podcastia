@@ -33,6 +33,7 @@ function HomePage() {
     loadPodcast,
     play,
     togglePlayPause,
+    setQueue,
   } = useBackgroundAudio()
 
   useEffect(() => {
@@ -80,7 +81,7 @@ function HomePage() {
     }
   }
 
-  const handlePlayNow = async (podcast) => {
+  const handlePlayNow = async (podcast, queue) => {
     try {
       console.log('[HomePage] Playing podcast:', podcast.titulo)
 
@@ -92,13 +93,16 @@ function HomePage() {
       const currentId = playingPodcast?.id || playingPodcast?.podcastId
 
       if (currentId === podcastId) {
-        // Se já é o podcast atual, apenas alterna entre play e pause sem reiniciar
         await togglePlayPause()
         return
       }
 
       const loaded = await loadPodcast(podcast, 0)
       if (loaded) {
+        if (queue && queue.length > 0) {
+          const idx = queue.findIndex((p) => (p.id || p.podcastId) === podcastId)
+          setQueue(queue, idx >= 0 ? idx : 0)
+        }
         console.log('[HomePage] Podcast loaded, starting playback...')
         await play()
         console.log('[HomePage] Playback started')
@@ -171,14 +175,16 @@ function HomePage() {
     }
   }
 
-  const renderPodcastCard = (podcast, index) => (
+  const makePlayHandler = (sectionQueue) => (podcast) => handlePlayNow(podcast, sectionQueue)
+
+  const renderPodcastCard = (sectionQueue) => (podcast, index) => (
     <PodcastCard
       key={getPodcastId(podcast) || `${podcast.titulo || podcast.title || 'podcast'}-${index}`}
       podcast={podcast}
       isPlaying={isPlaying}
       playingPodcast={playingPodcast}
       onOpen={openSidebar}
-      onPlay={handlePlayNow}
+      onPlay={makePlayHandler(sectionQueue)}
     />
   )
 
@@ -213,7 +219,7 @@ function HomePage() {
         emptyMessage="Ainda não tens podcasts. Cria o teu primeiro!"
         emptyActionLabel="Criar Podcast"
         onEmptyAction={() => navigate('/generate')}
-        renderPodcast={renderPodcastCard}
+        renderPodcast={renderPodcastCard(filteredMyPodcasts)}
       />
 
       <HomePodcastSection
@@ -224,7 +230,7 @@ function HomePage() {
         emptyMessage="Ainda não guardaste nenhum podcast."
         emptyActionLabel="Explorar Podcasts"
         onEmptyAction={() => navigate('/search-test')}
-        renderPodcast={renderPodcastCard}
+        renderPodcast={renderPodcastCard(filteredSavedPodcasts)}
       />
 
       <HomePodcastSection
@@ -238,7 +244,7 @@ function HomePage() {
         error={error}
         onRetry={fetchPodcasts}
         emptyMessage="Nenhum podcast encontrado"
-        renderPodcast={renderPodcastCard}
+        renderPodcast={renderPodcastCard(filteredCommunityPodcasts)}
       />
 
     </main>

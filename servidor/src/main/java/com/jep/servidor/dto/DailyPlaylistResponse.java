@@ -7,7 +7,15 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * DTO para resposta de playlist diária.
+ * DTO de resposta completo de uma playlist diária gerada automaticamente.
+ *
+ * <p>Corresponde à visão serializada de uma {@link com.jep.servidor.model.DailyPlaylist},
+ * incluindo metadados (data, título, descrição, duração total) e a lista de
+ * {@link DailyPlaylistItemResponse} convertidos automaticamente no construtor
+ * via {@link DailyPlaylistItemResponse#fromEntity}.
+ *
+ * @see com.jep.servidor.controller.DailyPlaylistController
+ * @see com.jep.servidor.service.DailyPlaylistService
  */
 public class DailyPlaylistResponse {
 
@@ -21,14 +29,23 @@ public class DailyPlaylistResponse {
   private LocalDateTime createdAt;
   private LocalDateTime updatedAt;
 
-  /**
-   * Construtor padrão.
-   */
+  /** Construtor padrão para deserialização. */
   public DailyPlaylistResponse() {
   }
 
   /**
-   * Construtor com dados.
+   * Construtor que aceita a lista de entidades {@link DailyPlaylistItem} e as converte
+   * automaticamente para {@link DailyPlaylistItemResponse}.
+   *
+   * @param id            ID da playlist diária.
+   * @param playlistDate  Data a que esta playlist corresponde.
+   * @param title         Título gerado para a playlist.
+   * @param description   Descrição da playlist.
+   * @param totalDuration Duração total em segundos.
+   * @param totalPodcasts Número de podcasts na lista.
+   * @param items         Lista de entidades {@link DailyPlaylistItem} a converter.
+   * @param createdAt     Data de criação.
+   * @param updatedAt     Data da última atualização.
    */
   public DailyPlaylistResponse(Long id, LocalDate playlistDate, String title, String description,
       int totalDuration, int totalPodcasts, List<DailyPlaylistItem> items,

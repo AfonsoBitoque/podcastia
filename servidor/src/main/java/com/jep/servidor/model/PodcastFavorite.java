@@ -13,7 +13,18 @@ import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
 
 /**
- * Entidade que representa a relacao de favorito entre utilizador e podcast.
+ * Entidade JPA que regista a relação de favorito entre um utilizador e um podcast.
+ *
+ * <p>A combinação ({@code user_id}, {@code podcast_id}) é única, garantindo
+ * que cada utilizador só pode favoritar um podcast uma vez (toggle).
+ *
+ * <p>O toggle é gerido pelo
+ * {@link com.jep.servidor.controller.PodcastFavoriteController}:
+ * se o favorito já existir, é removido; caso contrário, é criado.
+ *
+ * <p><b>Tabela:</b> {@code podcast_favorites}
+ *
+ * @see com.jep.servidor.repository.PodcastFavoriteRepository
  */
 @Entity
 @Table(

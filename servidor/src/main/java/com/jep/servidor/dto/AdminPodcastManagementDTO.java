@@ -4,31 +4,54 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * DTO for Admin Podcast Management
+ * DTO de gestão administrativa de podcasts.
+ *
+ * <p>Exposto pelo {@link com.jep.servidor.controller.AdminController} para operações
+ * de moderação como marcar conteúdo como explícito, ocultar, destacar ou eliminar podcasts.
+ * Inclui campos de auditoria ({@code lastModifiedBy}, {@code modificationReason})
+ * e campos de moderação ({@code violationReasons}).
  */
 public class AdminPodcastManagementDTO {
     
+    /** ID do podcast. */
     private Long id;
+    /** Título do podcast. */
     private String titulo;
+    /** Nome do autor/criador do podcast. */
     private String author;
+    /** Tags de categorização (valores de {@link com.jep.servidor.model.PodcastTag}). */
     private List<String> tags;
+    /** Duração do podcast em segundos. */
     private int duracao;
+    /** {@code true} se o podcast foi marcado como conteúdo explícito. */
     private boolean explicitContent;
+    /** {@code true} se o podcast está oculto (não visível no feed público). */
     private boolean hidden;
+    /** {@code true} se o podcast está em destaque (featured). */
     private boolean featured;
+    /** {@code true} se o podcast é público; {@code false} se privado. */
     private boolean publico;
+    /** {@code true} se o podcast está disponível (não soft-deleted). */
     private boolean available;
+    /** Data de criação do podcast. */
     private LocalDateTime createdAt;
+    /** Data da última modificação administrativa. */
     private LocalDateTime lastModified;
+    /** Número total de reproduções. */
     private long totalPlays;
+    /** Tempo total de audição em minutos. */
     private long totalListeningTime;
+    /** Classificação média (0.0–5.0). */
     private double averageRating;
+    /** Caminho relativo para a imagem de capa do podcast. */
     private String coverImagePath;
+    /** Caminho para o ficheiro de áudio MP3. */
     private String conteudoPath;
-    
-    // Admin-specific fields
+    /** Username do administrador que fez a última modificação. */
     private String lastModifiedBy;
+    /** Razão fornecida pelo administrador para a modificação. */
     private String modificationReason;
+    /** Lista de razões de violação das regras da plataforma. */
     private List<String> violationReasons;
     
     public AdminPodcastManagementDTO() {}

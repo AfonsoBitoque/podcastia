@@ -3,26 +3,63 @@ package com.jep.servidor.dto;
 import java.time.LocalDateTime;
 
 /**
- * DTO for Admin Action Logging
+ * DTO de transferência de dados para logs de ações administrativas.
+ *
+ * <p>Representa um registo de auditoria de uma ação efetuada por um administrador,
+ * incluindo dados de identidade, alvo, contexto HTTP e resultado da operação.
+ * Usado pelo {@link com.jep.servidor.controller.AdminController} para expor os logs
+ * gerados pelo {@link com.jep.servidor.model.AdminActionLog}.
+ *
+ * <p><b>Campos de alvo ({@code targetType}):</b> {@code PODCAST}, {@code USER}, {@code SYSTEM}.
  */
 public class AdminActionLogDTO {
     
+    /** ID único do registo de log. */
     private Long id;
+    /** Username do administrador que executou a ação. */
     private String adminUsername;
+    /** Email do administrador. */
     private String adminEmail;
+    /** Código da ação executada (ex: {@code "DELETE_PODCAST"}, {@code "RESET_PASSWORD"}). */
     private String action;
-    private String targetType; // PODCAST, USER, SYSTEM
+    /** Tipo de entidade alvo: {@code PODCAST}, {@code USER} ou {@code SYSTEM}. */
+    private String targetType;
+    /** ID da entidade alvo (podcast, utilizador, etc.). */
     private Long targetId;
+    /** Nome/título da entidade alvo para referência humana. */
     private String targetName;
+    /** Descrição detalhada da ação executada. */
     private String description;
+    /** Endereço IP do administrador no momento da ação. */
     private String ipAddress;
+    /** User-Agent do browser/cliente do administrador. */
     private String userAgent;
+    /** Data e hora em que a ação foi executada. */
     private LocalDateTime timestamp;
+    /** {@code true} se a ação foi concluída com sucesso; {@code false} se falhou. */
     private boolean successful;
+    /** Mensagem de erro em caso de falha; {@code null} se bem-sucedido. */
     private String errorMessage;
     
+    /** Construtor padrão para deserialização. */
     public AdminActionLogDTO() {}
-    
+
+    /**
+     * Construtor completo para criação programática do log.
+     *
+     * @param adminUsername   username do administrador.
+     * @param adminEmail      email do administrador.
+     * @param action          código da ação.
+     * @param targetType      tipo do alvo ({@code PODCAST}, {@code USER}, {@code SYSTEM}).
+     * @param targetId        ID do alvo.
+     * @param targetName      nome do alvo.
+     * @param description     descrição da ação.
+     * @param ipAddress       IP do administrador.
+     * @param userAgent       user-agent do cliente.
+     * @param timestamp       data/hora da ação.
+     * @param successful      {@code true} se bem-sucedido.
+     * @param errorMessage    mensagem de erro (ou {@code null}).
+     */
     public AdminActionLogDTO(String adminUsername, String adminEmail, String action,
                              String targetType, Long targetId, String targetName,
                              String description, String ipAddress, String userAgent,

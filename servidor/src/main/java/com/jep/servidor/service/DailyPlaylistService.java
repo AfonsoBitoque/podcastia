@@ -22,9 +22,23 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Serviço para gerenciar playlists diárias automáticas dos utilizadores.
- * A playlist diária é gerada com base nas preferências (pontos) do utilizador
- * e contém os podcasts mais relevantes para aquele utilizador.
+ * Serviço de gestão de playlists diárias automáticas.
+ *
+ * <p>A playlist diária é gerada uma vez por dia para cada utilizador
+ * ativo, com base nos seus pontos de afinidade por tag ({@link com.jep.servidor.model.PodcastTag}).
+ *
+ * <p>Algoritmo de seleção:
+ * <ol>
+ *   <li>Calcula as preferências do utilizador a partir dos pontos por tag.</li>
+ *   <li>Ordena todos os podcasts públicos/disponíveis por score de relevância normalizado.</li>
+ *   <li>Seleciona até {@code MAX_PODCASTS_PER_PLAYLIST} (20) ou até atingir
+ *       {@code MIN_PLAYLIST_DURATION} (30 min), o que ocorrer primeiro.</li>
+ * </ol>
+ *
+ * <p>O método {@link #regenerateAllDailyPlaylists()} é chamado pelo
+ * {@link com.jep.servidor.config.DailyPlaylistScheduler} diariamente à meia-noite.
+ *
+ * @see com.jep.servidor.controller.DailyPlaylistController
  */
 @Service
 public class DailyPlaylistService {

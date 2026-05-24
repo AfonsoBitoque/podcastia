@@ -12,7 +12,19 @@ import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 
 /**
- * Entidade que representa um artigo noticioso extraído de um feed RSS parceiro.
+ * Entidade JPA que representa um artigo noticioso extraído de um feed RSS.
+ *
+ * <p>Os artigos são obtidos automaticamente pelo {@link com.jep.servidor.config.AudioPathSync}
+ * (scheduler RSS) a cada 2 horas via biblioteca ROME, a partir das
+ * fontes ativas em {@link RssSource}.
+ *
+ * <p>A URL original ({@code urlOriginal}) tem restrição {@code UNIQUE}
+ * para evitar duplicados no caso de feeds sobrepostos.
+ *
+ * <p><b>Tabela:</b> {@code articles}
+ *
+ * @see RssSource
+ * @see com.jep.servidor.repository.ArticleRepository
  */
 @Entity
 @Table(name = "articles")

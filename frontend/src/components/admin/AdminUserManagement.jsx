@@ -236,13 +236,13 @@ function AdminUserManagement() {
                       <div className="points-total">
                         {toFiniteNumber(user.pontosGeral) +
                           toFiniteNumber(user.pontosDesporto) +
-                          toFiniteNumber(user.pontosFinanca) +
+                          toFiniteNumber(user.pontosFinancas) +
                           toFiniteNumber(user.pontosPolitica)}
                       </div>
                       <div className="points-breakdown">
                         G:{toFiniteNumber(user.pontosGeral)} S:
                         {toFiniteNumber(user.pontosDesporto)} F:
-                        {toFiniteNumber(user.pontosFinanca)} P:
+                        {toFiniteNumber(user.pontosFinancas)} P:
                         {toFiniteNumber(user.pontosPolitica)}
                       </div>
                     </div>

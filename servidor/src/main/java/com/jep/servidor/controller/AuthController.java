@@ -15,7 +15,32 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Controlador REST para autenticação (Login).
+ * Controller REST responsável pela autenticação de utilizadores (login) na plataforma Podcastia.
+ *
+ * <p>Expõe um único endpoint público ({@code POST /api/auth/login}) que valida as credenciais
+ * fornecidas, verifica o estado da conta e emite um token JWT em caso de sucesso.
+ *
+ * <p><b>Modos de login suportados:</b>
+ * <ul>
+ *   <li><b>Por email:</b> Quando o campo {@code tag} é omitido ou vazio, o {@code identifier}
+ *       é tratado como endereço de email.</li>
+ *   <li><b>Por username + tag:</b> Quando {@code tag} é fornecido, o utilizador é localizado
+ *       pelo par único {@code (username, tag)}, que identifica de forma inequívoca um utilizador
+ *       mesmo quando existem utilizadores com o mesmo nome.</li>
+ * </ul>
+ *
+ * <p><b>Verificações de segurança:</b>
+ * <ol>
+ *   <li>O utilizador deve existir na base de dados.</li>
+ *   <li>O estado da conta deve ser {@link User.UserStatus#ACTIVE} — contas suspensas ou banidas
+ *       recebem HTTP 403 Forbidden.</li>
+ *   <li>A password fornecida deve corresponder ao hash BCrypt armazenado.</li>
+ * </ol>
+ *
+ * <p><b>Base path:</b> {@code /api/auth} (público, sem autenticação JWT requerida)
+ *
+ * @see JwtUtil
+ * @see com.jep.servidor.config.SecurityConfig
  */
 @RestController
 @RequestMapping("/api/auth")
@@ -31,7 +56,16 @@ public class AuthController {
     private JwtUtil jwtUtil;
 
     /**
-     * DTO para o pedido de login.
+     * DTO interno para desserialização do corpo do pedido de login.
+     *
+     * <p>Campos:
+     * <ul>
+     *   <li>{@code identifier} — email do utilizador (login por email) ou username
+     *       (login por username+tag).</li>
+     *   <li>{@code tag} — tag numérica do utilizador (opcional; se omitida ou vazia,
+     *       o login é por email).</li>
+     *   <li>{@code password} — password em plaintext a verificar contra o hash BCrypt.</li>
+     * </ul>
      */
     public static class LoginRequest {
         public String identifier; // email ou username
@@ -40,10 +74,41 @@ public class AuthController {
     }
 
     /**
-     * Endpoint para realizar login e obter um JWT.
+     * Autentica um utilizador e emite um token JWT.
      *
-     * @param request Dados de login.
-     * @return Token JWT se válido, ou erro 401.
+     * <p>Fluxo detalhado:
+     * <ol>
+     *   <li>Determina o modo de login (email ou username+tag) com base na presença do campo
+     *       {@code tag}.</li>
+     *   <li>Localiza o utilizador no repositório.</li>
+     *   <li>Verifica se o estado da conta é {@code ACTIVE}; caso contrário, retorna 403.</li>
+     *   <li>Verifica a password com {@link PasswordEncoder#matches}.</li>
+     *   <li>Atualiza {@code lastActiveAt} com o timestamp atual e persiste.</li>
+     *   <li>Gera um JWT com {@link JwtUtil#generateToken} (24 horas de validade).</li>
+     *   <li>Retorna o token e dados resumidos do utilizador.</li>
+     * </ol>
+     *
+     * <p><b>Resposta de sucesso ({@code 200 OK}):</b>
+     * <pre>
+     * {
+     *   "token": "eyJhbGciOiJIUzI1NiJ9...",
+     *   "userId": 42,
+     *   "username": "johndoe",
+     *   "userType": "USER",
+     *   "playbackSpeed": 1.0,
+     *   "hasCompletedOnboarding": true,
+     *   "topics": ["DESPORTO", "GERAL"]
+     * }
+     * </pre>
+     *
+     * <p><b>Respostas de erro:</b>
+     * <ul>
+     *   <li>{@code 403 Forbidden} — conta suspensa ou banida.</li>
+     *   <li>{@code 401 Unauthorized} — utilizador não encontrado ou password incorreta.</li>
+     * </ul>
+     *
+     * @param request corpo JSON com {@code identifier}, {@code tag} (opcional) e {@code password}.
+     * @return {@link ResponseEntity} com o token JWT e dados do utilizador, ou mensagem de erro.
      */
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
