@@ -33,10 +33,12 @@ import java.util.List;
  *   <li><b>Utilizador admin:</b> Cria o utilizador {@code admin@podcastia.com} com tipo
  *       {@code USERADMIN} caso ainda não exista. Credenciais por omissão:
  *       email {@code admin@podcastia.com}, password {@code admin} (hash BCrypt).</li>
- *   <li><b>10 podcasts de exemplo:</b> Criados associados ao utilizador admin, cobrindo
- *       todas as categorias disponíveis ({@code DESPORTO}, {@code POLITICA},
- *       {@code FINANCAS}, {@code GERAL}). Só são criados se existirem menos de 10
- *       podcasts na base de dados.</li>
+ *   <li><b>15 podcasts de exemplo:</b> Criados associados ao admin e a 2 utilizadores
+ *       demo, com ficheiros MP3 reais incluídos no repositório, cobrindo todas as categorias
+ *       ({@code DESPORTO}, {@code POLITICA}, {@code FINANCAS}, {@code GERAL}). Só são
+ *       criados se existirem menos de 10 podcasts na base de dados.</li>
+ *   <li><b>Utilizadores demo:</b> {@code demo1@podcastia.com} e {@code demo2@podcastia.com},
+ *       ambos com password {@code demo}, para facilitar testes sem registo manual.</li>
  *   <li><b>4 fontes RSS:</b> Populadas caso não existam quaisquer fontes RSS na base de
  *       dados (Observador, Público Desporto, TechCrunch, BBC News World).</li>
  * </ul>
@@ -105,16 +107,61 @@ public class DataSeeder implements CommandLineRunner {
                 return userRepository.save(user);
             });
 
-            createPodcast(admin, "Resumo Desportivo", 45, List.of(PodcastTag.DESPORTO));
-            createPodcast(admin, "Debate Semanal", 60, List.of(PodcastTag.POLITICA));
-            createPodcast(admin, "Mercados em Alta", 30, List.of(PodcastTag.FINANCAS));
-            createPodcast(admin, "Conversa de Cafe", 90, List.of(PodcastTag.GERAL));
-            createPodcast(admin, "Futebol e Negocios", 50, List.of(PodcastTag.DESPORTO, PodcastTag.FINANCAS));
-            createPodcast(admin, "Politica Internacional", 75, List.of(PodcastTag.POLITICA));
-            createPodcast(admin, "Dicas de Poupanca", 20, List.of(PodcastTag.FINANCAS));
-            createPodcast(admin, "Entrevista Especial", 120, List.of(PodcastTag.GERAL));
-            createPodcast(admin, "Olimpiadas em Foco", 40, List.of(PodcastTag.DESPORTO));
-            createPodcast(admin, "Analise Eleitoral", 80, List.of(PodcastTag.POLITICA));
+            // Podcasts com ficheiros de áudio reais (gerados e incluídos no repositório)
+            createPodcast(admin, "História de Portugal", 10, List.of(PodcastTag.GERAL),
+                    "user1_história_de_portugal_20260524_214401.mp3");
+            createPodcast(admin, "Curiosidades sobre o Espaço Sideral", 8, List.of(PodcastTag.GERAL),
+                    "user1_curiosidades_sobre_o_espaço_sideral_20260524_214527.mp3");
+            createPodcast(admin, "A Importância do Sono para a Saúde", 9, List.of(PodcastTag.GERAL),
+                    "user1_a_importância_do_sono_para_a_saúde_20260524_214629.mp3");
+            createPodcast(admin, "Como Aprender Novas Línguas", 9, List.of(PodcastTag.GERAL),
+                    "user1_como_aprender_novas_línguas_20260524_214727.mp3");
+            createPodcast(admin, "Tecnologias que Vão Mudar o Futuro", 9, List.of(PodcastTag.GERAL),
+                    "user1_tecnologias_que_vão_mudar_o_futuro_20260524_214836.mp3");
+            createPodcast(admin, "Noções Básicas de Investimento", 10, List.of(PodcastTag.FINANCAS),
+                    "user1_história_de_portugal_20260524_215033.mp3");
+            createPodcast(admin, "História do Futebol em Portugal", 10, List.of(PodcastTag.DESPORTO),
+                    "user1_história_do_futebol_em_portugal_20260524_215655.mp3");
+            createPodcast(admin, "Nutrição e Suplementação para Desportistas", 9, List.of(PodcastTag.DESPORTO),
+                    "user1_nutrição_e_suplementação_para_desportist_20260524_215910.mp3");
+            createPodcast(admin, "Modalidades Olímpicas Pouco Conhecidas", 9, List.of(PodcastTag.DESPORTO),
+                    "user1_modalidades_olímpicas_pouco_conhecidas_20260524_220019.mp3");
+            createPodcast(admin, "Sistema Político Português Explicado", 10, List.of(PodcastTag.POLITICA),
+                    "user1_sistema_político_português_explicado_20260524_220234.mp3");
+
+            // Utilizador demo 1
+            User demo1 = userRepository.findByEmail("demo1@podcastia.com").orElseGet(() -> {
+                User user = new User();
+                user.setUsername("demo1");
+                user.setTag("1111");
+                user.setEmail("demo1@podcastia.com");
+                user.setPassword(passwordEncoder.encode("demo"));
+                user.setUserType(User.UserType.USERNORMAL);
+                user.setBio("Utilizador de demonstração — Desporto e Finanças");
+                return userRepository.save(user);
+            });
+            createPodcast(demo1, "A Mentalidade Vencedora no Desporto", 9, List.of(PodcastTag.DESPORTO),
+                    "user1_a_mentalidade_vencedora_no_desporto_20260524_220125.mp3");
+            createPodcast(demo1, "Treino de Alta Performance para Atletas", 9, List.of(PodcastTag.DESPORTO),
+                    "user1_treino_de_alta_performance_para_atletas_20260524_215757.mp3");
+            createPodcast(demo1, "Economia Portuguesa", 10, List.of(PodcastTag.FINANCAS),
+                    "user1_tecnologias_que_vão_mudar_o_futuro_20260524_215522.mp3");
+
+            // Utilizador demo 2
+            User demo2 = userRepository.findByEmail("demo2@podcastia.com").orElseGet(() -> {
+                User user = new User();
+                user.setUsername("demo2");
+                user.setTag("2222");
+                user.setEmail("demo2@podcastia.com");
+                user.setPassword(passwordEncoder.encode("demo"));
+                user.setUserType(User.UserType.USERNORMAL);
+                user.setBio("Utilizador de demonstração — Política e Cultura");
+                return userRepository.save(user);
+            });
+            createPodcast(demo2, "Relações Internacionais", 10, List.of(PodcastTag.POLITICA),
+                    "user1_como_aprender_novas_línguas_20260524_215407.mp3");
+            createPodcast(demo2, "Criptomoedas e Blockchain", 10, List.of(PodcastTag.FINANCAS),
+                    "user1_a_importância_do_sono_para_a_saúde_20260524_215311.mp3");
         }
 
         // Seeding RSS Sources
@@ -129,22 +176,23 @@ public class DataSeeder implements CommandLineRunner {
     /**
      * Cria e persiste um novo podcast de exemplo associado ao utilizador indicado.
      *
-     * <p>O caminho do ficheiro de áudio ({@code conteudoPath}) é gerado como um
-     * caminho de teste no formato {@code test/titulonormalizado.mp3}, sem ficheiro
-     * real associado — serve apenas como placeholder para testes.
-     * A capa é definida com a imagem por omissão {@code /images/default-podcast-cover.svg}.
+     * <p>O caminho do ficheiro de áudio ({@code conteudoPath}) é construído como
+     * {@code generated-podcasts/<audioFileName>}, apontando para um ficheiro MP3 real
+     * incluído no repositório. A capa é definida com a imagem por omissão
+     * {@code /images/default-podcast-cover.svg}.
      *
-     * @param user     utilizador proprietário (host) do podcast.
-     * @param title    título do podcast.
-     * @param duration duração do podcast em minutos.
-     * @param tags     lista de categorias/tags ({@link PodcastTag}) associadas ao podcast.
+     * @param user          utilizador proprietário (host) do podcast.
+     * @param title         título do podcast.
+     * @param duration      duração do podcast em minutos.
+     * @param tags          lista de categorias/tags ({@link PodcastTag}) associadas ao podcast.
+     * @param audioFileName nome do ficheiro MP3 dentro de {@code generated-podcasts/}.
      */
-    private void createPodcast(User user, String title, int duration, List<PodcastTag> tags) {
+    private void createPodcast(User user, String title, int duration, List<PodcastTag> tags, String audioFileName) {
         Podcast p = new Podcast();
         p.setUser(user);
         p.setTitulo(title);
         p.setDuracao(duration);
-        p.setConteudoPath("test/" + title.replaceAll("\\s+", "").toLowerCase() + ".mp3");
+        p.setConteudoPath("generated-podcasts/" + audioFileName);
         p.setCoverImagePath("/images/default-podcast-cover.svg");
         p.setTags(tags);
         podcastRepository.save(p);

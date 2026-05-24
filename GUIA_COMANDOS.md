@@ -179,11 +179,13 @@ edge-tts --version
 
 No primeiro arranque, o sistema cria automaticamente um utilizador administrador:
 
-| Campo    | Valor                   |
-|----------|-------------------------|
-| Email    | `admin@podcastia.com`   |
-| Password | `admin`                 |
-| Papel    | `USER_ADMIN`            |
+| Utilizador | Email                   | Password | Papel        |
+|------------|-------------------------|----------|--------------|
+| Admin      | `admin@podcastia.com`   | `admin`  | `USER_ADMIN` |
+| Demo 1     | `demo1@podcastia.com`   | `demo`   | `USER`       |
+| Demo 2     | `demo2@podcastia.com`   | `demo`   | `USER`       |
+
+Os utilizadores demo já têm podcasts com áudio real associados, prontos a ouvir assim que o servidor arranca.
 
 ---
 
