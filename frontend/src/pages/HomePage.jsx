@@ -330,7 +330,6 @@ function HomePage() {
       {message && <div className="home-notification">{message}</div>}
 
       <section
-        ref={filterScrollRef}
         className={`filter-strip ${isFilterOpen ? 'is-expanded' : ''}`}
         aria-label="Filtros da homepage"
       >
@@ -374,6 +373,14 @@ function HomePage() {
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            className="filter-close"
+            onClick={() => setIsFilterOpen(false)}
+            aria-label="Fechar filtros"
+          >
+            x
+          </button>
         </div>
       </section>
 
@@ -384,9 +391,6 @@ function HomePage() {
             <h2 className="section-title">Teus Podcasts</h2>
             <p className="section-subtitle">Os teus podcasts criados e guardados</p>
           </div>
-          <button className="section-action" onClick={() => navigate('/user')}>
-            Ver tudo
-          </button>
         </div>
 
         <div className="podcast-grid fixed-width">
