@@ -4,6 +4,18 @@ import '../styles/friends-page.css'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
 
+const resolveProfilePicture = (path, userId) => {
+  const safePath = String(path || '').trim()
+  if (!safePath) return ''
+  if (/^https?:\/\//i.test(safePath)) return safePath
+  if (userId) {
+    return `${API_BASE_URL}/users/${userId}/profile-image?t=${Date.now()}`
+  }
+  const normalizedPath = safePath.replace(/^\/+/, '')
+  const separator = normalizedPath.includes('?') ? '&' : '?'
+  return `${API_BASE_URL}/${normalizedPath}${separator}t=${Date.now()}`
+}
+
 function FriendsPage() {
   const [friends, setFriends] = useState([])
   const [pendingRequests, setPendingRequests] = useState([])
@@ -83,43 +95,6 @@ function FriendsPage() {
 
   return (
     <main className="friends-page">
-      {friendToRemove && (
-        <div className="modal-backdrop">
-          <div
-            className="modal-content"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="modal-title"
-          >
-            <h2 id="modal-title" style={{ marginTop: 0 }}>
-              Remover Amigo
-            </h2>
-            <p>
-              Tem a certeza que deseja remover {friendToRemove.username} da sua lista de amigos?
-            </p>
-            <div
-              style={{
-                display: 'flex',
-                gap: '1rem',
-                marginTop: '1.5rem',
-                justifyContent: 'flex-end',
-              }}
-            >
-              <button className="user-action-btn" onClick={() => setFriendToRemove(null)}>
-                Cancelar
-              </button>
-              <button
-                className="user-action-btn user-action-btn--danger"
-                style={{ background: '#ef4444', color: 'white', border: 'none' }}
-                onClick={() => handleAction(friendToRemove.id, 'remove')}
-              >
-                Remover
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="friends-header">
         <h1>Amigos</h1>
       </div>
@@ -135,28 +110,64 @@ function FriendsPage() {
             </p>
           ) : (
             <ul className="friend-list">
-              {friends.map((friend) => (
-                <li key={friend.id} className="friend-item">
-                  <div className="friend-info">
-                    <div className="friend-avatar">
-                      {friend.profilePicturePath ? (
-                        <img
-                          src={`${API_BASE_URL}/${friend.profilePicturePath}`}
-                          alt={friend.username}
-                        />
-                      ) : (
-                        <span>{(friend.username || '?').charAt(0).toUpperCase()}</span>
+              {friends.map((friend) => {
+                const isRemoving = friendToRemove?.id === friend.id
+                return (
+                  <li
+                    key={friend.id}
+                    className={`friend-item ${isRemoving ? 'friend-item--removing' : ''}`}
+                  >
+                    <div className="friend-item-main">
+                      <div className="friend-info">
+                        <div className="friend-avatar">
+                          {friend.profilePicturePath ? (
+                            <img
+                              src={resolveProfilePicture(friend.profilePicturePath, friend.id)}
+                              alt={friend.username}
+                            />
+                          ) : (
+                            <span>{(friend.username || '?').charAt(0).toUpperCase()}</span>
+                          )}
+                        </div>
+                        <Link to={`/user/${friend.id}`} className="friend-name">
+                          {friend.username || 'Utilizador desconhecido'}
+                        </Link>
+                      </div>
+                      {!isRemoving && (
+                        <button className="btn-remove-friend" onClick={() => confirmRemove(friend)}>
+                          Remover Amigo
+                        </button>
                       )}
                     </div>
-                    <Link to={`/user/${friend.id}`} className="friend-name">
-                      {friend.username || 'Utilizador desconhecido'}
-                    </Link>
-                  </div>
-                  <button className="btn-remove-friend" onClick={() => confirmRemove(friend)}>
-                    Remover
-                  </button>
-                </li>
-              ))}
+                    {isRemoving && (
+                      <div
+                        className="friend-remove-confirm-row"
+                        role="dialog"
+                        aria-label="Confirmar remoção de amigo"
+                      >
+                        <p className="confirm-text">
+                          Tem a certeza que deseja remover {friend.username} da sua lista de amigos?
+                        </p>
+                        <div className="confirm-actions">
+                          <button
+                            className="btn-cancel-remove"
+                            onClick={() => setFriendToRemove(null)}
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            className="btn-confirm-remove"
+                            style={{ background: '#ef4444', color: 'white', border: 'none' }}
+                            onClick={() => handleAction(friend.id, 'remove')}
+                          >
+                            Remover
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </li>
+                )
+              })}
             </ul>
           )}
         </section>
@@ -171,9 +182,12 @@ function FriendsPage() {
                 <li key={request.id} className="friend-item request-item">
                   <div className="friend-info">
                     <div className="friend-avatar">
-                      {request.senderProfilePicturePath ? (
+                      {request.senderAvatarUrl || request.senderProfilePicturePath ? (
                         <img
-                          src={`${API_BASE_URL}/${request.senderProfilePicturePath}`}
+                          src={resolveProfilePicture(
+                            request.senderAvatarUrl || request.senderProfilePicturePath,
+                            request.senderId,
+                          )}
                           alt={request.senderUsername}
                         />
                       ) : (

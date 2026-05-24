@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import '../styles/home-page.css'
 import '../styles/trending-page.css'
-import PodcastSidebar from '../components/PodcastSidebar'
 import { useBackgroundAudio } from '../hooks/useBackgroundAudio'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
@@ -18,9 +17,6 @@ function HomePage() {
   const [currentUser, setCurrentUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [selectedPodcast, setSelectedPodcast] = useState(null)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const [message, setMessage] = useState('')
   const [savedPodcasts, setSavedPodcasts] = useState([])
   const [filters, setFilters] = useState(DEFAULT_FEED_FILTERS)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
@@ -142,7 +138,6 @@ function HomePage() {
   }
 
   const handlePlayNow = async (podcast) => {
-    setIsSidebarOpen(false)
     try {
       console.log('[HomePage] Playing podcast:', podcast.titulo)
 
@@ -152,7 +147,6 @@ function HomePage() {
       if (currentId === podcastId) {
         // Se já é o podcast atual, apenas alterna entre play e pause sem reiniciar
         await togglePlayPause()
-        setSelectedPodcast(podcast)
         return
       }
 
@@ -162,7 +156,6 @@ function HomePage() {
         await play()
         console.log('[HomePage] Playback started')
       }
-      setSelectedPodcast(podcast)
     } catch (err) {
       console.error('[HomePage] Error playing podcast:', err)
       setError('Failed to play podcast: ' + err.message)
@@ -198,67 +191,8 @@ function HomePage() {
     }
   }
 
-  const handleSaveToPodcasts = async (podcast) => {
-    try {
-      const token = localStorage.getItem('token')
-      const podcastId = podcast.id || podcast.podcastId
-      console.log('[handleSaveToPodcasts] Podcast:', podcast)
-      console.log('[handleSaveToPodcasts] Podcast ID:', podcastId)
-      console.log('[handleSaveToPodcasts] Token:', token ? 'present' : 'missing')
-
-      if (!podcastId) {
-        throw new Error('Podcast ID is undefined')
-      }
-
-      const response = await fetch(`${API_BASE_URL}/api/favorites/${podcastId}/toggle`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      console.log('[handleSaveToPodcasts] Response status:', response.status)
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('[handleSaveToPodcasts] Error response:', errorText)
-        throw new Error(`Failed to save podcast: ${response.status} ${errorText}`)
-      }
-
-      const data = await response.json()
-      console.log('[handleSaveToPodcasts] Data:', data)
-
-      if (data.isFavorite) {
-        setSavedPodcasts((prev) => [...prev, podcast])
-        setMessage('Podcast guardado com sucesso!')
-      } else {
-        setSavedPodcasts((prev) => prev.filter((p) => p.id !== podcast.id))
-        setMessage('Podcast removido dos guardados!')
-      }
-
-      // Refresh saved podcasts section
-      fetchSavedPodcasts()
-
-      setTimeout(() => setMessage(''), 3000)
-    } catch (err) {
-      console.error('[handleSaveToPodcasts] Error:', err)
-      setError('Erro ao guardar podcast: ' + err.message)
-      setTimeout(() => setError(''), 3000)
-    }
-  }
-
-  const isPodcastSaved = (podcastId) => {
-    return savedPodcasts.some((p) => (p.id || p.podcastId) === podcastId)
-  }
-
-  const closeSidebar = () => {
-    setIsSidebarOpen(false)
-  }
-
   const openSidebar = (podcast) => {
-    setSelectedPodcast(podcast)
-    setIsSidebarOpen(true)
+    window.dispatchEvent(new CustomEvent('podcastia-open-podcast', { detail: podcast }))
   }
 
   const getActiveFilterCount = () => {
@@ -342,10 +276,7 @@ function HomePage() {
         <div className="visual-ring ring-c" aria-hidden="true" />
       </section>
 
-      {message && <div className="home-notification">{message}</div>}
-
       <section
-        ref={filterScrollRef}
         className={`filter-strip ${isFilterOpen ? 'is-expanded' : ''}`}
         aria-label="Filtros da homepage"
       >
@@ -389,6 +320,14 @@ function HomePage() {
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            className="filter-close"
+            onClick={() => setIsFilterOpen(false)}
+            aria-label="Fechar filtros"
+          >
+            x
+          </button>
         </div>
       </section>
 
@@ -399,9 +338,6 @@ function HomePage() {
             <h2 className="section-title">Teus Podcasts</h2>
             <p className="section-subtitle">Os teus podcasts criados e guardados</p>
           </div>
-          <button className="section-action" onClick={() => navigate('/user')}>
-            Ver tudo
-          </button>
         </div>
 
         <div className="podcast-grid fixed-width">
@@ -485,25 +421,6 @@ function HomePage() {
         </div>
       </section>
 
-      {/* Podcast Sidebar */}
-      <PodcastSidebar
-        podcast={selectedPodcast}
-        isOpen={isSidebarOpen}
-        onClose={closeSidebar}
-        onPlayNow={() => selectedPodcast && handlePlayNow(selectedPodcast)}
-        onSave={handleSaveToPodcasts}
-        isSaved={
-          selectedPodcast ? isPodcastSaved(selectedPodcast.id || selectedPodcast.podcastId) : false
-        }
-        isPlaying={
-          playingPodcast &&
-          (playingPodcast.id || playingPodcast.podcastId) ===
-            (selectedPodcast?.id || selectedPodcast?.podcastId)
-            ? isPlaying
-            : false
-        }
-        API_BASE_URL={API_BASE_URL}
-      />
     </main>
   )
 }
