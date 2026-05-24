@@ -223,4 +223,15 @@ public class Podcast {
   public void setLastModified(LocalDateTime lastModified) {
     this.lastModified = lastModified;
   }
+
+  /**
+   * Retorna a URL de streaming do áudio para o frontend.
+   * Este campo não é persistido na base de dados, é calculado dinamicamente.
+   *
+   * @return URL do endpoint de streaming de áudio.
+   */
+  @com.fasterxml.jackson.annotation.JsonProperty("audioUrl")
+  public String getAudioUrl() {
+    return "/api/podcasts/" + id + "/audio";
+  }
 }

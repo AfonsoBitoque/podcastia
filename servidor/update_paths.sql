@@ -1,0 +1,21 @@
+-- Update all podcast paths to use placeholder files
+UPDATE podcasts SET conteudo_path = 'generated-podcasts/user1_placeholder_1.mp3' WHERE id = 1;
+UPDATE podcasts SET conteudo_path = 'generated-podcasts/user1_placeholder_2.mp3' WHERE id = 2;
+UPDATE podcasts SET conteudo_path = 'generated-podcasts/user1_placeholder_3.mp3' WHERE id = 3;
+UPDATE podcasts SET conteudo_path = 'generated-podcasts/user1_placeholder_4.mp3' WHERE id = 4;
+UPDATE podcasts SET conteudo_path = 'generated-podcasts/user1_placeholder_5.mp3' WHERE id = 5;
+UPDATE podcasts SET conteudo_path = 'generated-podcasts/user1_placeholder_6.mp3' WHERE id = 6;
+UPDATE podcasts SET conteudo_path = 'generated-podcasts/user1_placeholder_7.mp3' WHERE id = 7;
+UPDATE podcasts SET conteudo_path = 'generated-podcasts/user1_placeholder_8.mp3' WHERE id = 8;
+UPDATE podcasts SET conteudo_path = 'generated-podcasts/user1_placeholder_9.mp3' WHERE id = 9;
+UPDATE podcasts SET conteudo_path = 'generated-podcasts/user1_placeholder_10.mp3' WHERE id = 10;
+UPDATE podcasts SET conteudo_path = 'generated-podcasts/user1_placeholder_11.mp3' WHERE id = 11;
+UPDATE podcasts SET conteudo_path = 'generated-podcasts/user1_placeholder_12.mp3' WHERE id = 12;
+UPDATE podcasts SET conteudo_path = 'generated-podcasts/user1_placeholder_13.mp3' WHERE id = 13;
+UPDATE podcasts SET conteudo_path = 'generated-podcasts/user1_placeholder_14.mp3' WHERE id = 14;
+UPDATE podcasts SET conteudo_path = 'generated-podcasts/user1_placeholder_15.mp3' WHERE id = 15;
+UPDATE podcasts SET conteudo_path = 'generated-podcasts/user1_placeholder_16.mp3' WHERE id = 16;
+UPDATE podcasts SET conteudo_path = 'generated-podcasts/user1_placeholder_17.mp3' WHERE id = 17;
+UPDATE podcasts SET conteudo_path = 'generated-podcasts/user1_placeholder_18.mp3' WHERE id = 18;
+UPDATE podcasts SET conteudo_path = 'generated-podcasts/user1_placeholder_19.mp3' WHERE id = 19;
+UPDATE podcasts SET conteudo_path = 'generated-podcasts/user1_placeholder_20.mp3' WHERE id = 20;

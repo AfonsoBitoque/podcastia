@@ -99,7 +99,8 @@ public class SecurityConfig {
             .requestMatchers("/users", "/users/**", "/api/users/**").permitAll() // Registo de conta e perfis
             .requestMatchers("/api/register/**").permitAll() // Gerar/Verificar Tag REST
             .requestMatchers("/api/search/**").permitAll() // Pesquisa publica
-            .requestMatchers(HttpMethod.GET, "/api/podcasts", "/api/podcasts/**").permitAll() // Listar e aceder a podcasts publicos
+            .requestMatchers(HttpMethod.GET, "/api/podcasts/**").permitAll() // Todos os GET requests de podcasts são públicos
+            .requestMatchers("/api/podcasts/**").permitAll() // Allow all podcast endpoints (POST still needs auth but will be handled by method security)
             .requestMatchers(HttpMethod.GET, "/podcasts", "/podcasts/**").permitAll() // PodcastController endpoints publicos
             .requestMatchers("/images/**").permitAll() // Imagens estáticas
             .requestMatchers("/audio/**").permitAll() // Ficheiros de áudio
