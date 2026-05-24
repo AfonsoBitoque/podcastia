@@ -23,6 +23,18 @@ const isAdminUser = (user) => {
   return type === 'USERADMIN' || type === 'USER_ADMIN'
 }
 
+const resolveProfilePicture = (path, userId) => {
+  const safePath = String(path || '').trim()
+  if (!safePath) return ''
+  if (/^https?:\/\//i.test(safePath)) return safePath
+  if (userId) {
+    return `${API_BASE_URL}/users/${userId}/profile-image?t=${Date.now()}`
+  }
+  const normalizedPath = safePath.replace(/^\/+/, '')
+  const separator = normalizedPath.includes('?') ? '&' : '?'
+  return `${API_BASE_URL}/${normalizedPath}${separator}t=${Date.now()}`
+}
+
 function Header() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
@@ -326,7 +338,9 @@ function Header() {
                     {searchResults.length > 0 ? (
                       searchResults.map((item, index) => {
                         const isLast = index === searchResults.length - 1
-                        const imageUrl = item.imageUrl ? `${API_BASE_URL}${item.imageUrl}` : ''
+                        const imageUrl = item.type === 'USER'
+                          ? resolveProfilePicture(item.imageUrl, item.id)
+                          : (item.imageUrl ? resolveProfilePicture(item.imageUrl) : '')
                         return (
                           <button
                             key={`${item.type}-${item.id}`}
