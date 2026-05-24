@@ -380,7 +380,7 @@ function Header() {
             <>
               {showAdminLink && (
                 <NavLink to="/admin" className="site-admin-cta">
-                  Admin
+                  Dashboard
                 </NavLink>
               )}
               <NavLink to="/generate" className="site-generate-cta">
