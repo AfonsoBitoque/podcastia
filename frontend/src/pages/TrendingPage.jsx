@@ -46,7 +46,6 @@ function TrendingPage() {
 
   useEffect(() => {
     fetchAllPodcasts()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handlePlayNow = async (podcast) => {

@@ -17,7 +17,6 @@ function HomePage() {
   const [currentUser, setCurrentUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [message, setMessage] = useState('')
   const [savedPodcasts, setSavedPodcasts] = useState([])
   const [filters, setFilters] = useState(DEFAULT_FEED_FILTERS)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
@@ -192,56 +191,6 @@ function HomePage() {
     }
   }
 
-  const handleSaveToPodcasts = async (podcast) => {
-    try {
-      const token = localStorage.getItem('token')
-      const podcastId = podcast.id || podcast.podcastId
-      console.log('[handleSaveToPodcasts] Podcast:', podcast)
-      console.log('[handleSaveToPodcasts] Podcast ID:', podcastId)
-      console.log('[handleSaveToPodcasts] Token:', token ? 'present' : 'missing')
-
-      if (!podcastId) {
-        throw new Error('Podcast ID is undefined')
-      }
-
-      const response = await fetch(`${API_BASE_URL}/api/favorites/${podcastId}/toggle`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      console.log('[handleSaveToPodcasts] Response status:', response.status)
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('[handleSaveToPodcasts] Error response:', errorText)
-        throw new Error(`Failed to save podcast: ${response.status} ${errorText}`)
-      }
-
-      const data = await response.json()
-      console.log('[handleSaveToPodcasts] Data:', data)
-
-      if (data.isFavorite) {
-        setSavedPodcasts((prev) => [...prev, podcast])
-        setMessage('Podcast guardado com sucesso!')
-      } else {
-        setSavedPodcasts((prev) => prev.filter((p) => p.id !== podcast.id))
-        setMessage('Podcast removido dos guardados!')
-      }
-
-      // Refresh saved podcasts section
-      fetchSavedPodcasts()
-
-      setTimeout(() => setMessage(''), 3000)
-    } catch (err) {
-      console.error('[handleSaveToPodcasts] Error:', err)
-      setError('Erro ao guardar podcast: ' + err.message)
-      setTimeout(() => setError(''), 3000)
-    }
-  }
-
   const openSidebar = (podcast) => {
     window.dispatchEvent(new CustomEvent('podcastia-open-podcast', { detail: podcast }))
   }
@@ -326,8 +275,6 @@ function HomePage() {
         <div className="visual-ring ring-b" aria-hidden="true" />
         <div className="visual-ring ring-c" aria-hidden="true" />
       </section>
-
-      {message && <div className="home-notification">{message}</div>}
 
       <section
         className={`filter-strip ${isFilterOpen ? 'is-expanded' : ''}`}
