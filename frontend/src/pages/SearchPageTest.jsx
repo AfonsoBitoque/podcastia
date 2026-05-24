@@ -242,10 +242,6 @@ function SearchPageTest() {
     const podcastTags = getPodcastTags(podcast)
     const tags = podcastTags.length > 0 ? podcastTags : ['GERAL']
     const duration = podcast.duracao ? `${podcast.duracao} min` : 'Podcast'
-    const progressPercent = Math.max(
-      8,
-      Math.min(100, Number(podcast.progressPercent) || ((index + 2) * 13) % 74),
-    )
     const currentPodcastId = playingPodcast?.id || playingPodcast?.podcastId
     const isCurrentPodcast = Boolean(actualId && currentPodcastId === actualId)
     const playablePodcast = {
@@ -309,9 +305,6 @@ function SearchPageTest() {
           <p>
             {duration} | Host: {host}
           </p>
-          <div className="explore-progress" aria-hidden="true">
-            <span style={{ width: `${progressPercent}%` }} />
-          </div>
         </div>
       </article>
     )

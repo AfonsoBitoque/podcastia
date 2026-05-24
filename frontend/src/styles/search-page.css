@@ -417,20 +417,6 @@
   background: linear-gradient(135deg, #334155, #0f172a);
 }
 
-.explore-progress {
-  height: 8px;
-  background: rgba(114, 71, 56, 0.15);
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.explore-progress span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: #e05a2a;
-}
-
 .explore-user-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 340px));
