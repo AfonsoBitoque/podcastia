@@ -2,8 +2,8 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { useBackgroundAudio } from '../hooks/useBackgroundAudio'
 import '../styles/playlist-page.css'
 import '../styles/home-page.css'
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
+import { API_BASE_URL } from '../shared/config/env'
+import { getToken } from '../shared/storage/authStorage'
 
 function PlaylistPage() {
   const [playlists, setPlaylists] = useState([])
@@ -44,8 +44,6 @@ function PlaylistPage() {
   useEffect(() => {
     isRepeatRef.current = isRepeat
   }, [isRepeat])
-
-  const getToken = () => localStorage.getItem('token')
 
   const fetchSavedPodcasts = useCallback(async () => {
     try {

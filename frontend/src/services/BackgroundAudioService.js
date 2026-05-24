@@ -2,13 +2,15 @@
  * Background Audio Service for Podcastia
  * Handles background playback, media session, audio focus, and state persistence
  */
+import { API_BASE_URL } from '../shared/config/env'
+import { getStoredUser, getToken } from '../shared/storage/authStorage'
+
 const getCurrentAccountKey = () => {
   try {
-    const token = localStorage.getItem('token')
-    const userRaw = localStorage.getItem('user')
-    if (!token || !userRaw) return null
+    const token = getToken()
+    const user = getStoredUser()
+    if (!token || !user) return null
 
-    const user = JSON.parse(userRaw)
     const accountId = user?.id || user?.userId || user?.email || user?.username
     return accountId ? String(accountId) : null
   } catch {
@@ -18,10 +20,8 @@ const getCurrentAccountKey = () => {
 
 const getCurrentAccountPlaybackSpeed = () => {
   try {
-    const userRaw = localStorage.getItem('user')
-    if (!userRaw) return 1.0
-
-    const user = JSON.parse(userRaw)
+    const user = getStoredUser()
+    if (!user) return 1.0
     const speed = Number(user?.playbackSpeed)
     return Number.isFinite(speed) && speed > 0 ? speed : 1.0
   } catch {
@@ -482,7 +482,7 @@ class BackgroundAudioService {
       ...podcast,
       audioUrl:
         podcast.audioUrl ||
-        `${(typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || ''}/api/podcasts/${podcast.id || podcast.podcastId}/audio`,
+        `${API_BASE_URL}/api/podcasts/${podcast.id || podcast.podcastId}/audio`,
     }
 
     const success = await this.loadPodcast(podcastWithUrl, 0)

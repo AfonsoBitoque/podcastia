@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import '../../styles/admin-page.css'
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
+import { API_BASE_URL } from '../../shared/config/env'
+import { getToken } from '../../shared/storage/authStorage'
 
 function AdminLogs() {
   const [logs, setLogs] = useState([])
@@ -14,7 +14,7 @@ function AdminLogs() {
 
   const fetchLogs = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       const response = await fetch(`${API_BASE_URL}/api/admin/logs?limit=50&offset=${page * 50}`, {
         headers: {
           Authorization: `Bearer ${token}`,

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import '../../styles/admin-page.css'
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
+import { API_BASE_URL } from '../../shared/config/env'
+import { getToken } from '../../shared/storage/authStorage'
 
 function AdminAnalytics() {
   const [analytics, setAnalytics] = useState(null)
@@ -17,7 +17,7 @@ function AdminAnalytics() {
 
   const fetchAnalytics = async () => {
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       const response = await fetch(`${API_BASE_URL}/api/admin/analytics`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -42,7 +42,7 @@ function AdminAnalytics() {
   const handleExportCSV = async () => {
     setExportLoading(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       const response = await fetch(`${API_BASE_URL}/api/admin/export/csv`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -72,7 +72,7 @@ function AdminAnalytics() {
   const handleExportPDF = async () => {
     setExportLoading(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       const response = await fetch(`${API_BASE_URL}/api/admin/export/pdf`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -102,7 +102,7 @@ function AdminAnalytics() {
   const handleGenerateReport = async (reportType, email) => {
     setReportLoading(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       const response = await fetch(`${API_BASE_URL}/api/admin/reports/generate`, {
         method: 'POST',
         headers: {

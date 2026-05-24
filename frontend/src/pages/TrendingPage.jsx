@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import '../styles/trending-page.css'
 import '../styles/home-page.css'
 import { useBackgroundAudio } from '../hooks/useBackgroundAudio'
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
+import { API_BASE_URL } from '../shared/config/env'
 
 function TrendingPage() {
   const navigate = useNavigate()

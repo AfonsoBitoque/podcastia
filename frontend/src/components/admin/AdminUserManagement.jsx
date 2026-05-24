@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import '../../styles/admin-page.css'
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
+import { API_BASE_URL } from '../../shared/config/env'
+import { getToken } from '../../shared/storage/authStorage'
 
 function AdminUserManagement() {
   const [users, setUsers] = useState([])
@@ -19,7 +19,7 @@ function AdminUserManagement() {
 
   const fetchUsers = async () => {
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       const response = await fetch(`${API_BASE_URL}/api/admin/users`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -54,7 +54,7 @@ function AdminUserManagement() {
 
   const handleConfirmReset = async () => {
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       const response = await fetch(
         `${API_BASE_URL}/api/admin/users/${selectedUser.id}/reset-password`,
         {
@@ -80,7 +80,7 @@ function AdminUserManagement() {
 
   const handleConfirmDelete = async (confirmation, adminPassword) => {
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       const response = await fetch(`${API_BASE_URL}/api/admin/users/${selectedUser.id}/confirm`, {
         method: 'DELETE',
         headers: {

@@ -1,20 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import '../styles/friends-page.css'
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
-
-const resolveProfilePicture = (path, userId) => {
-  const safePath = String(path || '').trim()
-  if (!safePath) return ''
-  if (/^https?:\/\//i.test(safePath)) return safePath
-  if (userId) {
-    return `${API_BASE_URL}/users/${userId}/profile-image?t=${Date.now()}`
-  }
-  const normalizedPath = safePath.replace(/^\/+/, '')
-  const separator = normalizedPath.includes('?') ? '&' : '?'
-  return `${API_BASE_URL}/${normalizedPath}${separator}t=${Date.now()}`
-}
+import { API_BASE_URL } from '../shared/config/env'
+import { getToken } from '../shared/storage/authStorage'
+import { resolveProfilePicture } from '../shared/utils/media'
 
 const UsersEmptyIcon = () => (
   <svg
@@ -52,7 +41,7 @@ function FriendsPage() {
 
   const fetchFriendsData = async () => {
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       if (!token) return
 
       const [friendsRes, requestsRes] = await Promise.all([
@@ -87,7 +76,7 @@ function FriendsPage() {
 
   const handleAction = async (userId, action) => {
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       let url = `${API_BASE_URL}/api/relations/friend-request/${userId}`
       let method = 'POST'
 

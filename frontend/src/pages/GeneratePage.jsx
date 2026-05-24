@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import '../styles/generate-page.css'
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
+import { API_BASE_URL } from '../shared/config/env'
+import { getToken } from '../shared/storage/authStorage'
 
 const TAG_OPTIONS = [
   { value: 'DESPORTO', label: 'Desporto' },
@@ -28,7 +28,7 @@ function GeneratePage() {
   const [generatedPodcast, setGeneratedPodcast] = useState(null)
   const [isTogglingVisibility, setIsTogglingVisibility] = useState(false)
 
-  const token = localStorage.getItem('token')
+  const token = getToken()
 
   useEffect(() => {
     if (!token) {

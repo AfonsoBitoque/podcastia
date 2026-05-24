@@ -4,8 +4,8 @@ import { useBackgroundAudio } from '../hooks/useBackgroundAudio'
 import '../styles/search-page.css'
 import '../styles/trending-page.css'
 import '../styles/home-page.css'
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
+import { API_BASE_URL } from '../shared/config/env'
+import { resolveAssetUrl } from '../shared/utils/media'
 const PAGE_SIZE = 8
 
 const SEARCH_TABS = [
@@ -36,12 +36,6 @@ const TAG_UI = {
   },
   GERAL: { label: 'Geral', className: 'tag-geral', thumbClass: 'thumb-geral', short: 'GER' },
   DEFAULT: { label: 'Podcast', className: 'tag-geral', thumbClass: 'thumb-geral', short: 'POD' },
-}
-
-const getAssetUrl = (path) => {
-  if (!path) return ''
-  if (/^https?:\/\//i.test(path)) return path
-  return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`
 }
 
 const getTagUi = (tag) => TAG_UI[String(tag || '').toUpperCase()] || TAG_UI.DEFAULT
@@ -322,7 +316,7 @@ function SearchPageTest() {
   }
 
   const renderUserCard = (user) => {
-    const avatar = getAssetUrl(user.imageUrl)
+    const avatar = resolveAssetUrl(user.imageUrl)
 
     return (
       <article

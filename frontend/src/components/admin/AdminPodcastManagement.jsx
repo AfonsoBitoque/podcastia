@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import '../../styles/admin-page.css'
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
+import { API_BASE_URL } from '../../shared/config/env'
+import { getToken } from '../../shared/storage/authStorage'
 
 function AdminPodcastManagement() {
   const [podcasts, setPodcasts] = useState([])
@@ -19,7 +19,7 @@ function AdminPodcastManagement() {
 
   const fetchPodcasts = async () => {
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       const response = await fetch(`${API_BASE_URL}/api/admin/podcasts`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -53,7 +53,7 @@ function AdminPodcastManagement() {
 
   const handleToggleExplicit = async (podcast) => {
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       const response = await fetch(`${API_BASE_URL}/api/admin/podcasts/${podcast.id}/explicit`, {
         method: 'PUT',
         headers: {
@@ -76,7 +76,7 @@ function AdminPodcastManagement() {
 
   const handleToggleHidden = async (podcast) => {
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       const response = await fetch(`${API_BASE_URL}/api/admin/podcasts/${podcast.id}/hidden`, {
         method: 'PUT',
         headers: {
@@ -99,7 +99,7 @@ function AdminPodcastManagement() {
 
   const handleToggleFeatured = async (podcast) => {
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       const response = await fetch(`${API_BASE_URL}/api/admin/podcasts/${podcast.id}/featured`, {
         method: 'PUT',
         headers: {
@@ -122,7 +122,7 @@ function AdminPodcastManagement() {
 
   const handleSavePodcast = async (updatedPodcast) => {
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       const response = await fetch(`${API_BASE_URL}/api/admin/podcasts/${updatedPodcast.id}`, {
         method: 'PUT',
         headers: {
@@ -147,7 +147,7 @@ function AdminPodcastManagement() {
 
   const handleConfirmDelete = async (confirmation, adminPassword) => {
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       const response = await fetch(
         `${API_BASE_URL}/api/admin/podcasts/${selectedPodcast.id}/confirm`,
         {

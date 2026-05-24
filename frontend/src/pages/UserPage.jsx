@@ -1,54 +1,22 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useEffect, useRef, useState } from 'react'
 import '../styles/user-page.css'
+import { API_BASE_URL } from '../shared/config/env'
+import {
+  clearSession,
+  getStoredUser,
+  getToken,
+  updateStoredUser as updateAuthStoredUser,
+} from '../shared/storage/authStorage'
+import { resolveProfilePicture } from '../shared/utils/media'
+import UserActivitySection from '../features/user/components/UserActivitySection'
+import UserBioSection from '../features/user/components/UserBioSection'
+import UserPasswordForm from '../features/user/components/UserPasswordForm'
+import UserStyleWheel from '../features/user/components/UserStyleWheel'
+import UserPodcastsSection from '../features/user/components/UserPodcastsSection'
+import UserTopicsSection from '../features/user/components/UserTopicsSection'
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
 const PASSWORD_COMPLEXITY_REGEX = /^(?=.*[A-Z])(?=.*\d).{8,}$/
-
-const formatDateTime = (value) => {
-  if (!value) return 'Sem registo'
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return value
-
-  return parsed.toLocaleString('pt-PT', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  })
-}
-
-const formatMemberSince = (value) => {
-  if (!value) return 'Sem registo'
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return value
-
-  return parsed.toLocaleDateString('pt-PT', {
-    month: 'long',
-    year: 'numeric',
-  })
-}
-
-const formatRelativeTime = (value) => {
-  if (!value) return 'Sem registo'
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return value
-
-  const diffMs = Date.now() - parsed.getTime()
-  const diffMinutes = Math.floor(diffMs / 60000)
-  if (diffMinutes < 1) return 'Agora mesmo'
-  if (diffMinutes < 60) return `Ha ${diffMinutes} min`
-
-  const diffHours = Math.floor(diffMinutes / 60)
-  if (diffHours < 24) return `Ha ${diffHours} h`
-
-  const diffDays = Math.floor(diffHours / 24)
-  if (diffDays < 30) return `Ha ${diffDays} dias`
-
-  const diffMonths = Math.floor(diffDays / 30)
-  if (diffMonths < 12) return `Ha ${diffMonths} meses`
-
-  const diffYears = Math.floor(diffMonths / 12)
-  return `Ha ${diffYears} anos`
-}
 
 const formatText = (value, fallback = 'Nao definido') => {
   if (value === null || value === undefined) return fallback
@@ -60,27 +28,6 @@ const getAvatarInitial = (username) => {
   const safeName = formatText(username, '?')
   return safeName.charAt(0).toUpperCase()
 }
-
-const resolveProfilePicture = (path, userId) => {
-  const safePath = String(path || '').trim()
-  if (!safePath) return ''
-  if (/^https?:\/\//i.test(safePath)) return safePath
-  if (userId) {
-    return `${API_BASE_URL}/users/${userId}/profile-image?t=${Date.now()}`
-  }
-  const normalizedPath = safePath.replace(/^\/+/, '')
-  const separator = normalizedPath.includes('?') ? '&' : '?'
-  return `${API_BASE_URL}/${normalizedPath}${separator}t=${Date.now()}`
-}
-
-const TOPIC_LABELS = {
-  DESPORTO: 'Desporto',
-  POLITICA: 'Politica',
-  FINANCAS: 'Financas',
-  GERAL: 'Geral',
-}
-
-const formatTopicLabel = (topic) => TOPIC_LABELS[String(topic || '').toUpperCase()] || topic
 
 function UserPage() {
   const navigate = useNavigate()
@@ -193,9 +140,7 @@ function UserPage() {
   }, [activeEditSection])
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    window.dispatchEvent(new Event('auth-change'))
+    clearSession()
     navigate('/login')
   }
 
@@ -218,7 +163,7 @@ function UserPage() {
     setIsDeletingPhoto(true)
 
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       const headers = {}
       if (token) {
         headers.Authorization = `Bearer ${token}`
@@ -266,20 +211,12 @@ function UserPage() {
   }
 
   const updateStoredUser = (patch) => {
-    const storedUserRaw = localStorage.getItem('user')
-    if (!storedUserRaw) return
-
     try {
-      const storedUser = JSON.parse(storedUserRaw)
-      const mergedSessionUser = {
-        ...storedUser,
-        ...patch,
-      }
-      localStorage.setItem('user', JSON.stringify(mergedSessionUser))
+      const mergedSessionUser = updateAuthStoredUser(patch)
+      if (!mergedSessionUser) return
       setSessionUser(mergedSessionUser)
-      window.dispatchEvent(new Event('auth-change'))
     } catch {
-      // Ignorar se o localStorage estiver corrompido.
+      // Ignorar se o storage estiver indisponivel.
     }
   }
 
@@ -314,7 +251,7 @@ function UserPage() {
     setIsUploadingPhoto(true)
 
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       const headers = {}
       if (token) {
         headers.Authorization = `Bearer ${token}`
@@ -420,9 +357,7 @@ function UserPage() {
   }
 
   const triggerReauthentication = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    window.dispatchEvent(new Event('auth-change'))
+    clearSession()
     navigate('/login', { replace: true })
   }
 
@@ -466,7 +401,7 @@ function UserPage() {
     setIsChangingPassword(true)
 
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       const headers = {
         'Content-Type': 'application/json',
       }
@@ -570,7 +505,7 @@ function UserPage() {
     setIsSavingProfile(true)
 
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       const headers = {
         'Content-Type': 'application/json',
       }
@@ -622,15 +557,14 @@ function UserPage() {
   }
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user')
-    const token = localStorage.getItem('token')
-    if (!storedUser) {
+    const parsedUser = getStoredUser()
+    const token = getToken()
+    if (!parsedUser) {
       setStatus('idle')
       return
     }
 
     try {
-      const parsedUser = JSON.parse(storedUser)
       setSessionUser(parsedUser)
 
       if (!parsedUser?.id) {
@@ -684,7 +618,7 @@ function UserPage() {
   const currentTopics = Array.isArray(currentProfile?.topics) ? currentProfile.topics : []
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
+    const token = getToken()
     if (!token) return
     setPodcastsLoading(true)
     fetch(`${API_BASE_URL}/api/podcasts/mine`, {
@@ -697,7 +631,7 @@ function UserPage() {
   }, [])
 
   const handleTogglePodcastVisibility = async (podcastId, currentPublico) => {
-    const token = localStorage.getItem('token')
+    const token = getToken()
     if (!token) return
     setTogglingPodcastId(podcastId)
     try {
@@ -720,33 +654,6 @@ function UserPage() {
       setTogglingPodcastId(null)
     }
   }
-
-  const totalPoints =
-    (currentProfile?.pontosDesporto || 0) +
-    (currentProfile?.pontosPolitica || 0) +
-    (currentProfile?.pontosFinancas || 0) +
-    (currentProfile?.pontosGeral || 0)
-
-  let desportoPct = 0,
-    politicaPct = 0,
-    financasPct = 0,
-    geralPct = 0
-  if (totalPoints > 0) {
-    desportoPct = Math.round(((currentProfile.pontosDesporto || 0) / totalPoints) * 100)
-    politicaPct = Math.round(((currentProfile.pontosPolitica || 0) / totalPoints) * 100)
-    financasPct = Math.round(((currentProfile.pontosFinancas || 0) / totalPoints) * 100)
-    geralPct = 100 - desportoPct - politicaPct - financasPct
-  }
-
-  const conicGradient =
-    totalPoints > 0
-      ? `conic-gradient(
-        #3b82f6 0% ${desportoPct}%, 
-        #ef4444 ${desportoPct}% ${desportoPct + politicaPct}%, 
-        #10b981 ${desportoPct + politicaPct}% ${desportoPct + politicaPct + financasPct}%, 
-        #f59e0b ${desportoPct + politicaPct + financasPct}% 100%
-      )`
-      : ''
 
   if (status === 'loading') {
     return (
@@ -930,375 +837,46 @@ function UserPage() {
               {profileFormSuccess && <p className="user-success">{profileFormSuccess}</p>}
 
               {activeEditSection === 'password' && (
-                <div className="info-block">
-                  <p className="info-title">
-                    <span className="icon-dot" aria-hidden="true" />
-                    Alterar password
-                  </p>
-
-                  <form className="user-edit-form" onSubmit={handleChangePassword} noValidate>
-                    <label htmlFor="currentPassword">Password Atual</label>
-                    <div className="password-input-shell">
-                      <input
-                        id="currentPassword"
-                        name="currentPassword"
-                        type={showPasswords.currentPassword ? 'text' : 'password'}
-                        value={passwordForm.currentPassword}
-                        onChange={handlePasswordInputChange}
-                        required
-                        autoComplete="current-password"
-                        disabled={isChangingPassword}
-                      />
-                      <button
-                        type="button"
-                        className="password-visibility-btn"
-                        onClick={() => togglePasswordVisibility('currentPassword')}
-                        disabled={isChangingPassword}
-                        aria-label={
-                          showPasswords.currentPassword
-                            ? 'Mascarar password atual'
-                            : 'Desmascarar password atual'
-                        }
-                      >
-                        <svg
-                          className="password-visibility-icon"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          aria-hidden="true"
-                        >
-                          <path d="M2 12s3.8-6 10-6 10 6 10 6-3.8 6-10 6-10-6-10-6Z" />
-                          <circle cx="12" cy="12" r="3" />
-                        </svg>
-                        <span className="visually-hidden">
-                          {showPasswords.currentPassword
-                            ? 'Mascarar password atual'
-                            : 'Desmascarar password atual'}
-                        </span>
-                      </button>
-                    </div>
-
-                    <label htmlFor="newPassword">Nova Password</label>
-                    <div className="password-input-shell">
-                      <input
-                        id="newPassword"
-                        name="newPassword"
-                        type={showPasswords.newPassword ? 'text' : 'password'}
-                        value={passwordForm.newPassword}
-                        onChange={handlePasswordInputChange}
-                        required
-                        autoComplete="new-password"
-                        disabled={isChangingPassword}
-                      />
-                      <button
-                        type="button"
-                        className="password-visibility-btn"
-                        onClick={() => togglePasswordVisibility('newPassword')}
-                        disabled={isChangingPassword}
-                        aria-label={
-                          showPasswords.newPassword
-                            ? 'Mascarar nova password'
-                            : 'Desmascarar nova password'
-                        }
-                      >
-                        <svg
-                          className="password-visibility-icon"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          aria-hidden="true"
-                        >
-                          <path d="M2 12s3.8-6 10-6 10 6 10 6-3.8 6-10 6-10-6-10-6Z" />
-                          <circle cx="12" cy="12" r="3" />
-                        </svg>
-                        <span className="visually-hidden">
-                          {showPasswords.newPassword
-                            ? 'Mascarar nova password'
-                            : 'Desmascarar nova password'}
-                        </span>
-                      </button>
-                    </div>
-                    <p className="user-password-hint">
-                      Minimo de 8 caracteres, incluindo uma letra maiuscula e um numero.
-                    </p>
-
-                    <label htmlFor="confirmPassword">Confirmacao da Nova Password</label>
-                    <div className="password-input-shell">
-                      <input
-                        id="confirmPassword"
-                        name="confirmPassword"
-                        type={showPasswords.confirmPassword ? 'text' : 'password'}
-                        value={passwordForm.confirmPassword}
-                        onChange={handlePasswordInputChange}
-                        required
-                        autoComplete="new-password"
-                        disabled={isChangingPassword}
-                      />
-                      <button
-                        type="button"
-                        className="password-visibility-btn"
-                        onClick={() => togglePasswordVisibility('confirmPassword')}
-                        disabled={isChangingPassword}
-                        aria-label={
-                          showPasswords.confirmPassword
-                            ? 'Mascarar confirmacao da nova password'
-                            : 'Desmascarar confirmacao da nova password'
-                        }
-                      >
-                        <svg
-                          className="password-visibility-icon"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          aria-hidden="true"
-                        >
-                          <path d="M2 12s3.8-6 10-6 10 6 10 6-3.8 6-10 6-10-6-10-6Z" />
-                          <circle cx="12" cy="12" r="3" />
-                        </svg>
-                        <span className="visually-hidden">
-                          {showPasswords.confirmPassword
-                            ? 'Mascarar confirmacao da nova password'
-                            : 'Desmascarar confirmacao da nova password'}
-                        </span>
-                      </button>
-                    </div>
-
-                    {passwordFormError && <p className="user-warning">{passwordFormError}</p>}
-                    {passwordFormSuccess && <p className="user-success">{passwordFormSuccess}</p>}
-
-                    <div className="user-edit-actions">
-                      <button
-                        type="button"
-                        className="user-action-btn"
-                        onClick={closeEditProfile}
-                        disabled={isChangingPassword}
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        type="submit"
-                        className="user-action-btn user-action-btn--primary"
-                        disabled={isChangingPassword}
-                      >
-                        {isChangingPassword ? 'A carregar...' : 'Alterar password'}
-                      </button>
-                    </div>
-                  </form>
-                </div>
+                <UserPasswordForm
+                  passwordForm={passwordForm}
+                  showPasswords={showPasswords}
+                  isChangingPassword={isChangingPassword}
+                  passwordFormError={passwordFormError}
+                  passwordFormSuccess={passwordFormSuccess}
+                  onSubmit={handleChangePassword}
+                  onInputChange={handlePasswordInputChange}
+                  onToggleVisibility={togglePasswordVisibility}
+                  onCancel={closeEditProfile}
+                />
               )}
 
-              <div className="info-block">
-                <div className="info-block-header">
-                  <p className="info-title">
-                    <span className="icon-dot" aria-hidden="true" />
-                    Bio
-                  </p>
-                  {activeEditSection !== 'bio' && String(user?.bio || '').trim() && (
-                    <button
-                      type="button"
-                      className="user-inline-edit-btn"
-                      onClick={openBioEditor}
-                      aria-label="Editar biografia"
-                    >
-                      Editar
-                    </button>
-                  )}
-                </div>
-                {activeEditSection === 'bio' ? (
-                  <form
-                    className="user-edit-form user-edit-form--inline"
-                    onSubmit={handleSaveProfile}
-                  >
-                    <label htmlFor="edit-bio" className="visually-hidden">
-                      Biografia
-                    </label>
-                    <textarea
-                      ref={bioTextareaRef}
-                      id="edit-bio"
-                      name="bio"
-                      value={profileForm.bio}
-                      onChange={handleProfileInputChange}
-                      rows={4}
-                      maxLength={160}
-                      disabled={isSavingProfile}
-                    />
+              <UserBioSection
+                user={user}
+                activeEditSection={activeEditSection}
+                profileForm={profileForm}
+                profileFormError={profileFormError}
+                isSavingProfile={isSavingProfile}
+                bioTextareaRef={bioTextareaRef}
+                onOpenBioEditor={openBioEditor}
+                onSaveProfile={handleSaveProfile}
+                onProfileInputChange={handleProfileInputChange}
+                onCloseEditProfile={closeEditProfile}
+              />
 
-                    <p className="user-edit-counter">{profileForm.bio.length}/160</p>
+              <UserTopicsSection currentTopics={currentTopics} />
 
-                    {profileFormError && <p className="user-warning">{profileFormError}</p>}
+              <UserActivitySection user={user} />
 
-                    <div className="user-edit-actions">
-                      <button
-                        type="button"
-                        className="user-action-btn"
-                        onClick={closeEditProfile}
-                        disabled={isSavingProfile}
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        type="submit"
-                        className="user-action-btn user-action-btn--primary"
-                        disabled={isSavingProfile}
-                      >
-                        {isSavingProfile ? 'A guardar...' : 'Guardar'}
-                      </button>
-                    </div>
-                  </form>
-                ) : String(user?.bio || '').trim() ? (
-                  <p className="user-bio-text">{user.bio}</p>
-                ) : (
-                  <p className="user-bio-empty">
-                    Sem biografia definida.{' '}
-                    <button type="button" className="text-link-btn" onClick={openBioEditor}>
-                      Adicionar biografia
-                    </button>
-                  </p>
-                )}
-              </div>
-
-              <div className="info-block">
-                <div className="info-block-header">
-                  <p className="info-title">
-                    <span className="icon-dot" aria-hidden="true" />
-                    Temas de Interesse
-                  </p>
-                  <Link to="/topics?return=/user" className="user-inline-edit-btn">
-                    Gerir temas
-                  </Link>
-                </div>
-
-                {currentTopics.length > 0 ? (
-                  <div className="user-topic-list" aria-label="Temas selecionados">
-                    {currentTopics.map((topic) => (
-                      <span key={topic} className="user-topic-chip">
-                        {formatTopicLabel(topic)}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="user-bio-empty">
-                    Ainda nao escolheste temas.{' '}
-                    <Link to="/topics?return=/user" className="text-link-btn">
-                      Escolher agora
-                    </Link>
-                  </p>
-                )}
-              </div>
-
-              <div className="info-block info-block--activity">
-                <p className="info-title">
-                  <span className="icon-dot" aria-hidden="true" />
-                  Atividade
-                </p>
-                <p className="user-meta-line">
-                  <span>Membro desde</span>
-                  <strong>{formatMemberSince(user?.createdAt)}</strong>
-                </p>
-                <p className="user-meta-line">
-                  <span>Ultima atividade</span>
-                  <strong>{formatRelativeTime(user?.lastActiveAt)}</strong>
-                </p>
-                <p className="user-meta-detail">{formatDateTime(user?.lastActiveAt)}</p>
-              </div>
-
-              <div className="user-style-section">
-                <p className="info-title">A tua Roda de Estilo Percentual</p>
-                {totalPoints > 0 ? (
-                  <>
-                    <div
-                      className="user-style-wheel"
-                      style={{ background: conicGradient }}
-                      aria-label="Grafico percentual das tuas escutas"
-                    ></div>
-                    <div className="style-legend">
-                      <div className="legend-item">
-                        <span className="legend-color" style={{ background: '#3b82f6' }}></span>
-                        Desporto ({desportoPct}%)
-                      </div>
-                      <div className="legend-item">
-                        <span className="legend-color" style={{ background: '#ef4444' }}></span>
-                        Politica ({politicaPct}%)
-                      </div>
-                      <div className="legend-item">
-                        <span className="legend-color" style={{ background: '#10b981' }}></span>
-                        Financas ({financasPct}%)
-                      </div>
-                      <div className="legend-item">
-                        <span className="legend-color" style={{ background: '#f59e0b' }}></span>
-                        Geral ({geralPct}%)
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="user-style-wheel user-style-empty">
-                    Ouve podcasts para revelar!
-                  </div>
-                )}
-              </div>
+              <UserStyleWheel profile={currentProfile} />
             </section>
           </div>
 
-          <section className="user-podcasts-section" aria-label="Os meus podcasts">
-            <div className="info-block">
-              <div className="info-block-header">
-                <p className="info-title">
-                  <span className="icon-dot" aria-hidden="true" />
-                  Os Meus Podcasts
-                </p>
-                <Link to="/generate" className="user-inline-edit-btn">
-                  Gerar Novo
-                </Link>
-              </div>
-
-              {podcastsLoading ? (
-                <p className="user-podcasts-loading">A carregar podcasts...</p>
-              ) : myPodcasts.length === 0 ? (
-                <p className="user-podcasts-empty">
-                  Ainda não geraste nenhum podcast.{' '}
-                  <Link to="/generate" className="text-link-btn">
-                    Gerar o primeiro
-                  </Link>
-                </p>
-              ) : (
-                <div className="user-podcasts-list">
-                  {myPodcasts.map((podcast) => (
-                    <div key={podcast.id} className="user-podcast-item">
-                      <div className="user-podcast-info">
-                        <h3 className="user-podcast-title">{podcast.titulo}</h3>
-                        <div className="user-podcast-meta">
-                          <span className="user-podcast-duration">{podcast.duracao} min</span>
-                          <span
-                            className={`user-podcast-visibility ${podcast.publico ? 'public' : 'private'}`}
-                          >
-                            {podcast.publico ? 'Público' : 'Privado'}
-                          </span>
-                          {podcast.tags && podcast.tags.length > 0 && (
-                            <span className="user-podcast-tags">{podcast.tags.join(', ')}</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="user-podcast-actions">
-                        <audio
-                          src={`${API_BASE_URL}/api/podcasts/${podcast.id}/audio`}
-                          controls
-                          className="user-podcast-audio"
-                        />
-                        <button
-                          className={`user-podcast-toggle-btn ${podcast.publico ? 'is-public' : 'is-private'}`}
-                          onClick={() => handleTogglePodcastVisibility(podcast.id, podcast.publico)}
-                          disabled={togglingPodcastId === podcast.id}
-                        >
-                          {togglingPodcastId === podcast.id
-                            ? '...'
-                            : podcast.publico
-                              ? 'Tornar Privado'
-                              : 'Publicar'}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </section>
+          <UserPodcastsSection
+            podcasts={myPodcasts}
+            isLoading={podcastsLoading}
+            togglingPodcastId={togglingPodcastId}
+            onTogglePodcastVisibility={handleTogglePodcastVisibility}
+          />
         </article>
       </section>
     </main>

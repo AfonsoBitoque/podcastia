@@ -2,13 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import '../styles/home-page.css'
 import '../styles/trending-page.css'
+import HomeFilterStrip from '../features/home/components/HomeFilterStrip'
+import HomePodcastSection from '../features/home/components/HomePodcastSection'
+import PodcastCard from '../features/podcasts/components/PodcastCard'
+import { DEFAULT_FEED_FILTERS } from '../features/podcasts/constants/topicFilters'
+import { filterPodcastsByTopic } from '../features/podcasts/utils/filterPodcastsByTopic'
 import { useBackgroundAudio } from '../hooks/useBackgroundAudio'
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
-
-const DEFAULT_FEED_FILTERS = {
-  topic: 'all',
-}
+import { API_BASE_URL } from '../shared/config/env'
+import { getStoredUser, getToken } from '../shared/storage/authStorage'
 
 function HomePage() {
   const navigate = useNavigate()
@@ -32,70 +33,9 @@ function HomePage() {
     togglePlayPause,
   } = useBackgroundAudio()
 
-  const PodcastCard = ({ podcast }) => {
-    const isCurrentPlaying =
-      playingPodcast &&
-      (playingPodcast.id || playingPodcast.podcastId) === (podcast.id || podcast.podcastId) &&
-      isPlaying
-
-    return (
-      <article className="trending-card" onClick={() => openSidebar(podcast)}>
-        <div className="trending-card-cover">
-          <div className="trending-cover-placeholder">
-            <span>🎙</span>
-          </div>
-          <button
-            className="trending-play-btn"
-            onClick={(e) => {
-              e.stopPropagation()
-              e.preventDefault()
-              handlePlayNow(podcast)
-            }}
-            aria-label={
-              isCurrentPlaying ? `Pausar ${podcast.titulo}` : `Reproduzir ${podcast.titulo}`
-            }
-          >
-            {isCurrentPlaying ? '⏸' : '▶'}
-          </button>
-          <button
-            className="trending-info-btn"
-            onClick={(e) => {
-              e.stopPropagation()
-              e.preventDefault()
-              openSidebar(podcast)
-            }}
-            aria-label={`Informações de ${podcast.titulo}`}
-          >
-            ℹ
-          </button>
-        </div>
-        <div className="trending-card-info">
-          <h3 className="trending-card-title">{podcast.titulo}</h3>
-          <p className="trending-card-author">{podcast.user?.username || 'Podcastia'}</p>
-        </div>
-      </article>
-    )
-  }
-
-  const TOPIC_FILTERS = [
-    { value: 'all', label: 'Todos', icon: '🎵' },
-    { value: 'sports', label: 'Desporto', icon: '⚽' },
-    { value: 'finance', label: 'Finanças', icon: '💰' },
-    { value: 'politics', label: 'Política', icon: '🗳️' },
-    { value: 'general', label: 'Geral', icon: '📢' },
-  ]
-
   useEffect(() => {
     // Get current user from localStorage
-    const userStr = localStorage.getItem('user')
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr)
-        setCurrentUser(user)
-      } catch (e) {
-        console.error('Error parsing user:', e)
-      }
-    }
+    setCurrentUser(getStoredUser())
     fetchPodcasts()
     fetchSavedPodcasts()
   }, [])
@@ -164,7 +104,7 @@ function HomePage() {
 
   const fetchSavedPodcasts = async () => {
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       console.log('[fetchSavedPodcasts] Token:', token ? 'present' : 'missing')
       if (!token) return
 
@@ -195,61 +135,19 @@ function HomePage() {
     window.dispatchEvent(new CustomEvent('podcastia-open-podcast', { detail: podcast }))
   }
 
-  const getActiveFilterCount = () => {
-    return filters.topic !== 'all' ? 1 : 0
-  }
-
-  // Filter function by topic
-  // Note: declared OUTSIDE component logic that needs it in deps, or use useCallback,
-  // but for simplicity we will just put the logic inside useMemo or keep it out of deps if it doesn't use component state.
-  // Actually, filterByTopic relies on `filters.topic`. So we can just define it as a plain function
-  // and pass `filters.topic` to it.
-  const filterByTopic = (podcastList, currentTopic) => {
-    if (!podcastList) return []
-    if (!currentTopic || currentTopic === 'all') return podcastList
-
-    return podcastList.filter((podcast) => {
-      const tags = podcast.tags || []
-      const tagUpper = tags.map((t) => t.toUpperCase())
-
-      switch (currentTopic) {
-        case 'sports':
-          return (
-            tagUpper.includes('DESPORTO') || tagUpper.includes('SPORTS') || tagUpper.includes('SPT')
-          )
-        case 'finance':
-          return (
-            tagUpper.includes('FINANCAS') ||
-            tagUpper.includes('FINANCE') ||
-            tagUpper.includes('FIN')
-          )
-        case 'politics':
-          return (
-            tagUpper.includes('POLITICA') ||
-            tagUpper.includes('POLITICS') ||
-            tagUpper.includes('POL')
-          )
-        case 'general':
-          return (
-            tagUpper.includes('GERAL') || tagUpper.includes('GENERAL') || tagUpper.includes('GEN')
-          )
-        default:
-          return true
-      }
-    })
-  }
+  const activeFilterCount = filters.topic !== DEFAULT_FEED_FILTERS.topic ? 1 : 0
 
   // Filtered lists
   const filteredMyPodcasts = useMemo(
-    () => filterByTopic(myPodcasts, filters.topic),
+    () => filterPodcastsByTopic(myPodcasts, filters.topic),
     [myPodcasts, filters.topic],
   )
   const filteredSavedPodcasts = useMemo(
-    () => filterByTopic(savedPodcasts, filters.topic),
+    () => filterPodcastsByTopic(savedPodcasts, filters.topic),
     [savedPodcasts, filters.topic],
   )
   const filteredCommunityPodcasts = useMemo(
-    () => filterByTopic(communityPodcasts, filters.topic),
+    () => filterPodcastsByTopic(communityPodcasts, filters.topic),
     [communityPodcasts, filters.topic],
   )
 
@@ -266,6 +164,17 @@ function HomePage() {
     }
   }
 
+  const renderPodcastCard = (podcast) => (
+    <PodcastCard
+      key={podcast.id}
+      podcast={podcast}
+      isPlaying={isPlaying}
+      playingPodcast={playingPodcast}
+      onOpen={openSidebar}
+      onPlay={handlePlayNow}
+    />
+  )
+
   return (
     <main className="home-page" aria-labelledby="home-title">
       <section className="home-banner">
@@ -276,150 +185,54 @@ function HomePage() {
         <div className="visual-ring ring-c" aria-hidden="true" />
       </section>
 
-      <section
-        className={`filter-strip ${isFilterOpen ? 'is-expanded' : ''}`}
-        aria-label="Filtros da homepage"
-      >
-        <button
-          type="button"
-          className={`filter-toggle ${isFilterOpen ? 'active' : ''}`}
-          onClick={() => setIsFilterOpen((prev) => !prev)}
-          aria-expanded={isFilterOpen}
-          aria-controls="home-filter-options"
-        >
-          <span className="filter-toggle-icon" aria-hidden="true" />
-          <span>Filtrar</span>
-          {getActiveFilterCount() > 0 && (
-            <span
-              className="filter-active-count"
-              aria-label={`${getActiveFilterCount()} filtros ativos`}
-            >
-              {getActiveFilterCount()}
-            </span>
-          )}
-        </button>
+      <HomeFilterStrip
+        filters={filters}
+        isOpen={isFilterOpen}
+        activeFilterCount={activeFilterCount}
+        filterScrollRef={filterScrollRef}
+        onToggleOpen={() => setIsFilterOpen((prev) => !prev)}
+        onChangeTopic={(topic) => setFilters((prev) => ({ ...prev, topic }))}
+        onClose={() => setIsFilterOpen(false)}
+        onScroll={updateFilterScrollIndicator}
+      />
 
-        <div
-          id="home-filter-options"
-          ref={filterScrollRef}
-          className="filter-scroll"
-          onScroll={updateFilterScrollIndicator}
-        >
-          <div className="filter-chips scrollable-filters">
-            {TOPIC_FILTERS.map((filter) => (
-              <button
-                key={filter.value}
-                type="button"
-                className={`filter-chip ${filters.topic === filter.value ? 'active' : ''}`}
-                onClick={() => setFilters((prev) => ({ ...prev, topic: filter.value }))}
-              >
-                <span className="filter-chip-icon" aria-hidden="true">
-                  {filter.icon}
-                </span>
-                <span>{filter.label}</span>
-              </button>
-            ))}
-          </div>
-          <button
-            type="button"
-            className="filter-close"
-            onClick={() => setIsFilterOpen(false)}
-            aria-label="Fechar filtros"
-          >
-            x
-          </button>
-        </div>
-      </section>
+      <HomePodcastSection
+        title="Teus Podcasts"
+        subtitle="Os teus podcasts criados e guardados"
+        podcasts={filteredMyPodcasts}
+        loading={loading}
+        loadingText="A carregar..."
+        emptyClassName="my-podcasts-empty"
+        emptyMessage="Ainda não tens podcasts. Cria o teu primeiro!"
+        emptyActionLabel="Criar Podcast"
+        onEmptyAction={() => navigate('/generate')}
+        renderPodcast={renderPodcastCard}
+      />
 
-      {/* Teus Podcasts Section */}
-      <section className="home-section">
-        <div className="section-header">
-          <div className="section-title-group">
-            <h2 className="section-title">Teus Podcasts</h2>
-            <p className="section-subtitle">Os teus podcasts criados e guardados</p>
-          </div>
-        </div>
+      <HomePodcastSection
+        title="Podcasts Guardados"
+        subtitle="Os teus podcasts favoritos"
+        podcasts={filteredSavedPodcasts}
+        emptyClassName="saved-podcasts-empty"
+        emptyMessage="Ainda não guardaste nenhum podcast."
+        emptyActionLabel="Explorar Podcasts"
+        onEmptyAction={() => navigate('/search-test')}
+        renderPodcast={renderPodcastCard}
+      />
 
-        <div className="podcast-grid fixed-width">
-          {loading ? (
-            <div className="loading-state">
-              <div className="loading-spinner" />
-              <p>A carregar...</p>
-            </div>
-          ) : filteredMyPodcasts && filteredMyPodcasts.length > 0 ? (
-            filteredMyPodcasts.map((podcast) => <PodcastCard key={podcast.id} podcast={podcast} />)
-          ) : (
-            <div className="empty-state my-podcasts-empty">
-              <p>Ainda não tens podcasts. Cria o teu primeiro!</p>
-              <button className="create-podcast-btn" onClick={() => navigate('/generate')}>
-                Criar Podcast
-              </button>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Podcasts Guardados Section */}
-      <section className="home-section">
-        <div className="section-header">
-          <div className="section-title-group">
-            <h2 className="section-title">Podcasts Guardados</h2>
-            <p className="section-subtitle">Os teus podcasts favoritos</p>
-          </div>
-        </div>
-
-        <div className="podcast-grid fixed-width">
-          {filteredSavedPodcasts && filteredSavedPodcasts.length > 0 ? (
-            filteredSavedPodcasts.map((podcast) => (
-              <PodcastCard key={podcast.id} podcast={podcast} />
-            ))
-          ) : (
-            <div className="empty-state saved-podcasts-empty">
-              <p>Ainda não guardaste nenhum podcast.</p>
-              <button className="create-podcast-btn" onClick={() => navigate('/search-test')}>
-                Explorar Podcasts
-              </button>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Podcasts da Comunidade Section */}
-      <section className="home-section">
-        <div className="section-header">
-          <div className="section-title-group">
-            <h2 className="section-title">Podcasts da Comunidade</h2>
-            <p className="section-subtitle">Descobre o que outros criadores partilham</p>
-          </div>
-          <button className="section-action" onClick={() => navigate('/search-test')}>
-            Explorar
-          </button>
-        </div>
-
-        <div className="podcast-grid fixed-width">
-          {loading ? (
-            <div className="loading-state">
-              <div className="loading-spinner" />
-              <p>A carregar podcasts...</p>
-            </div>
-          ) : error ? (
-            <div className="error-state">
-              <p>{error}</p>
-              <button onClick={fetchPodcasts} className="retry-button">
-                Tentar novamente
-              </button>
-            </div>
-          ) : filteredCommunityPodcasts && filteredCommunityPodcasts.length > 0 ? (
-            filteredCommunityPodcasts.map((podcast) => (
-              <PodcastCard key={podcast.id} podcast={podcast} />
-            ))
-          ) : (
-            <div className="empty-state">
-              <p>Nenhum podcast encontrado</p>
-            </div>
-          )}
-        </div>
-      </section>
+      <HomePodcastSection
+        title="Podcasts da Comunidade"
+        subtitle="Descobre o que outros criadores partilham"
+        actionLabel="Explorar"
+        onAction={() => navigate('/search-test')}
+        podcasts={filteredCommunityPodcasts}
+        loading={loading}
+        loadingText="A carregar podcasts..."
+        error={error}
+        onRetry={fetchPodcasts}
+        emptyMessage="Nenhum podcast encontrado"
+        renderPodcast={renderPodcastCard}
+      />
 
     </main>
   )

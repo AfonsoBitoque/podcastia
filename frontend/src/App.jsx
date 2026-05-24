@@ -9,8 +9,8 @@ import PodcastSidebar from './components/PodcastSidebar'
 import './styles/layout.css'
 import { useAuth } from './hooks/useAuth'
 import { useBackgroundAudio } from './hooks/useBackgroundAudio'
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')
+import { API_BASE_URL } from './shared/config/env'
+import { getToken } from './shared/storage/authStorage'
 
 // Lazy load pages for code splitting
 const RegisterPage = lazy(() => import('./pages/RegisterPage'))
@@ -93,7 +93,7 @@ function App() {
   const checkSelectedPodcastFavorite = useCallback(
     async (podcast) => {
       const podcastId = getPodcastId(podcast)
-      const token = localStorage.getItem('token')
+      const token = getToken()
       if (!podcastId || !token) {
         setIsSelectedPodcastSaved(false)
         return
@@ -154,7 +154,7 @@ function App() {
 
   const handleSavePodcast = async (podcast) => {
     const podcastId = getPodcastId(podcast)
-    const token = localStorage.getItem('token')
+    const token = getToken()
     if (!podcastId || !token) return
 
     try {
