@@ -231,11 +231,11 @@ function AdminUserManagement() {
                       <div className="points-total">
                         {user.pontosGeral +
                           user.pontosDesporto +
-                          user.pontosFinanca +
+                          user.pontosFinancas +
                           user.pontosPolitica}
                       </div>
                       <div className="points-breakdown">
-                        G:{user.pontosGeral} S:{user.pontosDesporto} F:{user.pontosFinanca} P:
+                        G:{user.pontosGeral} S:{user.pontosDesporto} F:{user.pontosFinancas} P:
                         {user.pontosPolitica}
                       </div>
                     </div>

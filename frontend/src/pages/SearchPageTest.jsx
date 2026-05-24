@@ -44,6 +44,18 @@ const getAssetUrl = (path) => {
   return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`
 }
 
+const resolveProfilePicture = (path, userId) => {
+  const safePath = String(path || '').trim()
+  if (!safePath) return ''
+  if (/^https?:\/\//i.test(safePath)) return safePath
+  if (userId) {
+    return `${API_BASE_URL}/users/${userId}/profile-image?t=${Date.now()}`
+  }
+  const normalizedPath = safePath.replace(/^\/+/, '')
+  const separator = normalizedPath.includes('?') ? '&' : '?'
+  return `${API_BASE_URL}/${normalizedPath}${separator}t=${Date.now()}`
+}
+
 const getTagUi = (tag) => TAG_UI[String(tag || '').toUpperCase()] || TAG_UI.DEFAULT
 
 const getInitials = (value) => {
@@ -322,7 +334,7 @@ function SearchPageTest() {
   }
 
   const renderUserCard = (user) => {
-    const avatar = getAssetUrl(user.imageUrl)
+    const avatar = resolveProfilePicture(user.imageUrl, user.id)
 
     return (
       <article
