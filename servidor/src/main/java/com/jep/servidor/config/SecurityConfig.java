@@ -11,6 +11,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.web.util.matcher.RegexRequestMatcher;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -26,6 +27,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
   @Autowired
@@ -58,6 +60,7 @@ public class SecurityConfig {
             .requestMatchers("/ws/**").permitAll() // Handshake WebSocket autenticado por token
             .requestMatchers("/h2-console/**").permitAll() // H2 Console
             .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll() // Swagger OpenAPI
+            .requestMatchers("/error").permitAll()
             
             // Tudo o resto exige estar autenticado com um JWT válido
             .anyRequest().authenticated()

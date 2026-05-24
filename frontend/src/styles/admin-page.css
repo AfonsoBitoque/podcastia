@@ -1809,7 +1809,8 @@
   }
 }
 
-.admin-header h1 {
+.admin-header h1,
+.admin-page-title {
   color: #8b2f17;
   font-family: 'Space Grotesk', sans-serif;
   font-weight: 800;

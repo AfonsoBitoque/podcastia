@@ -14,10 +14,13 @@ import com.jep.servidor.repository.PodcastProgressRepository;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -221,9 +224,11 @@ public class AdminService {
      */
     @Transactional
     public boolean confirmPodcastDeletion(Long podcastId, String confirmation, String adminPassword, User admin) {
+        User effectiveAdmin = resolveAdmin(admin);
+
         // Verify admin password
-        if (!passwordEncoder.matches(adminPassword, admin.getPassword())) {
-            logAdminAction(admin, "DELETE_PODCAST_FAILED", "PODCAST", podcastId, "", 
+        if (effectiveAdmin == null || !passwordEncoder.matches(adminPassword, effectiveAdmin.getPassword())) {
+            logAdminAction(effectiveAdmin, "DELETE_PODCAST_FAILED", "PODCAST", podcastId, "", 
                           "Failed deletion - invalid password", null, null, false, "Invalid admin password");
             return false;
         }
@@ -234,7 +239,7 @@ public class AdminService {
         
         String expectedConfirmation = "DELETE_" + podcast.getTitulo().toUpperCase().replaceAll("\\s+", "_");
         if (!expectedConfirmation.equals(confirmation)) {
-            logAdminAction(admin, "DELETE_PODCAST_FAILED", "PODCAST", podcastId, podcast.getTitulo(), 
+            logAdminAction(effectiveAdmin, "DELETE_PODCAST_FAILED", "PODCAST", podcastId, podcast.getTitulo(), 
                           "Failed deletion - invalid confirmation", null, null, false, "Invalid confirmation text");
             return false;
         }
@@ -244,7 +249,7 @@ public class AdminService {
         podcastRepository.delete(podcast);
         
         // Log the action
-        logAdminAction(admin, "DELETE_PODCAST", "PODCAST", podcastId, podcastTitle, 
+        logAdminAction(effectiveAdmin, "DELETE_PODCAST", "PODCAST", podcastId, podcastTitle, 
                       "Deleted podcast permanently", null, null, true, null);
 
         return true;
@@ -297,9 +302,11 @@ public class AdminService {
      */
     @Transactional
     public boolean confirmUserDeletion(Long userId, String confirmation, String adminPassword, User admin) {
+        User effectiveAdmin = resolveAdmin(admin);
+
         // Verify admin password
-        if (!passwordEncoder.matches(adminPassword, admin.getPassword())) {
-            logAdminAction(admin, "DELETE_USER_FAILED", "USER", userId, "", 
+        if (effectiveAdmin == null || !passwordEncoder.matches(adminPassword, effectiveAdmin.getPassword())) {
+            logAdminAction(effectiveAdmin, "DELETE_USER_FAILED", "USER", userId, "", 
                           "Failed deletion - invalid password", null, null, false, "Invalid admin password");
             return false;
         }
@@ -310,7 +317,7 @@ public class AdminService {
         
         String expectedConfirmation = "DELETE_" + user.getUsername().toUpperCase().replaceAll("\\s+", "_");
         if (!expectedConfirmation.equals(confirmation)) {
-            logAdminAction(admin, "DELETE_USER_FAILED", "USER", userId, user.getUsername(), 
+            logAdminAction(effectiveAdmin, "DELETE_USER_FAILED", "USER", userId, user.getUsername(), 
                           "Failed deletion - invalid confirmation", null, null, false, "Invalid confirmation text");
             return false;
         }
@@ -320,7 +327,7 @@ public class AdminService {
         userRepository.delete(user);
         
         // Log the action
-        logAdminAction(admin, "DELETE_USER", "USER", userId, username, 
+        logAdminAction(effectiveAdmin, "DELETE_USER", "USER", userId, username, 
                       "Deleted user permanently", null, null, true, null);
 
         return true;
@@ -369,41 +376,120 @@ public class AdminService {
      * Export analytics to PDF
      */
     public void exportAnalyticsPdf(HttpServletResponse response) {
-        // For now, implement a simple text-based PDF export
-        // In a real implementation, you would use a library like iText or PDFBox
         try {
             AdminAnalyticsDTO analytics = getAnalytics();
-            
+            byte[] pdfBytes = buildAnalyticsPdf(analytics);
+
             response.setContentType("application/pdf");
             response.setHeader("Content-Disposition", "attachment; filename=analytics.pdf");
-            
-            StringBuilder pdfContent = new StringBuilder();
-            pdfContent.append("Podcastia Analytics Report\n");
-            pdfContent.append("Generated: ").append(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)).append("\n\n");
-            
-            pdfContent.append("User Metrics:\n");
-            pdfContent.append("Daily Active Users: ").append(analytics.getDailyActiveUsers()).append("\n");
-            pdfContent.append("Monthly Active Users: ").append(analytics.getMonthlyActiveUsers()).append("\n");
-            pdfContent.append("Total Users: ").append(analytics.getTotalUsers()).append("\n");
-            pdfContent.append("New Registrations Today: ").append(analytics.getNewRegistrationsToday()).append("\n");
-            pdfContent.append("New Registrations This Month: ").append(analytics.getNewRegistrationsThisMonth()).append("\n\n");
-            
-            pdfContent.append("Podcast Metrics:\n");
-            pdfContent.append("Total Podcasts: ").append(analytics.getTotalPodcasts()).append("\n");
-            pdfContent.append("Total Listening Time (minutes): ").append(analytics.getTotalListeningTime()).append("\n\n");
-            
-            pdfContent.append("Top Podcasts:\n");
-            for (AdminAnalyticsDTO.PodcastRankingDTO podcast : analytics.getTopPodcasts()) {
-                pdfContent.append(podcast.getRank()).append(". ").append(podcast.getTitle())
-                         .append(" by ").append(podcast.getAuthor())
-                         .append(" (").append(podcast.getTotalPlays()).append(" plays)\n");
-            }
-            
-            response.getWriter().write(pdfContent.toString());
-            
+            response.setContentLength(pdfBytes.length);
+            response.getOutputStream().write(pdfBytes);
+
         } catch (IOException e) {
             throw new RuntimeException("Error generating PDF export", e);
         }
+    }
+
+    private byte[] buildAnalyticsPdf(AdminAnalyticsDTO analytics) {
+        List<String> lines = new ArrayList<>();
+        lines.add("Podcastia Analytics Report");
+        lines.add("Generated: " + LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+        lines.add("");
+        lines.add("User Metrics");
+        lines.add("Daily Active Users: " + analytics.getDailyActiveUsers());
+        lines.add("Monthly Active Users: " + analytics.getMonthlyActiveUsers());
+        lines.add("Total Users: " + analytics.getTotalUsers());
+        lines.add("New Registrations Today: " + analytics.getNewRegistrationsToday());
+        lines.add("New Registrations This Month: " + analytics.getNewRegistrationsThisMonth());
+        lines.add("");
+        lines.add("Podcast Metrics");
+        lines.add("Total Podcasts: " + analytics.getTotalPodcasts());
+        lines.add("Total Listening Time (minutes): " + analytics.getTotalListeningTime());
+        lines.add("");
+        lines.add("Top Podcasts");
+
+        List<AdminAnalyticsDTO.PodcastRankingDTO> topPodcasts = analytics.getTopPodcasts();
+        if (topPodcasts == null || topPodcasts.isEmpty()) {
+            lines.add("No listening data available yet.");
+        } else {
+            int limit = Math.min(topPodcasts.size(), 10);
+            for (int i = 0; i < limit; i++) {
+                AdminAnalyticsDTO.PodcastRankingDTO podcast = topPodcasts.get(i);
+                lines.add((i + 1) + ". " + podcast.getTitle()
+                    + " by " + podcast.getAuthor()
+                    + " - " + podcast.getTotalPlays() + " plays");
+            }
+        }
+
+        return createSimplePdf(lines);
+    }
+
+    private byte[] createSimplePdf(List<String> lines) {
+        StringBuilder content = new StringBuilder();
+        content.append("BT\n");
+        content.append("/F1 18 Tf\n");
+        content.append("72 740 Td\n");
+        content.append("(").append(escapePdfText(lines.get(0))).append(") Tj\n");
+        content.append("/F1 11 Tf\n");
+
+        for (int i = 1; i < lines.size(); i++) {
+            content.append("0 -18 Td\n");
+            content.append("(").append(escapePdfText(lines.get(i))).append(") Tj\n");
+        }
+
+        content.append("ET\n");
+
+        byte[] streamBytes = content.toString().getBytes(StandardCharsets.ISO_8859_1);
+        List<String> objects = List.of(
+            "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
+            "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
+            "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
+                + "/Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n",
+            "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n",
+            "5 0 obj\n<< /Length " + streamBytes.length + " >>\nstream\n"
+                + content + "endstream\nendobj\n"
+        );
+
+        StringBuilder pdf = new StringBuilder();
+        List<Integer> offsets = new ArrayList<>();
+        pdf.append("%PDF-1.4\n");
+
+        for (String object : objects) {
+            offsets.add(pdfByteLength(pdf));
+            pdf.append(object);
+        }
+
+        int xrefOffset = pdfByteLength(pdf);
+        pdf.append("xref\n");
+        pdf.append("0 ").append(objects.size() + 1).append("\n");
+        pdf.append("0000000000 65535 f \n");
+        for (Integer offset : offsets) {
+            pdf.append(String.format("%010d 00000 n \n", offset));
+        }
+
+        pdf.append("trailer\n");
+        pdf.append("<< /Size ").append(objects.size() + 1).append(" /Root 1 0 R >>\n");
+        pdf.append("startxref\n");
+        pdf.append(xrefOffset).append("\n");
+        pdf.append("%%EOF\n");
+
+        return pdf.toString().getBytes(StandardCharsets.ISO_8859_1);
+    }
+
+    private int pdfByteLength(StringBuilder content) {
+        return content.toString().getBytes(StandardCharsets.ISO_8859_1).length;
+    }
+
+    private String escapePdfText(String text) {
+        if (text == null) {
+            return "";
+        }
+
+        return text.replace("\\", "\\\\")
+            .replace("(", "\\(")
+            .replace(")", "\\)")
+            .replace("\r", "")
+            .replace("\n", " ");
     }
 
     /**
@@ -461,11 +547,11 @@ public class AdminService {
         
         return results.stream()
             .map(result -> new AdminAnalyticsDTO.PodcastRankingDTO(
-                (Long) result[0], // podcastId
+                ((Number) result[0]).longValue(), // podcastId
                 (String) result[1], // title
                 (String) result[2], // author
-                (Long) result[3], // totalPlays
-                (Long) result[4], // totalListeningTime
+                ((Number) result[3]).longValue(), // totalPlays
+                ((Number) result[4]).longValue(), // totalListeningTime
                 0.0, // averageRating (placeholder)
                 0 // rank (will be set below)
             ))
@@ -483,7 +569,9 @@ public class AdminService {
             // Calculate metrics for this day
             long activeUsers = userRepository.countByLastActiveAtAfter(date.toLocalDate().atStartOfDay());
             long newUsers = userRepository.countByCreatedAtAfter(date.toLocalDate().atStartOfDay());
-            long listeningTime = podcastProgressRepository.sumListeningTimeByDate(date.toLocalDate());
+            LocalDateTime dayStart = date.toLocalDate().atStartOfDay();
+            LocalDateTime dayEnd = dayStart.plusDays(1);
+            long listeningTime = podcastProgressRepository.sumListeningTimeBetween(dayStart, dayEnd);
             
             weeklyData.add(new AdminAnalyticsDTO.UsageDataPointDTO(dateStr, activeUsers, newUsers, listeningTime));
         }
@@ -505,7 +593,7 @@ public class AdminService {
             
             long activeUsers = userRepository.countByLastActiveAtBetween(monthStart, monthEnd);
             long newUsers = userRepository.countByCreatedAtBetween(monthStart, monthEnd);
-            long listeningTime = podcastProgressRepository.sumListeningTimeByMonth(date.toLocalDate().getMonthValue(), date.getYear());
+            long listeningTime = podcastProgressRepository.sumListeningTimeBetween(monthStart, monthEnd);
             
             monthlyData.add(new AdminAnalyticsDTO.UsageDataPointDTO(dateStr, activeUsers, newUsers, listeningTime));
         }
@@ -538,10 +626,11 @@ public class AdminService {
     private void logAdminAction(User admin, String action, String targetType, Long targetId, 
                               String targetName, String description, String ipAddress, 
                               String userAgent, boolean successful, String errorMessage) {
-        
+        User effectiveAdmin = resolveAdmin(admin);
+         
         AdminActionLog log = new AdminActionLog();
-        log.setAdminUsername(admin.getUsername());
-        log.setAdminEmail(admin.getEmail());
+        log.setAdminUsername(effectiveAdmin != null ? effectiveAdmin.getUsername() : "unknown");
+        log.setAdminEmail(effectiveAdmin != null ? effectiveAdmin.getEmail() : "unknown");
         log.setAction(action);
         log.setTargetType(targetType);
         log.setTargetId(targetId);
@@ -552,8 +641,21 @@ public class AdminService {
         log.setTimestamp(LocalDateTime.now());
         log.setSuccessful(successful);
         log.setErrorMessage(errorMessage);
-        
+         
         adminActionLogRepository.save(log);
+    }
+
+    private User resolveAdmin(User admin) {
+        if (admin != null) {
+            return admin;
+        }
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getName() == null) {
+            return null;
+        }
+
+        return userRepository.findByEmail(authentication.getName()).orElse(null);
     }
 
     private AdminActionLogDTO convertToLogDTO(AdminActionLog log) {

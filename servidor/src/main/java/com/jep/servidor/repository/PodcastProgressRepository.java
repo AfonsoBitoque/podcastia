@@ -3,11 +3,12 @@ package com.jep.servidor.repository;
 import com.jep.servidor.model.Podcast;
 import com.jep.servidor.model.PodcastProgress;
 import com.jep.servidor.model.User;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface PodcastProgressRepository extends JpaRepository<PodcastProgress, Long> {
     Optional<PodcastProgress> findByUserAndPodcast(User user, Podcast podcast);
@@ -32,10 +33,8 @@ public interface PodcastProgressRepository extends JpaRepository<PodcastProgress
     List<Object[]> findTopPodcastsByPlays();
     
     @Query("SELECT COALESCE(SUM(pp.progressSeconds), 0) FROM PodcastProgress pp " +
-           "WHERE DATE(pp.lastListenedAt) = :date")
-    long sumListeningTimeByDate(LocalDate date);
-    
-    @Query("SELECT COALESCE(SUM(pp.progressSeconds), 0) FROM PodcastProgress pp " +
-           "WHERE MONTH(pp.lastListenedAt) = :month AND YEAR(pp.lastListenedAt) = :year")
-    long sumListeningTimeByMonth(int month, int year);
+           "WHERE pp.lastListenedAt >= :start AND pp.lastListenedAt < :end")
+    long sumListeningTimeBetween(
+        @Param("start") LocalDateTime start,
+        @Param("end") LocalDateTime end);
 }

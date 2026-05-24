@@ -98,15 +98,6 @@ function AdminPage() {
         <h1 className="admin-page-title">Admin Dashboard</h1>
         <div className="admin-user-info">
           <span>Welcome, {user?.username}</span>
-          <button
-            onClick={() => {
-              localStorage.removeItem('token')
-              navigate('/login')
-            }}
-            className="btn-secondary"
-          >
-            Logout
-          </button>
         </div>
       </header>
 
