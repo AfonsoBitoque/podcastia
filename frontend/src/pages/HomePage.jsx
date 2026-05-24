@@ -30,9 +30,10 @@ function HomePage() {
     loadPodcast,
     play,
     togglePlayPause,
+    setQueue,
   } = useBackgroundAudio()
 
-  const PodcastCard = ({ podcast }) => {
+  const PodcastCard = ({ podcast, sectionQueue }) => {
     const isCurrentPlaying =
       playingPodcast &&
       (playingPodcast.id || playingPodcast.podcastId) === (podcast.id || podcast.podcastId) &&
@@ -49,7 +50,7 @@ function HomePage() {
             onClick={(e) => {
               e.stopPropagation()
               e.preventDefault()
-              handlePlayNow(podcast)
+              handlePlayNow(podcast, sectionQueue)
             }}
             aria-label={
               isCurrentPlaying ? `Pausar ${podcast.titulo}` : `Reproduzir ${podcast.titulo}`
@@ -137,7 +138,7 @@ function HomePage() {
     }
   }
 
-  const handlePlayNow = async (podcast) => {
+  const handlePlayNow = async (podcast, queue) => {
     try {
       console.log('[HomePage] Playing podcast:', podcast.titulo)
 
@@ -145,13 +146,16 @@ function HomePage() {
       const currentId = playingPodcast?.id || playingPodcast?.podcastId
 
       if (currentId === podcastId) {
-        // Se já é o podcast atual, apenas alterna entre play e pause sem reiniciar
         await togglePlayPause()
         return
       }
 
       const loaded = await loadPodcast(podcast, 0)
       if (loaded) {
+        if (queue && queue.length > 0) {
+          const idx = queue.findIndex((p) => (p.id || p.podcastId) === podcastId)
+          setQueue(queue, idx >= 0 ? idx : 0)
+        }
         console.log('[HomePage] Podcast loaded, starting playback...')
         await play()
         console.log('[HomePage] Playback started')
@@ -347,7 +351,7 @@ function HomePage() {
               <p>A carregar...</p>
             </div>
           ) : filteredMyPodcasts && filteredMyPodcasts.length > 0 ? (
-            filteredMyPodcasts.map((podcast) => <PodcastCard key={podcast.id} podcast={podcast} />)
+            filteredMyPodcasts.map((podcast) => <PodcastCard key={podcast.id} podcast={podcast} sectionQueue={filteredMyPodcasts} />)
           ) : (
             <div className="empty-state my-podcasts-empty">
               <p>Ainda não tens podcasts. Cria o teu primeiro!</p>
@@ -371,7 +375,7 @@ function HomePage() {
         <div className="podcast-grid fixed-width">
           {filteredSavedPodcasts && filteredSavedPodcasts.length > 0 ? (
             filteredSavedPodcasts.map((podcast) => (
-              <PodcastCard key={podcast.id} podcast={podcast} />
+              <PodcastCard key={podcast.id} podcast={podcast} sectionQueue={filteredSavedPodcasts} />
             ))
           ) : (
             <div className="empty-state saved-podcasts-empty">
@@ -411,7 +415,7 @@ function HomePage() {
             </div>
           ) : filteredCommunityPodcasts && filteredCommunityPodcasts.length > 0 ? (
             filteredCommunityPodcasts.map((podcast) => (
-              <PodcastCard key={podcast.id} podcast={podcast} />
+              <PodcastCard key={podcast.id} podcast={podcast} sectionQueue={filteredCommunityPodcasts} />
             ))
           ) : (
             <div className="empty-state">

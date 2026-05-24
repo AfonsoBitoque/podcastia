@@ -418,8 +418,7 @@ class BackgroundAudioService {
 
   skipPrevious() {
     if (this.queue.length === 0) {
-      // No queue — just rewind 15s
-      this.seek(Math.max(0, this.currentTime - 15))
+      // No queue — nothing to skip to
       return
     }
 
@@ -442,8 +441,7 @@ class BackgroundAudioService {
 
   skipNext() {
     if (this.queue.length === 0) {
-      // No queue — just skip 15s forward
-      this.seek(Math.min(this.duration, this.currentTime + 15))
+      // No queue — nothing to skip to
       return
     }
 
