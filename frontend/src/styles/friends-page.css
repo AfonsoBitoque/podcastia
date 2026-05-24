@@ -121,3 +121,81 @@
   padding: 2rem;
   font-size: 1.2rem;
 }
+
+.friend-item--removing {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.friend-item-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.friend-remove-confirm-row {
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  background-color: rgba(244, 67, 54, 0.06);
+  border: 1px solid rgba(244, 67, 54, 0.15);
+  border-radius: 6px;
+  animation: slideDown 0.2s ease-out;
+}
+
+.friend-remove-confirm-row .confirm-text {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.friend-remove-confirm-row .confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.btn-cancel-remove,
+.btn-confirm-remove {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  border: 1px solid #ccc;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
+}
+
+.btn-cancel-remove {
+  background-color: #fff;
+  color: #333;
+}
+
+.btn-cancel-remove:hover {
+  background-color: #f5f5f5;
+  border-color: #bbb;
+}
+
+.btn-confirm-remove {
+  background-color: #ef4444;
+  color: #fff;
+  border-color: #ef4444;
+}
+
+.btn-confirm-remove:hover {
+  background-color: #dc2626;
+  border-color: #dc2626;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

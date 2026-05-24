@@ -83,43 +83,6 @@ function FriendsPage() {
 
   return (
     <main className="friends-page">
-      {friendToRemove && (
-        <div className="modal-backdrop">
-          <div
-            className="modal-content"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="modal-title"
-          >
-            <h2 id="modal-title" style={{ marginTop: 0 }}>
-              Remover Amigo
-            </h2>
-            <p>
-              Tem a certeza que deseja remover {friendToRemove.username} da sua lista de amigos?
-            </p>
-            <div
-              style={{
-                display: 'flex',
-                gap: '1rem',
-                marginTop: '1.5rem',
-                justifyContent: 'flex-end',
-              }}
-            >
-              <button className="user-action-btn" onClick={() => setFriendToRemove(null)}>
-                Cancelar
-              </button>
-              <button
-                className="user-action-btn user-action-btn--danger"
-                style={{ background: '#ef4444', color: 'white', border: 'none' }}
-                onClick={() => handleAction(friendToRemove.id, 'remove')}
-              >
-                Remover
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="friends-header">
         <h1>Amigos</h1>
       </div>
@@ -135,28 +98,64 @@ function FriendsPage() {
             </p>
           ) : (
             <ul className="friend-list">
-              {friends.map((friend) => (
-                <li key={friend.id} className="friend-item">
-                  <div className="friend-info">
-                    <div className="friend-avatar">
-                      {friend.profilePicturePath ? (
-                        <img
-                          src={`${API_BASE_URL}/${friend.profilePicturePath}`}
-                          alt={friend.username}
-                        />
-                      ) : (
-                        <span>{(friend.username || '?').charAt(0).toUpperCase()}</span>
+              {friends.map((friend) => {
+                const isRemoving = friendToRemove?.id === friend.id
+                return (
+                  <li
+                    key={friend.id}
+                    className={`friend-item ${isRemoving ? 'friend-item--removing' : ''}`}
+                  >
+                    <div className="friend-item-main">
+                      <div className="friend-info">
+                        <div className="friend-avatar">
+                          {friend.profilePicturePath ? (
+                            <img
+                              src={`${API_BASE_URL}/${friend.profilePicturePath}`}
+                              alt={friend.username}
+                            />
+                          ) : (
+                            <span>{(friend.username || '?').charAt(0).toUpperCase()}</span>
+                          )}
+                        </div>
+                        <Link to={`/user/${friend.id}`} className="friend-name">
+                          {friend.username || 'Utilizador desconhecido'}
+                        </Link>
+                      </div>
+                      {!isRemoving && (
+                        <button className="btn-remove-friend" onClick={() => confirmRemove(friend)}>
+                          Remover Amigo
+                        </button>
                       )}
                     </div>
-                    <Link to={`/user/${friend.id}`} className="friend-name">
-                      {friend.username || 'Utilizador desconhecido'}
-                    </Link>
-                  </div>
-                  <button className="btn-remove-friend" onClick={() => confirmRemove(friend)}>
-                    Remover
-                  </button>
-                </li>
-              ))}
+                    {isRemoving && (
+                      <div
+                        className="friend-remove-confirm-row"
+                        role="dialog"
+                        aria-label="Confirmar remoção de amigo"
+                      >
+                        <p className="confirm-text">
+                          Tem a certeza que deseja remover {friend.username} da sua lista de amigos?
+                        </p>
+                        <div className="confirm-actions">
+                          <button
+                            className="btn-cancel-remove"
+                            onClick={() => setFriendToRemove(null)}
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            className="btn-confirm-remove"
+                            style={{ background: '#ef4444', color: 'white', border: 'none' }}
+                            onClick={() => handleAction(friend.id, 'remove')}
+                          >
+                            Remover
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </li>
+                )
+              })}
             </ul>
           )}
         </section>

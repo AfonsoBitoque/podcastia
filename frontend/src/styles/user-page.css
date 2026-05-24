@@ -934,3 +934,14 @@
   font-size: 0.75rem;
   color: #7b5f53;
 }
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
