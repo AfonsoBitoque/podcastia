@@ -152,7 +152,11 @@ function AppSidebar() {
 
     fetchCounts()
     const interval = setInterval(fetchCounts, 30000)
-    return () => clearInterval(interval)
+    window.addEventListener('podcastia-relation-change', fetchCounts)
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('podcastia-relation-change', fetchCounts)
+    }
   }, [isAuthenticated])
 
   if (!isAuthenticated) {

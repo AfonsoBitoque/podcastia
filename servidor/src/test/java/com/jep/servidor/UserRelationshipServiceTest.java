@@ -96,7 +96,7 @@ public class UserRelationshipServiceTest {
               userRelationshipService.sendFriendRequest(1L, 2L);
             });
     assertEquals(
-        "Ainda não pode enviar um novo pedido de amizade a este utilizador.",
+        "Não pode pedir amizade antes de 7 dias de recusa",
         exception.getMessage());
   }
 

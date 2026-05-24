@@ -180,6 +180,8 @@ function Header() {
     if (item.type === 'USER') {
       saveRecentSearch(searchQuery)
       setSearchFocused(false)
+      setSearchQuery('')
+      setSearchResults([])
       navigate(`/user/${item.id}`)
       return
     }
@@ -195,6 +197,8 @@ function Header() {
       const podcast = await response.json()
       window.dispatchEvent(new CustomEvent('podcastia-open-podcast', { detail: podcast }))
       setSearchFocused(false)
+      setSearchQuery('')
+      setSearchResults([])
     } catch (error) {
       console.error('Erro ao abrir podcast:', error)
       setSearchError('Não foi possível abrir este podcast.')

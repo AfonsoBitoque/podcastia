@@ -142,8 +142,6 @@ function MessagesPage() {
   const [activeFriendId, setActiveFriendId] = useState(null)
   const [messagesByFriend, setMessagesByFriend] = useState({})
   const [friendsStatus, setFriendsStatus] = useState('loading')
-  const [pendingRequests, setPendingRequests] = useState([])
-  const [pendingRequestsStatus, setPendingRequestsStatus] = useState('loading')
   const [historyStatus, setHistoryStatus] = useState('idle')
   const [socketStatus, setSocketStatus] = useState('offline')
   const [error, setError] = useState('')
@@ -453,25 +451,6 @@ function MessagesPage() {
         setError(fetchError.message)
       })
 
-    fetch(`${API_BASE_URL}/api/relations/friend-requests/pending`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error('Erro ao carregar pedidos de amizade.')
-        }
-        return response.json()
-      })
-      .then((payload) => {
-        if (!isActive) return
-        setPendingRequests(Array.isArray(payload) ? payload : [])
-        setPendingRequestsStatus('ready')
-      })
-      .catch(() => {
-        if (!isActive) return
-        setPendingRequestsStatus('error')
-      })
-
     return () => {
       isActive = false
     }
@@ -680,48 +659,6 @@ function MessagesPage() {
     }
   }
 
-  const handleRequestAction = async (senderId, action) => {
-    try {
-      let endpoint = `/api/relations/friend-request/${senderId}`
-      if (action === 'accept') endpoint += '/accept'
-      else if (action === 'reject') endpoint += '/reject'
-
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      })
-
-      if (response.ok) {
-        setPendingRequests((prev) =>
-          prev.filter((req) => String(req.senderId) !== String(senderId)),
-        )
-        if (action === 'accept') {
-          // Refetch friends list
-          const friendsRes = await fetch(`${API_BASE_URL}/api/relations/friends`, {
-            headers: { Authorization: `Bearer ${token}` },
-          })
-          if (friendsRes.ok) {
-            const newFriends = await friendsRes.json()
-            setFriends(newFriends)
-          }
-        }
-      } else {
-        const errorData = await response.json().catch(() => ({}))
-        alert(errorData.message || 'Ocorreu um erro. O pedido pode ja não estar disponivel.')
-        // Refetch requests in case it was cancelled
-        const reqRes = await fetch(`${API_BASE_URL}/api/relations/friend-requests/pending`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (reqRes.ok) {
-          const newReqs = await reqRes.json()
-          setPendingRequests(newReqs)
-        }
-      }
-    } catch (error) {
-      console.error('Error handling request action:', error)
-    }
-  }
-
   if (!sessionUser || !token) {
     return (
       <main className="messages-page messages-page--centered">
@@ -753,49 +690,6 @@ function MessagesPage() {
           </div>
 
           <div className="conversation-items">
-            {pendingRequestsStatus === 'ready' && pendingRequests.length > 0 && (
-              <div className="pending-requests-section">
-                <p className="messages-section-title">Pedidos de Amizade</p>
-                {pendingRequests.map((req) => (
-                  <div key={req.id} className="conversation-item pending-request-item">
-                    <span className="conversation-avatar">
-                      {req.senderAvatarUrl ? (
-                        <img src={resolveMediaUrl(req.senderAvatarUrl)} alt="" />
-                      ) : (
-                        getInitial(req.senderUsername)
-                      )}
-                    </span>
-                    <span className="conversation-copy">
-                      <strong>{req.senderUsername}</strong>
-                      <span className="pending-actions">
-                        <button
-                          className="user-action-btn user-action-btn--primary"
-                          style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleRequestAction(req.senderId, 'accept')
-                          }}
-                        >
-                          Aceitar
-                        </button>
-                        <button
-                          className="user-action-btn"
-                          style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleRequestAction(req.senderId, 'reject')
-                          }}
-                        >
-                          Rejeitar
-                        </button>
-                      </span>
-                    </span>
-                  </div>
-                ))}
-                <hr className="messages-divider" />
-              </div>
-            )}
-
             <p className="messages-section-title">Conversas</p>
             {friendsStatus === 'loading' && <p className="messages-muted">A carregar amigos...</p>}
             {friendsStatus === 'error' && <p className="messages-warning">{error}</p>}

@@ -70,7 +70,7 @@ public class UserRelationshipServiceImpl implements UserRelationshipService {
         case PEDIDO_REJEITADO:
           if (relation.getUpdatedAt().plusDays(COOLDOWN_DAYS).isAfter(LocalDateTime.now())) {
             throw new BusinessException(
-                "Ainda não pode enviar um novo pedido de amizade a este utilizador.");
+                "Não pode pedir amizade antes de 7 dias de recusa");
           }
           relation.setType(RelationType.PEDIDO);
           userRelationRepository.save(relation);

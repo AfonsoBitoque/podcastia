@@ -211,6 +211,7 @@ function UserProfilePage() {
         if (action === 'remove') {
           fetchPodcasts()
         }
+        window.dispatchEvent(new Event('podcastia-relation-change'))
       } else {
         const errorMessages = {
           add: 'Erro ao enviar pedido',
@@ -219,7 +220,8 @@ function UserProfilePage() {
           cancel: 'Erro ao cancelar pedido',
           remove: 'Erro ao remover amigo',
         }
-        toast.error(errorMessages[action] || 'Erro ao realizar ação')
+        const errorData = await response.json().catch(() => ({}))
+        toast.error(errorData.message || errorMessages[action] || 'Erro ao realizar ação')
       }
     } catch (error) {
       console.error(`Error performing relation action ${action}:`, error)

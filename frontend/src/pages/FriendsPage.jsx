@@ -9,6 +9,7 @@ function FriendsPage() {
   const [pendingRequests, setPendingRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [friendToRemove, setFriendToRemove] = useState(null)
 
   const fetchFriendsData = async () => {
     try {
@@ -63,12 +64,17 @@ function FriendsPage() {
       })
 
       if (response.ok) {
-        // Refetch to update lists
+        if (action === 'remove') setFriendToRemove(null)
         fetchFriendsData()
+        window.dispatchEvent(new Event('podcastia-relation-change'))
       }
     } catch (err) {
       console.error(`Error performing ${action}:`, err)
     }
+  }
+
+  const confirmRemove = (friend) => {
+    setFriendToRemove(friend)
   }
 
   if (loading) {
@@ -77,6 +83,43 @@ function FriendsPage() {
 
   return (
     <main className="friends-page">
+      {friendToRemove && (
+        <div className="modal-backdrop">
+          <div
+            className="modal-content"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-title"
+          >
+            <h2 id="modal-title" style={{ marginTop: 0 }}>
+              Remover Amigo
+            </h2>
+            <p>
+              Tem a certeza que deseja remover {friendToRemove.username} da sua lista de amigos?
+            </p>
+            <div
+              style={{
+                display: 'flex',
+                gap: '1rem',
+                marginTop: '1.5rem',
+                justifyContent: 'flex-end',
+              }}
+            >
+              <button className="user-action-btn" onClick={() => setFriendToRemove(null)}>
+                Cancelar
+              </button>
+              <button
+                className="user-action-btn user-action-btn--danger"
+                style={{ background: '#ef4444', color: 'white', border: 'none' }}
+                onClick={() => handleAction(friendToRemove.id, 'remove')}
+              >
+                Remover
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="friends-header">
         <h1>Amigos</h1>
       </div>
@@ -84,7 +127,6 @@ function FriendsPage() {
       {error && <div className="error-message">{error}</div>}
 
       <div className="friends-container">
-        {/* Coluna de Amigos */}
         <section className="friends-column">
           <h2>Os meus Amigos ({friends.length})</h2>
           {friends.length === 0 ? (
@@ -110,10 +152,7 @@ function FriendsPage() {
                       {friend.username || 'Utilizador desconhecido'}
                     </Link>
                   </div>
-                  <button
-                    className="btn-remove-friend"
-                    onClick={() => handleAction(friend.id, 'remove')}
-                  >
+                  <button className="btn-remove-friend" onClick={() => confirmRemove(friend)}>
                     Remover
                   </button>
                 </li>
@@ -122,7 +161,6 @@ function FriendsPage() {
           )}
         </section>
 
-        {/* Coluna de Pedidos Pendentes */}
         <section className="friends-column requests-column">
           <h2>Pedidos de Amizade ({pendingRequests.length})</h2>
           {pendingRequests.length === 0 ? (
