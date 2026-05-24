@@ -1,5 +1,5 @@
 % ============================================================
-%  Relatório de Projeto — Podcastia
+%  Relatorio de Projeto: Podcastia
 %  Compilar com: xelatex Relatorio_Podcastia.tex  (2 passes)
 %  Ou carregar directamente para o Overleaf (overleaf.com)
 % ============================================================
@@ -34,7 +34,7 @@
   linkcolor  = accent,
   urlcolor   = accent,
   citecolor  = accent,
-  pdftitle   = {Relatório de Projeto — Podcastia},
+  pdftitle   = {Relatorio de Projeto: Podcastia},
   pdfauthor  = {Afonso Bitoque, Maria Neto, Duarte Cunha, José Tico}
 }
 
@@ -80,7 +80,7 @@
 \usepackage{fancyhdr}
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{\small\textcolor{gray}{Podcastia — Relatório de Projeto}}
+\fancyhead[L]{\small\textcolor{gray}{Podcastia: Relat\'{o}rio de Projeto}}
 \fancyhead[R]{\small\textcolor{gray}{\leftmark}}
 \fancyfoot[C]{\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
@@ -197,7 +197,7 @@ O \textbf{Podcastia} é uma plataforma web de podcasts gerados automaticamente p
 Inteligência Artificial. Qualquer utilizador registado pode criar um podcast sobre
 qualquer tema: o sistema gera o guião com a API Google Gemini e sintetiza o áudio
 em português europeu usando \texttt{edge-tts}. Para além da geração de conteúdo,
-a plataforma oferece funcionalidades sociais completas --- amizades, chat privado
+a plataforma oferece funcionalidades sociais completas, incluindo amizades, chat privado
 em tempo real, playlists personalizadas, feed de recomendação e painel de
 administração com analytics.
 \end{infobox}
@@ -256,6 +256,7 @@ tecnologias utilizadas; o Capítulo~\ref{chap:funcionalidades} detalha as
 funcionalidades implementadas; os Capítulos~\ref{chap:seguranca}
 e~\ref{chap:testes} abordam a segurança e os testes; o
 Capítulo~\ref{chap:qualidade} analisa a qualidade e os problemas conhecidos;
+o Capítulo~\ref{chap:gestao} apresenta a gestão do projeto com base nos dados do Jira;
 o Capítulo~\ref{chap:instalacao} fornece instruções de instalação; e o
 Capítulo~\ref{chap:conclusao} apresenta as conclusões e o trabalho futuro.
 
@@ -341,10 +342,10 @@ por comunicação em tempo real via WebSocket STOMP.
 O Podcastia interage com quatro sistemas externos:
 
 \begin{itemize}
-  \item \textbf{Google Gemini API} --- geração do guião narrativo do podcast em português;
-  \item \textbf{edge-tts (Python)} --- síntese de texto em áudio MP3 com a voz \texttt{pt-PT-RaquelNeural};
-  \item \textbf{Fontes RSS Externas} --- feeds de parceiros (Observador, Público Desporto, TechCrunch, BBC News) consumidos a cada duas horas;
-  \item \textbf{Serviço de Email} --- envio de notificações e relatórios (actualmente em modo \emph{stub} para desenvolvimento).
+  \item \textbf{Google Gemini API}: geração do guião narrativo do podcast em português;
+  \item \textbf{edge-tts (Python)}: síntese de texto em áudio MP3 com a voz \texttt{pt-PT-RaquelNeural};
+  \item \textbf{Fontes RSS Externas}: feeds de parceiros (Observador, Público Desporto, TechCrunch, BBC News) consumidos a cada duas horas;
+  \item \textbf{Serviço de Email}: envio de notificações e relatórios (actualmente em modo \emph{stub} para desenvolvimento).
 \end{itemize}
 
 \section{Containers (C4 Nível 2)}
@@ -379,10 +380,10 @@ A segurança do sistema é implementada de forma transversal através de quatro
 componentes:
 
 \begin{description}
-  \item[\texttt{SecurityConfig}] Configura o Spring Security, define os endpoints públicos, as regras de CORS e integra o filtro JWT.
-  \item[\texttt{JwtAuthenticationFilter}] Intercepta todos os pedidos HTTP, valida o token Bearer e popula o \texttt{SecurityContext}.
-  \item[\texttt{JwtUtil}] Gera e valida tokens JWT HS512 com validade de 24 horas, transportando os claims \texttt{sub} (email), \texttt{id} e \texttt{type}.
-  \item[\texttt{JwtWebSocketHandshakeInterceptor}] Autentica as ligações WebSocket verificando o token JWT no handshake HTTP inicial.
+  \item[\texttt{SecurityConfig}:] Configura o Spring Security, define os endpoints públicos, as regras de CORS e integra o filtro JWT.
+  \item[\texttt{JwtAuthenticationFilter}:] Intercepta todos os pedidos HTTP, valida o token Bearer e popula o \texttt{SecurityContext}.
+  \item[\texttt{JwtUtil}:] Gera e valida tokens JWT HS512 com validade de 24 horas, transportando os claims \texttt{sub} (email), \texttt{id} e \texttt{type}.
+  \item[\texttt{JwtWebSocketHandshakeInterceptor}:] Autentica as ligações WebSocket verificando o token JWT no handshake HTTP inicial.
 \end{description}
 
 \subsection{Camada de Controllers (17 controllers)}
@@ -392,10 +393,10 @@ os dados de entrada e delegar o processamento para a camada de serviços. Alguns
 exemplos relevantes:
 
 \begin{itemize}
-  \item \texttt{PodcastGenerationController} (\texttt{/api/podcasts}) --- geração de podcasts por IA, streaming e download de áudio;
-  \item \texttt{FeedController} (\texttt{/api/home}) --- feed filtrado com múltiplos parâmetros combinados;
-  \item \texttt{ChatWebSocketController} (STOMP \texttt{/app/chat.*}) --- mensagens em tempo real;
-  \item \texttt{AdminController} (\texttt{/api/admin}) --- painel de administração, exclusivo a utilizadores com papel \texttt{USER\_ADMIN}.
+  \item \texttt{PodcastGenerationController} (\texttt{/api/podcasts}): geração de podcasts por IA, streaming e download de áudio;
+  \item \texttt{FeedController} (\texttt{/api/home}): feed filtrado com múltiplos parâmetros combinados;
+  \item \texttt{ChatWebSocketController} (STOMP \texttt{/app/chat.*}): mensagens em tempo real;
+  \item \texttt{AdminController} (\texttt{/api/admin}): painel de administração, exclusivo a utilizadores com papel \texttt{USER\_ADMIN}.
 \end{itemize}
 
 \subsection{Camada de Serviços (13 serviços)}
@@ -403,11 +404,11 @@ exemplos relevantes:
 Os serviços encapsulam toda a lógica de negócio. Destacam-se:
 
 \begin{description}
-  \item[\texttt{PodcastGenerationService}] Implementa o pipeline completo de geração: chamada à Gemini API $\rightarrow$ limpeza do guião $\rightarrow$ síntese TTS $\rightarrow$ persistência do MP3.
-  \item[\texttt{RecommendationService}] Calcula um feed personalizado com base nos pontos de cada categoria (DESPORTO, POLÍTICA, FINANÇAS, GERAL), mantendo uma cache de 24 horas por utilizador.
-  \item[\texttt{ChatMessageServiceImpl}] Gere o ciclo completo de mensagens: envio, entrega, leitura, reações e eliminação, com rate limiting e blacklist de links.
-  \item[\texttt{UserRelationshipServiceImpl}] Implementa o ciclo de amizades com cooldown de 7 dias após rejeição e gestão de bloqueios.
-  \item[\texttt{DailyPlaylistService}] Gera automaticamente uma playlist diária personalizada para cada utilizador com base nas suas preferências.
+  \item[\texttt{PodcastGenerationService}:] Implementa o pipeline completo de geração, desde a chamada à Gemini API, passando pela limpeza do guião e síntese TTS, até à persistência do MP3.
+  \item[\texttt{RecommendationService}:] Calcula um feed personalizado com base nos pontos de cada categoria (DESPORTO, POLÍTICA, FINANÇAS, GERAL), mantendo uma cache de 24 horas por utilizador.
+  \item[\texttt{ChatMessageServiceImpl}:] Gere o ciclo completo de mensagens, incluindo envio, entrega, leitura, reações e eliminação, com rate limiting e blacklist de links.
+  \item[\texttt{UserRelationshipServiceImpl}:] Implementa o ciclo de amizades com cooldown de 7 dias após rejeição e gestão de bloqueios.
+  \item[\texttt{DailyPlaylistService}:] Gera automaticamente uma playlist diária personalizada para cada utilizador com base nas suas preferências.
 \end{description}
 
 \subsection{Camada de Repositórios (13 repositórios)}
@@ -434,7 +435,7 @@ do áudio, é ilustrado de seguida:
 
 \begin{destaque}[title=Nota sobre desempenho]
   O processo de geração é síncrono e pode demorar entre 30 e 60 segundos, dependendo
-  da dimensão do guião gerado e da velocidade da rede. Para podcasts com 3--5 minutos
+  da dimensão do guião gerado e da velocidade da rede. Para podcasts com 3 a 5 minutos
   de duração, o guião gerado contém tipicamente entre 450 e 750 palavras.
 \end{destaque}
 
@@ -456,12 +457,12 @@ do áudio, é ilustrado de seguida:
     Spring Security    & 6.x       & Autenticação JWT e autorização por papéis \\
     Spring Data JPA    & 3.x       & Persistência, queries JPQL e Specification \\
     Hibernate          & 6.x       & ORM e DDL automático \\
-    H2 Database        & ---       & Base de dados para desenvolvimento e testes \\
+    H2 Database        & n/a       & Base de dados para desenvolvimento e testes \\
     JJWT               & 0.11.5    & Geração e validação de tokens JWT HS512 \\
     ROME Library       & 2.1.0     & Parsing de feeds RSS/Atom \\
     SpringDoc OpenAPI  & 2.8.5     & Documentação automática da API (Swagger UI) \\
     Python edge-tts    & 7.2.8     & Síntese de texto em áudio MP3 com voz PT \\
-    Google Gemini API  & ---       & Geração de guiões narrativos com LLM \\
+    Google Gemini API  & n/a       & Geração de guiões narrativos com LLM \\
     Maven              & 3.x       & Gestão de dependências e automação de build \\
     \bottomrule
   \end{tabularx}
@@ -480,8 +481,8 @@ do áudio, é ilustrado de seguida:
     Vite               & 7.3       & Bundler e servidor de desenvolvimento HMR \\
     React Router       & 7.13      & Routing client-side (SPA) \\
     react-hot-toast    & 2.4       & Notificações visuais não-intrusivas \\
-    WebSocket STOMP    & ---       & Chat privado em tempo real \\
-    Service Worker     & ---       & Suporte offline (PWA) \\
+    WebSocket STOMP    & n/a       & Chat privado em tempo real \\
+    Service Worker     & n/a       & Suporte offline (PWA) \\
     Vitest             & 4.x       & Testes unitários de componentes \\
     Playwright         & 1.45      & Testes End-to-End no browser \\
     ESLint             & 9.x       & Análise estática de código JavaScript \\
@@ -519,8 +520,8 @@ Esta é a funcionalidade central da plataforma. Um utilizador autenticado pode
 gerar um podcast preenchendo apenas dois campos:
 
 \begin{itemize}
-  \item \textbf{Tema} --- assunto do podcast em linguagem natural (ex: \emph{"Curiosidades sobre o espaço sideral"});
-  \item \textbf{Categorias} --- uma ou mais de \texttt{GERAL}, \texttt{DESPORTO}, \texttt{POLITICA}, \texttt{FINANCAS}.
+  \item \textbf{Tema}: assunto do podcast em linguagem natural (por exemplo, \emph{"Curiosidades sobre o espaço sideral"});
+  \item \textbf{Categorias}: uma ou mais de \texttt{GERAL}, \texttt{DESPORTO}, \texttt{POLITICA}, \texttt{FINANCAS}.
 \end{itemize}
 
 O processo é completamente automático: o sistema chama a Google Gemini API com
@@ -533,12 +534,12 @@ a reproduzir.
 O feed principal suporta filtros combinados em tempo real:
 
 \begin{itemize}
-  \item \texttt{type=recommended} --- podcasts ordenados por pontuação de relevância nas categorias do utilizador;
-  \item \texttt{category=DESPORTO|POLITICA|FINANCAS|GERAL} --- filtro por categoria;
-  \item \texttt{max\_duration=30} --- duração máxima em minutos;
-  \item \texttt{hide\_played=true} --- oculta podcasts já ouvidos;
-  \item \texttt{shorts=true} --- apenas podcasts curtos ($\leq$ 5 minutos);
-  \item \texttt{is\_favorite=true} --- apenas favoritos do utilizador.
+  \item \texttt{type=recommended}: podcasts ordenados por pontuação de relevância nas categorias do utilizador;
+  \item \texttt{category=DESPORTO|POLITICA|FINANCAS|GERAL}: filtro por categoria;
+  \item \texttt{max\_duration=30}: duração máxima em minutos;
+  \item \texttt{hide\_played=true}: oculta podcasts já ouvidos;
+  \item \texttt{shorts=true}: apenas podcasts curtos ($\leq$ 5 minutos);
+  \item \texttt{is\_favorite=true}: apenas favoritos do utilizador.
 \end{itemize}
 
 O motor de recomendação mantém uma pontuação por categoria para cada utilizador.
@@ -609,7 +610,7 @@ O painel de administração, acessível exclusivamente a utilizadores com o pape
 \section{Modelo de Segurança}
 
 A segurança do Podcastia é implementada em múltiplas camadas, seguindo uma
-abordagem de \emph{defense in depth}:
+abordagem de defesa em profundidade (\emph{defense in depth}):
 
 \subsection{Autenticação JWT}
 
@@ -631,7 +632,7 @@ password em texto simples após o registo.
 O controlo de acesso é implementado em dois níveis:
 \begin{itemize}
   \item \textbf{Declarativo}: os endpoints de administração usam a anotação \texttt{@PreAuthorize("hasRole('USER\_ADMIN')")} do Spring Security, verificada pelo AOP antes da execução da lógica de negócio;
-  \item \textbf{Programático}: operações sobre recursos (ex: editar ou eliminar uma playlist) verificam programaticamente se o utilizador autenticado é o proprietário do recurso.
+  \item \textbf{Programático}: operações sobre recursos (por exemplo, editar ou eliminar uma playlist) verificam programaticamente se o utilizador autenticado é o proprietário do recurso.
 \end{itemize}
 
 \section{Vulnerabilidades Conhecidas}
@@ -756,11 +757,11 @@ artefacto da pipeline com retenção de 30 dias.
 Durante o desenvolvimento foram identificados e resolvidos vários bugs:
 
 \begin{itemize}
-  \item \textbf{Loop de redirecionamento pós-onboarding} (crítico) --- resolvido com evento \texttt{auth-change} para forçar a re-renderização reactiva do \texttt{ProtectedRoute};
-  \item \textbf{Endpoint \texttt{GET /api/podcasts} inexistente} (crítico) --- adicionado o método \texttt{getAllPublicPodcasts()} com filtro \texttt{hidden=false};
-  \item \textbf{Recursos estáticos com 403} (crítico) --- criado \texttt{StaticResourceConfig} com handlers para \texttt{/images/**} e \texttt{/audio/**};
-  \item \textbf{\texttt{UnsupportedOperationException} no onboarding} (crítico) --- \texttt{stream().toList()} retorna lista imutável; corrigido com conversão para \texttt{ArrayList};
-  \item \textbf{\texttt{window.confirm()} bloqueado no browser} (médio) --- o diálogo nativo é bloqueado silenciosamente por políticas do browser moderno; substituído por modal React interno.
+  \item \textbf{Loop de redirecionamento pós-onboarding} (crítico): resolvido com evento \texttt{auth-change} para forçar a re-renderização reactiva do \texttt{ProtectedRoute};
+  \item \textbf{Endpoint \texttt{GET /api/podcasts} inexistente} (crítico): adicionado o método \texttt{getAllPublicPodcasts()} com filtro \texttt{hidden=false};
+  \item \textbf{Recursos estáticos com 403} (crítico): criado \texttt{StaticResourceConfig} com handlers para \texttt{/images/**} e \texttt{/audio/**};
+  \item \textbf{\texttt{UnsupportedOperationException} no onboarding} (crítico): \texttt{stream().toList()} retorna lista imutável; corrigido com conversão para \texttt{ArrayList};
+  \item \textbf{\texttt{window.confirm()} bloqueado no browser} (médio): o diálogo nativo é bloqueado silenciosamente por políticas do browser moderno, tendo sido substituído por modal React interno.
 \end{itemize}
 
 \section{Dívida Técnica}
@@ -782,6 +783,108 @@ Durante o desenvolvimento foram identificados e resolvidos vários bugs:
 \end{table}
 
 % ============================================================
+\chapter{Gestão do Projeto}
+\label{chap:gestao}
+% ============================================================
+
+\section{Metodologia}
+
+O desenvolvimento do Podcastia seguiu uma metodologia ágil baseada em Scrum,
+com sprints semanais geridas através da plataforma \textbf{Jira} (projeto
+\texttt{POD} em \url{https://ualg-team-podcast.atlassian.net}). O backlog foi
+constituído por histórias de utilizador (User Stories) e tarefas técnicas,
+estimadas em story points. No total, o projeto registou \textbf{111 pendências}
+distribuídas por 12 sprints, todas concluídas.
+
+\section{Equipa e Distribuição de Trabalho}
+
+A equipa era composta por quatro elementos, cada um com áreas de responsabilidade
+primárias, embora com colaboração transversal entre todos:
+
+\begin{table}[H]
+  \centering
+  \begin{tabularx}{\textwidth}{L{4cm} X}
+    \toprule
+    \textbf{Elemento} & \textbf{Principais Responsabilidades} \\
+    \midrule
+    Afonso Bitoque       & Backend (motor de recomendações, algoritmo de feed, pipeline de geração de podcasts, onboarding, endpoint da homepage, cache) \\
+    Maria Neto           & Frontend (UI/UX, player, pesquisa, perfil, sistema de mensagens, playlists, páginas de autenticação, polimento visual) \\
+    Duarte Cunha         & Backend (autenticação JWT, sistema de amizades, testes de integração, pipeline CI/CD, consumo RSS, Swagger/OpenAPI) \\
+    José Tico            & Backend/Frontend (playlists, sistema de mensagens, reações, pesquisa com filtros, funcionalidades de perfil, hot fixes) \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Distribuição de responsabilidades por elemento da equipa}
+\end{table}
+
+\section{Progresso por Sprint}
+
+A tabela seguinte resume o progresso do projeto sprint a sprint, com base nos
+dados exportados do Jira em 24 de maio de 2026.
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{L{2.5cm} r r r L{6cm}}
+    \toprule
+    \textbf{Sprint} & \textbf{Issues} & \textbf{Concluídos} & \textbf{Story Points} & \textbf{Foco Principal} \\
+    \midrule
+    Sprint 1  & 7  & 7  & 21,0 & Configuração do projeto Spring Boot, modelos de dados e endpoints base \\
+    Sprint 2  & 4  & 4  & 3,0  & Backend de autenticação: criação de conta, login, gestão de contas \\
+    Sprint 3  & 4  & 4  & 3,5  & Frontend de autenticação, testes unitários, pipeline de CI/CD \\
+    Sprint 4  & 4  & 4  & 5,5  & Migração para JWT, logout, cabeçalho com nome de utilizador \\
+    Sprint 5  & 11 & 11 & 11,2 & Recomendações, cache, playlist, foto de perfil, OpenAPI, retoma de reprodução \\
+    Sprint 6  & n/a & n/a & n/a  & Issues partilhadas com outros sprints (ver Sprint 5/7) \\
+    Sprint 7  & 9  & 9  & 13,0 & Sistema de amizades (backend), testes, sidebar de detalhe do podcast \\
+    Sprint 8  & 5  & 5  & 5,0  & Endpoints de amizade (aceitar, recusar, listar, remover) \\
+    Sprint 9  & 3  & 3  & 3,5  & Sistema de mensagens, reações, playlist diária automática \\
+    Sprint 10 & 8  & 8  & 10,0 & Dashboard admin, gestão de conteúdo, frontend de mensagens e reações \\
+    Sprint 11 & 8  & 8  & 3,5  & Hot fixes, melhorias de UX, notificações, pesquisa sem login \\
+    Sprint 12 & 9  & 9  & 9,0  & Polimento visual, testes frontend, correção de bugs de áudio e pesquisa \\
+    \midrule
+    \textbf{Total} & \textbf{111} & \textbf{111} & \textbf{88,2} & \\
+    \bottomrule
+  \end{tabular}
+  \caption{Resumo do progresso por sprint (fonte: Jira, 24/05/2026)}
+\end{table}
+
+\section{Destaques por Sprint}
+
+\subsection{Sprints 1 a 4: Fundações}
+
+Os primeiros quatro sprints estabeleceram as fundações do sistema: a estrutura
+do projeto Spring Boot, o modelo de dados, os endpoints de autenticação (registo,
+login, alteração de password) e a migração para autenticação JWT. Em paralelo,
+foi criada a interface de autenticação no frontend e configurada a pipeline de
+CI/CD com GitHub Actions.
+
+\subsection{Sprint 5: Motor Central}
+
+O quinto sprint foi o mais denso em termos técnicos, com 11 tarefas concluídas.
+Foram implementados o algoritmo de recomendações por histórico, a cache de feed,
+o endpoint agregador da homepage, a retoma de reprodução e a criação de playlists.
+
+\subsection{Sprints 7 e 8: Sistema Social}
+
+Os sprints 7 e 8 focaram-se no sistema de amizades: implementação dos endpoints
+para enviar, aceitar, recusar, cancelar e remover ligações de amizade, bem como
+os respectivos testes unitários e de integração. No frontend, foi desenvolvida
+a sidebar de detalhes do podcast e a navegação directa para o ecrã de player.
+
+\subsection{Sprints 9 e 10: Comunicação e Administração}
+
+O sprint 9 introduziu o sistema de mensagens privadas e de reações, bem como a
+automatização da playlist diária. O sprint 10 completou o painel de administração
+(dashboard de estatísticas e gestão de conteúdo) e o frontend das funcionalidades
+de comunicação.
+
+\subsection{Sprints 11 e 12: Qualidade e Polimento}
+
+Os dois últimos sprints foram dedicados a correcções de bugs, melhorias de
+experiência de utilizador e polimento visual. Destacam-se a correcção do estado
+do áudio ao navegar entre rotas (Sprint 12), a implementação de testes de
+frontend com Playwright e a refactorização das páginas de playlists, tendências
+e homepage.
+
+% ============================================================
 \chapter{Guia de Instalação e Execução}
 \label{chap:instalacao}
 % ============================================================
@@ -798,7 +901,7 @@ Durante o desenvolvimento foram identificados e resolvidos vários bugs:
     Maven     & 3.8+ & Ou usar o wrapper \texttt{./mvnw} incluído \\
     Node.js   & 20+  & Necessário para o frontend \\
     Python    & 3.x  & Necessário para a síntese TTS \\
-    pip       & ---  & Para instalar o \texttt{edge-tts} \\
+    pip       & n/a  & Para instalar o \texttt{edge-tts} \\
     \bottomrule
   \end{tabular}
   \caption{Pré-requisitos de instalação}
@@ -840,7 +943,7 @@ Após o arranque, o sistema estará disponível em:
 \end{itemize}
 
 \begin{infobox}[title=Credenciais Padrão (DataSeeder)]
-  O sistema cria automaticamente um utilizador administrador no primeiro arranque:\\[0.3cm]
+  O sistema cria automaticamente um utilizador administrador no primeiro arranque.\\[0.3cm]
   \textbf{Email:} \texttt{admin@podcastia.com} \quad
   \textbf{Password:} \texttt{admin} \quad
   \textbf{Papel:} \texttt{USER\_ADMIN}
@@ -862,17 +965,17 @@ seguinte, com a justificação de cada escolha:
   \textbf{Decisão} & \textbf{Escolha} & \textbf{Justificação} \\
   \midrule
   \endhead
-  Autenticação         & JWT stateless HS512 (24h)       & Sem estado no servidor; escalável horizontalmente \\
-  Chat em tempo real   & WebSocket STOMP                 & Bidirecional; integra com Spring Messaging; suporte a subscrições por tópico \\
-  ORM                  & JPA/Hibernate + H2              & DDL automático em dev; migração para PostgreSQL/MySQL com uma linha de configuração \\
+  Autenticação         & JWT stateless HS512 (24h)       & Sem estado no servidor, escalável horizontalmente \\
+  Chat em tempo real   & WebSocket STOMP                 & Bidirecional, integra com Spring Messaging, suporte a subscrições por tópico \\
+  ORM                  & JPA/Hibernate + H2              & DDL automático em desenvolvimento, migração para PostgreSQL/MySQL com uma linha de configuração \\
   Filtros de feed      & JPA Specification               & Queries dinâmicas seguras sem concatenação SQL \\
   Geração de áudio     & edge-tts via ProcessBuilder     & TTS gratuito com voz portuguesa nativa de alta qualidade \\
   Geração de guião     & Google Gemini API               & LLM com qualidade comprovada em português europeu \\
-  Cache de feed        & ConcurrentHashMap (24h)         & Suficiente para instância única; substituível por Redis em cluster \\
-  Playlists diárias    & @Scheduled cron à meia-noite    & Leve e não interactivo; sem necessidade de job queue externo \\
-  Consumo RSS          & ROME Library + @Scheduled 2h    & Abstrai diferenças RSS\,1.0/2.0/Atom; biblioteca madura \\
-  Segurança admin      & @PreAuthorize AOP               & Declarativo; verificado antes de chegar à lógica de negócio \\
-  Paginação do chat    & Cursor-based (Instant)          & Estável em feeds com inserções frequentes; evita problemas de offset \\
+  Cache de feed        & ConcurrentHashMap (24h)         & Suficiente para instância única, substituível por Redis em cluster \\
+  Playlists diárias    & @Scheduled cron à meia-noite    & Leve e não interactivo, sem necessidade de job queue externo \\
+  Consumo RSS          & ROME Library + @Scheduled 2h    & Abstrai diferenças RSS\,1.0/2.0/Atom, biblioteca madura \\
+  Segurança admin      & @PreAuthorize AOP               & Declarativo, verificado antes de chegar à lógica de negócio \\
+  Paginação do chat    & Cursor-based (Instant)          & Estável em feeds com inserções frequentes, evita problemas de offset \\
   Tags de utilizador   & username\#0000-9999             & Permite nomes duplicados sem ambiguidade \\
   \bottomrule
   \caption{Decisões arquiteturais do projecto Podcastia}
@@ -909,19 +1012,19 @@ construir funcionalidades adicionais. As melhorias mais relevantes para trabalho
 futuro incluem:
 
 \begin{description}
-  \item[Curto prazo]
-    Mover a chave JWT para variável de ambiente; implementar \texttt{NotificationService} e \texttt{EmailService} reais; adicionar endpoint de health check para as dependências externas.
-  \item[Médio prazo]
-    Migrar a base de dados para PostgreSQL para produção; implementar \emph{lazy loading} de páginas React; substituir a cache in-memory por Redis para arquitetura distribuída.
-  \item[Longo prazo]
-    Suporte a múltiplas vozes TTS e idiomas; sistema de comentários em podcasts; integração com plataformas externas (Spotify, Apple Podcasts); deploy em cloud com Docker e CI/CD com deploy automático.
+  \item[Curto prazo:]
+    Mover a chave JWT para variável de ambiente; implementar os serviços \texttt{NotificationService} e \texttt{EmailService} reais; adicionar endpoint de health check para as dependências externas.
+  \item[Médio prazo:]
+    Migrar a base de dados para PostgreSQL para produção; implementar \emph{lazy loading} de páginas React; substituir a cache em memória por Redis para arquitectura distribuída.
+  \item[Longo prazo:]
+    Suporte a múltiplas vozes TTS e idiomas; sistema de comentários em podcasts; integração com plataformas externas como Spotify e Apple Podcasts; deploy em cloud com Docker e CI/CD automático.
 \end{description}
 
 \section{Considerações Finais}
 
 O Podcastia demonstra que é possível criar uma plataforma de media completa,
-com funcionalidades sociais e conteúdo gerado por IA, utilizando tecnologias
-\emph{open-source} ou gratuitas (Spring Boot, React, edge-tts) e um investimento
+com funcionalidades sociais e conteúdo gerado por inteligência artificial, utilizando
+tecnologias de código aberto ou gratuitas (Spring Boot, React, edge-tts) e um investimento
 mínimo em serviços externos (Google Gemini API). O projecto alcançou todos os
 objectivos propostos e constitui uma base técnica sólida para desenvolvimento futuro.
 
