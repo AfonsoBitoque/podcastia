@@ -169,9 +169,10 @@ function TrendingPage() {
     )
   }
 
-  const SectionHeader = ({ title, subtitle, action }) => (
-    <div className="section-header">
+  const SectionHeader = ({ title, subtitle, action, badge }) => (
+    <div className={`section-header ${badge ? 'section-header-featured' : ''}`}>
       <div className="section-title-group">
+        {badge && <span className="section-context-badge">{badge}</span>}
         <h2 className="section-title">{title}</h2>
         <p className="section-subtitle">{subtitle}</p>
       </div>
@@ -216,7 +217,11 @@ function TrendingPage() {
       <div className="trending-shell">
         {/* Hero Section - Podcasts do Dia */}
         <section className="trending-section">
-          <SectionHeader title="Podcasts do Dia" subtitle="Escolhas personalizadas para ti" />
+          <SectionHeader
+            badge={'\uD83D\uDD25 EM DESTAQUE'}
+            title="Podcasts do Dia"
+            subtitle={'A tua curadoria di\u00E1ria baseada no que est\u00E1 em alta na Podcastia.'}
+          />
           <div className="trending-row">
             {dailyPodcasts.map((podcast) => (
               <PodcastCard key={podcast.id} podcast={podcast} />

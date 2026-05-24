@@ -72,10 +72,33 @@
   margin-bottom: 1.25rem;
 }
 
+.section-header-featured {
+  margin-bottom: 1.75rem;
+}
+
+.section-header-featured .section-subtitle {
+  margin-bottom: 0.35rem;
+}
+
 .section-title-group {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+}
+
+.section-context-badge {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.75rem;
+  padding: 0.32rem 0.68rem;
+  border-radius: 999px;
+  background: rgba(139, 47, 23, 0.1);
+  color: #8b2f17;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1;
 }
 
 .section-title {
