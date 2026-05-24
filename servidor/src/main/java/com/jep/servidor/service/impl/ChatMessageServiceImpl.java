@@ -49,7 +49,20 @@ import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import org.springframework.context.event.EventListener;
 
 /**
- * Implementação do serviço de mensagens privadas.
+ * Implementação do serviço de mensagens privadas de chat.
+ *
+ * <p>Funcionalidades principais:
+ * <ul>
+ *   <li><b>Rate limiting:</b> máximo de {@code 20/min} e {@code 100/h} por utilizador.</li>
+ *   <li><b>Blacklist de links:</b> domínios bloqueados e limite de 3 links em 10 min;
+ *       excesso bloqueia o utilizador por 15 min.</li>
+ *   <li><b>Presença WebSocket:</b> conta sessões STOMP ativas via {@code activeSessions}.</li>
+ *   <li><b>Push queue:</b> mensagens para utilizadores offline são enfileiradas e
+ *       processadas a cada 2 seg. via {@link #processPushQueue()}.</li>
+ *   <li><b>Cursor-based pagination:</b> formato {@code <ISO-instant>|<id>}.</li>
+ * </ul>
+ *
+ * @see com.jep.servidor.service.ChatMessageService
  */
 @Service
 public class ChatMessageServiceImpl implements ChatMessageService {
@@ -321,17 +334,33 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     });
   }
 
+  /**
+   * Listener de evento STOMP {@link SessionConnectedEvent}.
+   * Delega para {@link #handleConnect} com o principal e session ID extraídos do acessor.
+   *
+   * @param event evento de nova ligação STOMP.
+   */
   @EventListener
   public void onSessionConnected(SessionConnectedEvent event) {
     StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
     handleConnect(accessor.getUser(), accessor.getSessionId());
   }
 
+  /**
+   * Listener de evento STOMP {@link SessionDisconnectEvent}.
+   * Delega para {@link #handleDisconnect} com o session ID do evento.
+   *
+   * @param event evento de desligamento STOMP.
+   */
   @EventListener
   public void onSessionDisconnect(SessionDisconnectEvent event) {
     handleDisconnect(event.getSessionId());
   }
 
+  /**
+   * Processa a fila de notificações push para utilizadores offline.
+   * Executado a cada 2 segundos via {@code @Scheduled(fixedDelay = 2000)}.
+   */
   @Scheduled(fixedDelay = 2000)
   public void processPushQueue() {
     PushNotificationJob job;

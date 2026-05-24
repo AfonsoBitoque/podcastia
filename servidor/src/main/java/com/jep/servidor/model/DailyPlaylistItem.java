@@ -12,7 +12,20 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
 /**
- * Entidade que representa um item (podcast) numa playlist diária.
+ * Entidade JPA que representa um podcast incluído numa playlist diária.
+ *
+ * <p>Cada item liga uma {@link DailyPlaylist} a um {@link Podcast},
+ * com a posição na lista (1-indexed) e uma pontuação de relevância
+ * calculada pelo {@link com.jep.servidor.service.DailyPlaylistService}
+ * com base nos pontos de afinidade do utilizador por categoria.
+ *
+ * <p>A combinação ({@code daily_playlist_id}, {@code podcast_id})
+ * é única para evitar duplicados na mesma playlist.
+ *
+ * <p><b>Tabela:</b> {@code daily_playlist_items}
+ *
+ * @see DailyPlaylist
+ * @see com.jep.servidor.dto.DailyPlaylistItemResponse
  */
 @Entity
 @Table(name = "daily_playlist_items",

@@ -16,9 +16,28 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+/**
+ * Serviço de feed filtrado de podcasts.
+ *
+ * <p>Usa a API {@link org.springframework.data.jpa.domain.Specification} do Spring Data JPA
+ * para compor predicados dinâmicos de forma segura (sem concatenação de SQL).
+ *
+ * <p>Filtros suportados:
+ * <ul>
+ *   <li>{@code category} — filtra por {@link com.jep.servidor.model.PodcastTag}.</li>
+ *   <li>{@code shorts} — limita a podcasts com duração ≤ 15 min ({@link #SHORT_MAX_DURATION_SECONDS}).</li>
+ *   <li>{@code maxDuration} — duração máxima em segundos.</li>
+ *   <li>{@code hidePlayed} — exclui podcasts completados pelo utilizador.</li>
+ *   <li>{@code isFavorite} — inclui apenas podcasts favoritados pelo utilizador.</li>
+ *   <li>{@code type} — aceita apenas {@code "podcast"} (outros valores devolvem 0 resultados).</li>
+ * </ul>
+ *
+ * @see com.jep.servidor.controller.FeedController
+ */
 @Service
 public class FeedService {
 
+  /** Duração máxima (em segundos) para um podcast ser classificado como "short" (15 min). */
   public static final int SHORT_MAX_DURATION_SECONDS = 900;
 
   private final PodcastRepository podcastRepository;
@@ -27,6 +46,19 @@ public class FeedService {
     this.podcastRepository = podcastRepository;
   }
 
+  /**
+   * Devolve uma página de podcasts filtrada e paginada.
+   *
+   * @param user        utilizador autenticado (necessário para filtros {@code hidePlayed} e {@code isFavorite}).
+   * @param type        tipo de conteúdo; apenas {@code "podcast"} é válido.
+   * @param category    nome da tag ({@link com.jep.servidor.model.PodcastTag}) ou {@code null}.
+   * @param isFavorite  se {@code true}, inclui apenas favoritos do utilizador.
+   * @param maxDuration duração máxima em segundos ou {@code null}.
+   * @param hidePlayed  se {@code true}, exclui podcasts já completados.
+   * @param shorts      se {@code true}, limita a podcasts ≤ {@link #SHORT_MAX_DURATION_SECONDS}.
+   * @param pageable    configuração de paginação e ordenação.
+   * @return página de podcasts que satisfazem todos os filtros ativos.
+   */
   public Page<Podcast> getFilteredFeed(
       User user,
       String type,
@@ -72,6 +104,14 @@ public class FeedService {
     return podcastRepository.findAll(spec, pageable);
   }
 
+  /**
+   * Verifica se existe algum podcast disponível para uma categoria (tag).
+   * Usado para preencher o campo {@code categoryHasContent} no {@link com.jep.servidor.dto.FeedMeta}.
+   *
+   * @param category nome da tag a verificar.
+   * @return {@code true} se existir pelo menos um podcast com essa tag; {@code false} se a categoria
+   *         for inválida ou não houver podcasts.
+   */
   public boolean categoryHasContent(String category) {
     PodcastTag tag = parseTag(category);
     if (tag == null) {

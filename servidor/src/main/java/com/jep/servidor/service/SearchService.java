@@ -15,6 +15,18 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+/**
+ * Serviço de pesquisa unificada de utilizadores e podcasts.
+ *
+ * <p>Agrega resultados de {@link com.jep.servidor.repository.UserRepository}
+ * e {@link com.jep.servidor.repository.PodcastRepository} numa única lista
+ * paginada manualmente.
+ *
+ * <p>Ordem dos resultados: utilizadores primeiro, depois podcasts.
+ * Paginação manual aplicada sobre a lista agregada.
+ *
+ * @see com.jep.servidor.controller.SearchController
+ */
 @Service
 public class SearchService {
 

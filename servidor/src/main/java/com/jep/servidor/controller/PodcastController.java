@@ -35,7 +35,33 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Controlador REST para gerir podcasts.
+ * Controller REST para operações de podcast orientadas ao utilizador — feed, progresso,
+ * homepage, CRUD e podcasts por utilizador.
+ *
+ * <p>Este controller usa o base path {@code /podcasts} (sem prefixo {@code /api}),
+ * e os endpoints GET são públicos conforme configurado em
+ * {@link com.jep.servidor.config.SecurityConfig}.
+ *
+ * <p><b>Base path:</b> {@code /podcasts}
+ *
+ * <p><b>Endpoints disponíveis:</b>
+ * <ul>
+ *   <li>{@code GET /feed} — feed personalizado por recomendação (20 itens, requer auth).</li>
+ *   <li>{@code POST /{id}/listen} — regista uma escuta para o algoritmo de recomendação.</li>
+ *   <li>{@code POST /{id}/progress} — atualiza o progresso de reprodução em segundos.</li>
+ *   <li>{@code GET /home} — agrega "continuar a ouvir", "recomendados" e "novos" para a homepage.</li>
+ *   <li>{@code GET /} — lista todos os podcasts (público).</li>
+ *   <li>{@code GET /{id}} — obter podcast por ID (público).</li>
+ *   <li>{@code POST /} — criar podcast (direto, sem geração de áudio).</li>
+ *   <li>{@code GET /user/{userId}} — podcasts de um utilizador (públicos ou todos se amigo/próprio).</li>
+ *   <li>{@code DELETE /{id}} — soft-delete (marca {@code available = false}).</li>
+ * </ul>
+ *
+ * <p><b>Nota:</b> Para geração de podcasts com IA (Gemini + edge-tts), usar
+ * {@link PodcastGenerationController} em {@code /api/podcasts}.
+ *
+ * @see com.jep.servidor.service.RecommendationService
+ * @see PodcastGenerationController
  */
 @RestController
 @RequestMapping("/podcasts")
@@ -46,6 +72,15 @@ public class PodcastController {
   private final PodcastProgressRepository podcastProgressRepository;
   private final UserRelationshipService userRelationshipService;
 
+  /**
+   * Cria o controller com as dependências necessárias.
+   *
+   * @param podcastRepository          repositório JPA de podcasts.
+   * @param userRepository             repositório JPA de utilizadores.
+   * @param recommendationService      serviço de recomendação personalizada.
+   * @param podcastProgressRepository  repositório de progresso de reprodução.
+   * @param userRelationshipService    serviço de relações entre utilizadores (amizades/bloqueios).
+   */
   public PodcastController(PodcastRepository podcastRepository, UserRepository userRepository, 
       RecommendationService recommendationService, PodcastProgressRepository podcastProgressRepository,
       UserRelationshipService userRelationshipService) {
@@ -56,6 +91,11 @@ public class PodcastController {
     this.userRelationshipService = userRelationshipService;
   }
 
+  /**
+   * Resolve o utilizador autenticado a partir do contexto de segurança Spring.
+   *
+   * @return {@link Optional} com o utilizador autenticado, ou vazio se não autenticado.
+   */
   private Optional<User> getAuthenticatedUser() {
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     if (authentication == null || authentication.getName() == null) {
@@ -64,6 +104,15 @@ public class PodcastController {
     return userRepository.findByEmail(authentication.getName());
   }
 
+  /**
+   * Retorna o feed de podcasts personalizado para o utilizador autenticado.
+   *
+   * <p>Delega para {@link RecommendationService#getFeed} que ordena podcasts por
+   * afinidade de tags (pontos acumulados por escuta e onboarding), limitando a 20 itens.
+   *
+   * @return {@code 200 OK} com lista de até 20 podcasts recomendados;
+   *         {@code 401 Unauthorized} se não autenticado.
+   */
   @GetMapping("/feed")
   public ResponseEntity<List<Podcast>> getFeed() {
     Optional<User> authUser = getAuthenticatedUser();
@@ -75,6 +124,14 @@ public class PodcastController {
     return ResponseEntity.ok(feed);
   }
 
+  /**
+   * Regista uma escuta de um podcast, atualizando os pontos de afinidade do utilizador
+   * para as tags do podcast no {@link RecommendationService}.
+   *
+   * @param id ID do podcast que foi ouvido.
+   * @return {@code 200 OK} se registado; {@code 401 Unauthorized} se não autenticado;
+   *         {@code 404 Not Found} se o podcast não existir.
+   */
   @PostMapping("/{id}/listen")
   public ResponseEntity<Void> listenToPodcast(@PathVariable("id") Long id) {
     Optional<User> authUser = getAuthenticatedUser();
@@ -88,6 +145,17 @@ public class PodcastController {
     return ResponseEntity.ok().build();
   }
 
+  /**
+   * Atualiza o progresso de reprodução de um podcast para o utilizador autenticado.
+   *
+   * <p>Cria um novo registo {@link PodcastProgress} ou atualiza o existente com os
+   * segundos fornecidos e o timestamp atual de última escuta.
+   *
+   * @param id      ID do podcast.
+   * @param seconds progresso atual em segundos (posicão no áudio).
+   * @return {@code 200 OK} se atualizado; {@code 401 Unauthorized} se não autenticado;
+   *         {@code 404 Not Found} se o podcast não existir.
+   */
   @PostMapping("/{id}/progress")
   public ResponseEntity<Void> updateProgress(@PathVariable("id") Long id, @RequestParam("seconds") int seconds) {
     Optional<User> authUser = getAuthenticatedUser();
@@ -107,6 +175,22 @@ public class PodcastController {
     return ResponseEntity.ok().build();
   }
 
+  /**
+   * Retorna dados agregados para a página principal do utilizador autenticado.
+   *
+   * <p>Inclui três secções:
+   * <ul>
+   *   <li><b>{@code continueListening}:</b> últimos 10 podcasts com progresso registado,
+   *       ordenados por {@code lastListenedAt} descendente. Cada item inclui metadata do
+   *       podcast e o progresso em segundos.</li>
+   *   <li><b>{@code recommended}:</b> Top 10 podcasts recomendados pelo
+   *       {@link RecommendationService}.</li>
+   *   <li><b>{@code newReleases}:</b> 10 podcasts mais recentes (por ID descendente).</li>
+   * </ul>
+   *
+   * @return {@code 200 OK} com mapa contendo as três secções;
+   *         {@code 401 Unauthorized} se não autenticado.
+   */
   @GetMapping("/home")
   public ResponseEntity<Map<String, Object>> getHomeAggregator() {
     Optional<User> authUser = getAuthenticatedUser();
@@ -177,10 +261,20 @@ public class PodcastController {
   }
 
   /**
-   * Retorna podcasts de um utilizador específico.
+   * Retorna os podcasts de um utilizador específico, com controlo de visibilidade.
    *
-   * @param userId ID do utilizador.
-   * @return Lista de podcasts do utilizador.
+   * <p>Regras de visibilidade:
+   * <ul>
+   *   <li>O próprio utilizador vê todos os seus podcasts (públicos e privados).</li>
+   *   <li>Amigos vêem todos os podcasts (públicos e privados).</li>
+   *   <li>Outros utilizadores só vêem podcasts marcados como {@code publico = true}.</li>
+   * </ul>
+   *
+   * <p>A relação de amizade é verificada via {@link UserRelationshipService#getRelationStatus}.
+   *
+   * @param userId ID do utilizador cujos podcasts se pretendem listar.
+   * @return {@code 200 OK} com lista de podcasts visíveis;
+   *         {@code 404 Not Found} se o utilizador não existir.
    */
   @GetMapping("/user/{userId}")
   public ResponseEntity<?> getByUser(@PathVariable("userId") Long userId) {
@@ -208,10 +302,15 @@ public class PodcastController {
   }
 
   /**
-   * Remove um podcast pelo ID.
+   * Realiza um soft-delete de um podcast, marcando-o como indisponível.
+   *
+   * <p>Em vez de eliminar o registo da base de dados, define {@code available = false},
+   * o que o oculta dos feeds e listagens mas preserva o histórico de progresso e
+   * referências em playlists.
    *
    * @param id ID do podcast a remover.
-   * @return Resposta sem conteúdo ou 404.
+   * @return {@code 204 No Content} se marcado como indisponível;
+   *         {@code 404 Not Found} se não existir.
    */
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> delete(@PathVariable("id") Long id) {

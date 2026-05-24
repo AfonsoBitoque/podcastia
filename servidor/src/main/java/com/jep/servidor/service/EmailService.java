@@ -3,15 +3,26 @@ package com.jep.servidor.service;
 import org.springframework.stereotype.Service;
 
 /**
- * Service for sending emails
- * This is a simplified implementation - in production you would use a proper email service
+ * Serviço de envio de emails da plataforma Podcastia.
+ *
+ * <p><b>Implementação atual:</b> stub que escreve o conteúdo no {@code stdout}.
+ * Em produção deve ser substituído por uma integração real com
+ * {@code JavaMailSender} (SMTP) ou um serviço externo como SendGrid.
+ *
+ * @see com.jep.servidor.service.AdminService#generateBackgroundReport
  */
 @Service
 public class EmailService {
-    
+
     /**
-     * Send report email to admin
-     * In a real implementation, you would use Spring Mail or a service like SendGrid
+     * Envia (ou simula o envio de) um email com um relatório de analytics.
+     *
+     * <p>Chamado por {@link com.jep.servidor.service.AdminService#generateBackgroundReport}
+     * após a geração assíncrona do relatório.
+     *
+     * @param toEmail       endereço de email do destinatário (admin).
+     * @param reportType    tipo de relatório (ex: {@code "WEEKLY"}).
+     * @param reportContent conteúdo do relatório em formato texto.
      */
     public void sendReportEmail(String toEmail, String reportType, String reportContent) {
         // For now, we'll just log the email sending
@@ -30,7 +41,11 @@ public class EmailService {
     }
     
     /**
-     * Send notification email
+     * Envia (ou simula o envio de) um email de notificação genérico.
+     *
+     * @param toEmail endereço de email do destinatário.
+     * @param subject assunto do email.
+     * @param message corpo da mensagem.
      */
     public void sendNotificationEmail(String toEmail, String subject, String message) {
         System.out.println("=== NOTIFICATION EMAIL ===");

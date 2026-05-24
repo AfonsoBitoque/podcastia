@@ -13,7 +13,23 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Controller para operações de pesquisa.
+ * Controller REST para pesquisa unificada de utilizadores e podcasts na plataforma.
+ *
+ * <p>Expõe um único endpoint {@code GET /api/search?q=...} que agrega resultados
+ * de utilizadores e podcasts na mesma lista, ordenados por relevância.
+ *
+ * <p><b>Base path:</b> {@code /api/search} (requer autenticação JWT)
+ *
+ * <p><b>Comportamento:</b>
+ * <ul>
+ *   <li>Se o parâmetro {@code q} for omitido ou vazio, retorna lista vazia imediatamente
+ *       sem invocar o serviço.</li>
+ *   <li>A pesquisa é parcial — corresponde a prefixos ou substrings de usernames e títulos.</li>
+ *   <li>Os resultados são paginados via {@code page} e {@code size}.</li>
+ * </ul>
+ *
+ * @see SearchService
+ * @see com.jep.servidor.dto.SearchResultDto
  */
 @RestController
 @RequestMapping("/api/search")
@@ -23,14 +39,17 @@ public class SearchController {
     private SearchService searchService;
 
     /**
-     * Endpoint de pesquisa unificada para utilizadores e podcasts.
-     * Suporta a pesquisa parcial e pesquisa de podcasts de um utilizador,
-     * devolvendo resultados paginados na mesma lista.
+     * Executa uma pesquisa unificada por utilizadores e podcasts.
      *
-     * @param query Termo de pesquisa a procurar no titulo/username
-     * @param page  Página pretendida (default 0)
-     * @param size  Resultados por página (default 5)
-     * @return Lista paginada de utilizadores e podcasts formatada.
+     * <p>Delega para {@link SearchService#searchUnified} que combina resultados de
+     * utilizadores (por username) e podcasts (por título), devolvendo-os numa lista
+     * polimórfica de {@link com.jep.servidor.dto.SearchResultDto}.
+     *
+     * @param query termo de pesquisa (parâmetro {@code q}); retorna lista vazia se nulo ou vazio.
+     * @param page  número da página (0-indexado, por omissão: 0).
+     * @param size  número de resultados por página (por omissão: 5).
+     * @return {@code 200 OK} com lista de {@link com.jep.servidor.dto.SearchResultDto}
+     *         (pode ser vazia se não houver correspondências ou se o query for vazio).
      */
     @GetMapping
     public ResponseEntity<List<SearchResultDto>> search(

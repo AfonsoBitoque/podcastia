@@ -12,7 +12,19 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
 /**
- * Entidade que representa um episódio (podcast) dentro de uma playlist.
+ * Entidade JPA que representa um podcast (episódio) dentro de uma {@link Playlist}.
+ *
+ * <p>A combinação ({@code playlist_id}, {@code podcast_id}) e a combinação
+ * ({@code playlist_id}, {@code position}) têm restrições {@code UNIQUE},
+ * garantindo sem duplicados e sem conflitos de posição.
+ *
+ * <p>A reordenação de itens é feita pelo
+ * {@link com.jep.servidor.service.PlaylistService} que reatribui
+ * os campos {@code position} sequencialmente.
+ *
+ * <p><b>Tabela:</b> {@code playlist_items}
+ *
+ * @see Playlist
  */
 @Entity
 @Table(name = "playlist_items",

@@ -4,18 +4,44 @@ import com.jep.servidor.model.PodcastTag;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * DTO do perfil público de um utilizador.
+ *
+ * <p>Devolvido pelo endpoint {@code GET /users/{id}/profile} em
+ * {@link com.jep.servidor.controller.UserController}.
+ * Omite informação sensível (email, password) e expande dados
+ * de afinidade por categoria de podcast.
+ *
+ * <p>Os campos {@code pontosDesporto}, {@code pontosPolitica},
+ * {@code pontosFinancas} e {@code pontosGeral} são usados pelo
+ * {@link com.jep.servidor.service.RecommendationService} para
+ * personalizar o feed, e podem ser exibidos no perfil como indicadores
+ * de interesses do utilizador.
+ */
 public class UserProfileDto {
+    /** ID único do utilizador. */
     private Long id;
+    /** Nome de utilizador (não único, combinado com {@code tag} para identificação). */
     private String username;
+    /** Tag de 4 dígitos única para o username (ex: {@code "0042"}). */
     private String tag;
+    /** Biografia do utilizador (até 160 caracteres). */
     private String bio;
+    /** Caminho relativo para a foto de perfil (ou {@code null} se não definida). */
     private String profilePicturePath;
+    /** Pontos de afinidade com podcasts de desporto. */
     private int pontosDesporto;
+    /** Pontos de afinidade com podcasts de política. */
     private int pontosPolitica;
+    /** Pontos de afinidade com podcasts de finanças. */
     private int pontosFinancas;
+    /** Pontos de afinidade com podcasts gerais. */
     private int pontosGeral;
+    /** Data de registo na plataforma. */
     private LocalDateTime createdAt;
+    /** Data da última sessão ativa. */
     private LocalDateTime lastActiveAt;
+    /** Tópicos de interesse selecionados pelo utilizador (valores de {@link PodcastTag}). */
     private List<PodcastTag> topics;
 
     public UserProfileDto() {}

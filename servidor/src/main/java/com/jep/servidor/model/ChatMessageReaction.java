@@ -18,7 +18,20 @@ import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
 
 /**
- * Reação de um utilizador a uma mensagem.
+ * Entidade JPA que representa a reação de um utilizador a uma mensagem de chat.
+ *
+ * <p>Um par ({@code message}, {@code user}) é único (restrição {@code UNIQUE}),
+ * garantindo que cada utilizador só pode ter uma reação ativa por mensagem.
+ * A operação de toggle (adicionar/remover) é gerida pelo
+ * {@link com.jep.servidor.service.impl.ChatMessageServiceImpl}.
+ *
+ * <p>O emoji é armazenado como texto (caracter Unicode) e validado
+ * contra o enum {@link ReactionEmoji} antes de persistir.
+ *
+ * <p><b>Tabela:</b> {@code chat_message_reactions}
+ *
+ * @see ReactionEmoji
+ * @see com.jep.servidor.repository.ChatMessageReactionRepository
  */
 @Entity
 @Table(name = "chat_message_reactions",
@@ -33,6 +46,13 @@ import java.time.Instant;
 )
 public class ChatMessageReaction {
 
+  /**
+   * Conjunto de emojis permitidos como reações.
+   *
+   * <p>Cada constante armazena o caracter Unicode do emoji.
+   * O método {@link #isAllowed(String)} é usado para validar
+   * o emoji recebido no payload antes de persistir.
+   */
   public enum ReactionEmoji {
     THUMBS_UP("👍"), HEART("❤️"), LAUGH("😂"), SURPRISED("😮"), SAD("😢"), FIRE("🔥");
 
@@ -42,10 +62,17 @@ public class ChatMessageReaction {
       this.value = value;
     }
 
+    /** @return caracter Unicode do emoji. */
     public String getValue() {
       return value;
     }
 
+    /**
+     * Verifica se o emoji fornecido é uma reação permitida.
+     *
+     * @param emoji caracter Unicode a validar.
+     * @return {@code true} se fizer parte dos emojis permitidos.
+     */
     public static boolean isAllowed(String emoji) {
       for (ReactionEmoji reactionEmoji : values()) {
         if (reactionEmoji.value.equals(emoji)) {
@@ -80,6 +107,7 @@ public class ChatMessageReaction {
   @Column(nullable = false)
   private Instant updatedAt;
 
+  /** Inicializa {@code createdAt}, {@code updatedAt} e {@code clientEventAt} antes da persistência. */
   @PrePersist
   protected void onCreate() {
     Instant now = Instant.now();
@@ -94,6 +122,7 @@ public class ChatMessageReaction {
     }
   }
 
+  /** Atualiza {@code updatedAt} antes de cada atualização. */
   @PreUpdate
   protected void onUpdate() {
     updatedAt = Instant.now();

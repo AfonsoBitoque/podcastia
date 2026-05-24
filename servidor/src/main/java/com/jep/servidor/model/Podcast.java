@@ -18,7 +18,22 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * Entidade que representa um podcast no sistema.
+ * Entidade JPA central que representa um podcast gerado ou importado na plataforma.
+ *
+ * <p>Os podcasts são gerados pelo {@link com.jep.servidor.service.PodcastGenerationService}
+ * (Gemini API + edge-tts) e associados a um {@link User}. O ficheiro áudio MP3 é
+ * referenciado por {@code conteudoPath} e servido via streaming.
+ *
+ * <p>Campos de moderação ({@code explicitContent}, {@code hidden}, {@code featured})
+ * são geridos exclusivamente pelo {@link com.jep.servidor.controller.AdminController}.
+ *
+ * <p>As {@code tags} são uma coleção de {@link PodcastTag} armazenada na
+ * tabela {@code podcast_tags} com índice composto para pesquisa eficiente.
+ *
+ * <p><b>Tabela:</b> {@code podcasts}
+ *
+ * @see PodcastTag
+ * @see com.jep.servidor.repository.PodcastRepository
  */
 @Entity
 @Table(name = "podcasts",

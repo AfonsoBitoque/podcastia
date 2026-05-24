@@ -18,13 +18,29 @@ import java.util.stream.Collectors;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 
+/**
+ * Serviço de recomendação personalizada de podcasts.
+ *
+ * <p>Mantém um sistema de pontuação por tag: cada vez que o utilizador
+ * ouve um podcast, os pontos da(s) tag(s) correspondente(s) são incrementados.
+ *
+ * <p>O feed é composto por:
+ * <ul>
+ *   <li>10% de podcasts aleatórios (descoberta).</li>
+ *   <li>90% distribuídos proporcionalmente pelos pontos de cada tag.</li>
+ *   <li>Boost de {@code TOPIC_BOOST} (5 pontos) nos tópicos selecionados no onboarding.</li>
+ * </ul>
+ *
+ * <p>O feed gerado é armazenado em cache por 24h por utilizador,
+ * invalidado manualmente via {@link #invalidateFeedCache}.
+ */
 @Service
 public class RecommendationService {
 
     private final UserRepository userRepository;
     private final PodcastRepository podcastRepository;
     private final Random random = new Random();
-    
+
     private static class CachedFeed {
         private final List<Podcast> feed;
         private final LocalDateTime generatedAt;
@@ -43,6 +59,13 @@ public class RecommendationService {
         this.podcastRepository = podcastRepository;
     }
 
+    /**
+     * Regista a audição de um podcast e incrementa os pontos das suas tags.
+     * Persiste as alterações do {@link User} no repositório.
+     *
+     * @param user    utilizador que ouviu.
+     * @param podcast podcast ouvido.
+     */
     public void recordListen(User user, Podcast podcast) {
         if (podcast.getTags() != null) {
             for (PodcastTag tag : podcast.getTags()) {
@@ -65,6 +88,16 @@ public class RecommendationService {
         }
     }
 
+    /**
+     * Gera (ou devolve da cache) o feed personalizado do utilizador.
+     *
+     * <p>O feed é reutilizado da cache durante 24h. Após esse período
+     * (ou se a cache for invalidada), é recalculado.
+     *
+     * @param user  utilizador para o qual gerar o feed.
+     * @param limit número máximo de podcasts a devolver.
+     * @return lista de podcasts ordenada por relevância + aleatoriedade.
+     */
     public List<Podcast> getFeed(User user, int limit) {
         if (user.getId() != null) {
             CachedFeed cached = feedCache.get(user.getId());
@@ -115,6 +148,12 @@ public class RecommendationService {
         return feed;
     }
 
+    /**
+     * Invalida a cache de feed para um utilizador específico.
+     * Deve ser chamado quando os pontos ou tópicos do utilizador mudam significativamente.
+     *
+     * @param userId ID do utilizador cuja cache deve ser removida.
+     */
     public void invalidateFeedCache(Long userId) {
         if (userId != null) {
             feedCache.remove(userId);

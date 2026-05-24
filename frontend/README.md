@@ -1,16 +1,66 @@
-# React + Vite
+# Podcastia — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicação web React + Vite para a plataforma **Podcastia**, um serviço de podcasts gerados por IA com funcionalidades sociais.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **React 18** + **Vite** (HMR, bundling)
+- **TailwindCSS** — estilização
+- **React Router v6** — navegação SPA
+- **Vitest** — testes unitários e de componente
+- **Playwright** — testes E2E
 
-## React Compiler
+## Pré-requisitos
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Node.js 20+
+- Backend Spring Boot a correr em `http://localhost:8080` (ver `../servidor/`)
 
-## Expanding the ESLint configuration
+## Comandos
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+# Instalar dependências
+npm install
+
+# Servidor de desenvolvimento (http://localhost:5173)
+npm run dev
+
+# Testes unitários (modo watch)
+npm run test
+
+# Testes unitários (modo CI, sem watch)
+npm run test:ci
+
+# Testes E2E com Playwright (requer backend + frontend a correr)
+npm run test:e2e
+
+# Testes E2E com interface gráfica (debugging)
+npm run test:e2e:ui
+
+# Linting ESLint
+npm run lint
+
+# Formatação (Prettier)
+npm run format
+
+# Build de produção (output em dist/)
+npm run build
+```
+
+## Variáveis de Ambiente
+
+Criar um ficheiro `.env.local` na pasta `frontend/` com:
+
+```env
+VITE_API_BASE_URL=http://localhost:8080
+```
+
+## Estrutura Principal
+
+```
+src/
+├── components/     # Componentes reutilizáveis
+├── pages/          # Páginas (uma por rota)
+├── hooks/          # Custom hooks (useBackgroundAudio, useOnboardingGuard, ...)
+├── services/       # Clientes HTTP e lógica de acesso à API
+└── App.jsx         # Roteamento e ProtectedRoute
+```

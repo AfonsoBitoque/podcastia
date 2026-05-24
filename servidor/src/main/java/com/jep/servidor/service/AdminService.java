@@ -32,7 +32,21 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Service for Admin operations
+ * Serviço de operações administrativas da plataforma Podcastia.
+ *
+ * <p>Centraliza toda a lógica de negócio do painel de administração,
+ * incluindo analytics, gestão de podcasts e utilizadores, exportação
+ * de relatórios e auditoria de ações.
+ *
+ * <p>Todas as ações destrutivas (eliminação de podcast/utilizador)
+ * requerem dupla confirmação: password do admin + texto de confirmação
+ * no formato {@code DELETE_<NOME_EM_MAIUSCULAS>}.
+ *
+ * <p>Os logs de auditoria são persistidos via {@link AdminActionLog}
+ * e acessíveis pelo método {@link #getAdminLogs}.
+ *
+ * @see com.jep.servidor.controller.AdminController
+ * @see AdminActionLog
  */
 @Service
 public class AdminService {
@@ -59,7 +73,12 @@ public class AdminService {
     }
 
     /**
-     * Get comprehensive analytics for admin dashboard
+     * Calcula e devolve todas as métricas do painel de administração.
+     *
+     * <p>Inclui DAU/MAU, novos registos, total de podcasts, tempo de
+     * audição, top podcasts, dados de uso semanal/mensal e saúde do sistema.
+     *
+     * @return DTO com todas as métricas de analytics.
      */
     public AdminAnalyticsDTO getAnalytics() {
         // Calculate DAU (Daily Active Users)
@@ -101,7 +120,9 @@ public class AdminService {
     }
 
     /**
-     * Get all podcasts for admin management
+     * Devolve todos os podcasts enriquecidos com métricas de reproducão.
+     *
+     * @return lista de {@link AdminPodcastManagementDTO} com totalPlays e totalListeningTime.
      */
     public List<AdminPodcastManagementDTO> getAllPodcastsForManagement() {
         List<Podcast> podcasts = podcastRepository.findAll();
@@ -135,7 +156,14 @@ public class AdminService {
     }
 
     /**
-     * Update podcast metadata
+     * Atualiza os metadados de um podcast (título, tags, duração, capa).
+     * Regista a ação no log de auditoria.
+     *
+     * @param podcastId   ID do podcast a atualizar.
+     * @param podcastData objeto com os campos a atualizar (campos {@code null} são ignorados).
+     * @param admin       utilizador admin que executa a ação.
+     * @return podcast atualizado.
+     * @throws RuntimeException se o podcast não for encontrado.
      */
     @Transactional
     public Podcast updatePodcastMetadata(Long podcastId, Podcast podcastData, User admin) {
@@ -166,7 +194,12 @@ public class AdminService {
     }
 
     /**
-     * Mark podcast as explicit content
+     * Marca ou desmarca um podcast como conteúdo explícito.
+     *
+     * @param podcastId ID do podcast.
+     * @param explicit  {@code true} para marcar como explícito.
+     * @param admin     utilizador admin.
+     * @return podcast atualizado.
      */
     @Transactional
     public Podcast markAsExplicit(Long podcastId, boolean explicit, User admin) {
@@ -184,7 +217,12 @@ public class AdminService {
     }
 
     /**
-     * Toggle podcast visibility
+     * Oculta ou torna visível um podcast no feed público.
+     *
+     * @param podcastId ID do podcast.
+     * @param hidden    {@code true} para ocultar.
+     * @param admin     utilizador admin.
+     * @return podcast atualizado.
      */
     @Transactional
     public Podcast togglePodcastVisibility(Long podcastId, boolean hidden, User admin) {
@@ -202,7 +240,12 @@ public class AdminService {
     }
 
     /**
-     * Toggle podcast featured status
+     * Destaca ou remove um podcast da secção featured.
+     *
+     * @param podcastId ID do podcast.
+     * @param featured  {@code true} para destacar.
+     * @param admin     utilizador admin.
+     * @return podcast atualizado.
      */
     @Transactional
     public Podcast togglePodcastFeatured(Long podcastId, boolean featured, User admin) {
@@ -220,7 +263,16 @@ public class AdminService {
     }
 
     /**
-     * Confirm podcast deletion with double confirmation
+     * Elimina permanentemente um podcast, após dupla confirmação.
+     *
+     * <p>Valida a password do admin e o texto de confirmação
+     * ({@code DELETE_<TITULO_EM_MAIUSCULAS>}). Regista o resultado no log.
+     *
+     * @param podcastId    ID do podcast.
+     * @param confirmation texto de confirmação esperado.
+     * @param adminPassword password atual do admin.
+     * @param admin        utilizador admin (ou {@code null} para resolver do contexto).
+     * @return {@code true} se eliminado com sucesso; {@code false} se falhou a validação.
      */
     @Transactional
     public boolean confirmPodcastDeletion(Long podcastId, String confirmation, String adminPassword, User admin) {
@@ -256,7 +308,11 @@ public class AdminService {
     }
 
     /**
-     * Get admin action logs
+     * Devolve os logs de auditoria paginados (mais recentes primeiro).
+     *
+     * @param limit  número máximo de registos a devolver.
+     * @param offset ínicio da página (offset em número de registos).
+     * @return lista de DTOs de logs de auditoria.
      */
     public List<AdminActionLogDTO> getAdminLogs(int limit, int offset) {
         List<AdminActionLog> logs = adminActionLogRepository.findAllByOrderByTimestampDesc();
@@ -269,14 +325,23 @@ public class AdminService {
     }
 
     /**
-     * Get all users for admin management
+     * Devolve todos os utilizadores registados na plataforma.
+     *
+     * @return lista de todos os {@link User}.
      */
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
 
     /**
-     * Reset user password
+     * Gera e aplica uma password temporária aleatória a um utilizador.
+     *
+     * <p>A password é codificada com BCrypt antes de ser persistida.
+     * O valor em plain-text é devolvido para o admin comunicar ao utilizador.
+     *
+     * @param userId ID do utilizador cujo password é reposto.
+     * @param admin  utilizador admin que executa a ação.
+     * @return a password temporária em plain-text.
      */
     @Transactional
     public String resetUserPassword(Long userId, User admin) {
@@ -298,7 +363,16 @@ public class AdminService {
     }
 
     /**
-     * Confirm user deletion with double confirmation
+     * Elimina permanentemente um utilizador, após dupla confirmação.
+     *
+     * <p>Valida a password do admin e o texto de confirmação
+     * ({@code DELETE_<USERNAME_EM_MAIUSCULAS>}). Regista o resultado no log.
+     *
+     * @param userId       ID do utilizador a eliminar.
+     * @param confirmation texto de confirmação esperado.
+     * @param adminPassword password atual do admin.
+     * @param admin        utilizador admin (ou {@code null} para resolver do contexto).
+     * @return {@code true} se eliminado com sucesso; {@code false} se falhou a validação.
      */
     @Transactional
     public boolean confirmUserDeletion(Long userId, String confirmation, String adminPassword, User admin) {
@@ -334,7 +408,13 @@ public class AdminService {
     }
 
     /**
-     * Export analytics to CSV
+     * Exporta as métricas de analytics para um ficheiro CSV.
+     *
+     * <p>Define os headers HTTP ({@code Content-Type: text/csv}) e escreve
+     * diretamente na resposta HTTP para download imediato.
+     *
+     * @param response resposta HTTP onde o CSV é escrito.
+     * @throws RuntimeException se ocorrer erro de I/O.
      */
     public void exportAnalyticsCsv(HttpServletResponse response) {
         try {
@@ -373,7 +453,13 @@ public class AdminService {
     }
 
     /**
-     * Export analytics to PDF
+     * Exporta as métricas de analytics para um ficheiro PDF.
+     *
+     * <p>Gera um PDF nativo (sem bibliotecas externas) com formato PDF 1.4,
+     * usando fonte Helvetica e escrita direta de objetos PDF.
+     *
+     * @param response resposta HTTP onde o PDF é escrito.
+     * @throws RuntimeException se ocorrer erro de I/O.
      */
     public void exportAnalyticsPdf(HttpServletResponse response) {
         try {
@@ -493,7 +579,16 @@ public class AdminService {
     }
 
     /**
-     * Generate report in background
+     * Inicia a geração assíncrona de um relatório num thread em background.
+     *
+     * <p>Após geração (simula 5 seg.), envia o relatório por email via
+     * {@link EmailService}. Devolve imediatamente um jobId UUID para
+     * rastreamento via {@link #getReportStatus}.
+     *
+     * @param reportType tipo de relatório (ex: {@code "WEEKLY"}, {@code "MONTHLY"}).
+     * @param email      endereço de email para envio do relatório.
+     * @param admin      utilizador admin que solicitou o relatório.
+     * @return UUID do job de geração.
      */
     public String generateBackgroundReport(String reportType, String email, User admin) {
         String jobId = UUID.randomUUID().toString();
@@ -526,7 +621,13 @@ public class AdminService {
     }
 
     /**
-     * Get report generation status
+     * Devolve o estado de um job de geração de relatório.
+     *
+     * <p><b>Nota:</b> implementação atual devolve sempre {@code PROCESSING/50%}.
+     * Numa implementação real, o estado seria persistido numa base de dados.
+     *
+     * @param jobId UUID do job retornado por {@link #generateBackgroundReport}.
+     * @return mapa com {@code jobId}, {@code status}, {@code progress} e {@code estimatedCompletion}.
      */
     public Map<String, Object> getReportStatus(String jobId) {
         // In a real implementation, you would check the job status from a database

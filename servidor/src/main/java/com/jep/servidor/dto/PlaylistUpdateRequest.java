@@ -3,7 +3,11 @@ package com.jep.servidor.dto;
 import jakarta.validation.constraints.Size;
 
 /**
- * DTO para atualização de playlists.
+ * DTO de pedido de atualização parcial de uma playlist existente.
+ *
+ * <p>Usado pelo endpoint {@code PUT /api/playlists/{id}} em
+ * {@link com.jep.servidor.controller.PlaylistController}.
+ * Todos os campos são opcionais — apenas os não-nulos são aplicados.
  */
 public class PlaylistUpdateRequest {
 

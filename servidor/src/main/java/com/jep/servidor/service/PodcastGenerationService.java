@@ -25,6 +25,25 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
+/**
+ * Serviço de geração automática de podcasts com IA.
+ *
+ * <p>Orquestra o pipeline de dois passos:
+ * <ol>
+ *   <li>Gera o guião narrativo com a API Google Gemini ({@code gemini-flash-latest}).</li>
+ *   <li>Sintetiza o áudio a partir do guião com Python {@code edge-tts}
+ *       (voz {@code pt-PT-RaquelNeural}).</li>
+ * </ol>
+ *
+ * <p>O Python é localizado automaticamente: tenta primeiro o venv local
+ * ({@code venv/Scripts/python.exe} no Windows, {@code venv/bin/python3} no Unix),
+ * e faz fallback para o {@code python} do sistema.
+ *
+ * <p>Require a chave da API Gemini na propriedade {@code gemini.api.key}
+ * ou na variável de ambiente {@code GEMINI_API_KEY}.
+ *
+ * @see com.jep.servidor.controller.PodcastGenerationController
+ */
 @Service
 public class PodcastGenerationService {
 
@@ -40,10 +59,28 @@ public class PodcastGenerationService {
         this.podcastRepository = podcastRepository;
     }
 
+    /**
+     * Define a chave da API Gemini programaticamente (usado em testes).
+     *
+     * @param geminiApiKey chave da API Gemini.
+     */
     public void setGeminiApiKey(String geminiApiKey) {
         this.geminiApiKey = geminiApiKey;
     }
 
+    /**
+     * Gera um podcast completo (guião + áudio) e persiste a entidade.
+     *
+     * <p>A duração é estimada com base na contagem de palavras do guião
+     * (~150 palavras/min para TTS pt-PT). O podcast é criado com visibilidade
+     * privada ({@code publico=false}) por defeito.
+     *
+     * @param user  utilizador criador do podcast.
+     * @param tema  tema/título do podcast (usado como prompt para o Gemini).
+     * @param tags  lista de tags; se {@code null} ou vazia, usa {@link com.jep.servidor.model.PodcastTag#GERAL}.
+     * @return entidade {@link Podcast} persistida com o caminho do áudio gerado.
+     * @throws Exception se a chamada à API Gemini falhar ou se o processo edge-tts terminar com erro.
+     */
     public Podcast generatePodcast(User user, String tema, List<PodcastTag> tags) throws Exception {
         // 1. Generate script with Gemini
         String script = generateScript(tema);

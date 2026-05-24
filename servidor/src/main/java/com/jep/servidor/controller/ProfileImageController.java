@@ -25,7 +25,25 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * Controller responsável pelos uploads e transferências de imagens de perfil.
+ * Controller REST para upload, visualização e remoção de imagens de perfil dos utilizadores.
+ *
+ * <p>Delega a validação, redimensionamento e persistência das imagens para o
+ * {@link ProfileImageService}.
+ *
+ * <p><b>Base path:</b> {@code /users/{userId}/profile-image}
+ *
+ * <p><b>Endpoints disponíveis:</b>
+ * <ul>
+ *   <li>{@code POST /} — upload de nova imagem de perfil (substitui a atual).</li>
+ *   <li>{@code GET /} — obter a imagem de perfil atual (ou a imagem por defeito).</li>
+ *   <li>{@code DELETE /} — remover a imagem de perfil atual.</li>
+ * </ul>
+ *
+ * <p><b>Imagem por defeito:</b> Se um utilizador não tiver imagem de perfil definida
+ * (ou se o ficheiro não existir), o endpoint GET devolve a imagem estática de classpath
+ * {@code static/images/profile_picture.png} com {@code Content-Type: image/png}.
+ *
+ * @see ProfileImageService
  */
 @RestController
 @RequestMapping("/users/{userId}/profile-image")
@@ -37,7 +55,10 @@ public class ProfileImageController {
   private final ProfileImageService profileImageService;
 
   /**
-   * Construtor para injeção de dependências.
+   * Cria o controller com as dependências necessárias.
+   *
+   * @param userRepository      repositório JPA para carregar e atualizar o utilizador.
+   * @param profileImageService serviço com lógica de validação, armazenamento e eliminação.
    */
   public ProfileImageController(UserRepository userRepository, 
                                 ProfileImageService profileImageService) {
@@ -46,7 +67,23 @@ public class ProfileImageController {
   }
 
   /**
-   * Faz upload de uma nova imagem de perfil e associa-a ao utilizador.
+   * Faz upload de uma nova imagem de perfil e associa-a ao utilizador indicado.
+   *
+   * <p>Fluxo:
+   * <ol>
+   *   <li>Valida o ficheiro via {@link ProfileImageService#validate} (formato JPG/PNG, tamanho ≤ 5 MB).</li>
+   *   <li>Armazena o novo ficheiro via {@link ProfileImageService#store}.</li>
+   *   <li>Atualiza o campo {@code profilePicturePath} do utilizador na BD.</li>
+   *   <li>Elimina a imagem anterior via {@link ProfileImageService#deleteOldImage} (apenas após
+   *       guardar com sucesso o novo caminho, evitando perda de dados em caso de falha).</li>
+   * </ol>
+   *
+   * @param userId ID do utilizador.
+   * @param file   ficheiro de imagem a carregar (multipart/form-data, campo {@code "file"}).
+   * @return {@code 200 OK} com o novo caminho da imagem;
+   *         {@code 400 Bad Request} se o ficheiro for inválido;
+   *         {@code 404 Not Found} se o utilizador não existir;
+   *         {@code 500 Internal Server Error} em caso de erro de I/O.
    */
   @PostMapping
   public ResponseEntity<?> uploadProfileImage(
@@ -87,7 +124,17 @@ public class ProfileImageController {
   }
 
   /**
-   * Retorna a imagem de perfil atual do utilizador para visualização no frontend.
+   * Retorna a imagem de perfil do utilizador.
+   *
+   * <p>Se o utilizador não tiver imagem de perfil definida, ou se o ficheiro não existir
+   * ou não for legível, devolve a imagem por defeito via {@link #defaultProfileImageResponse()}.
+   * O {@code Content-Type} é detetado automaticamente pelo sistema operativo via
+   * {@code Files.probeContentType}; se indisponível, usa {@code application/octet-stream}.
+   *
+   * @param userId ID do utilizador.
+   * @return {@code 200 OK} com o recurso de imagem e o {@code Content-Type} correto;
+   *         {@code 404 Not Found} se o utilizador não existir;
+   *         fallback para imagem por defeito em caso de erro.
    */
   @GetMapping
   public ResponseEntity<Resource> getProfileImage(@PathVariable Long userId) {
@@ -123,6 +170,14 @@ public class ProfileImageController {
     }
   }
 
+  /**
+   * Constrói a resposta com a imagem de perfil por defeito do classpath.
+   *
+   * <p>Carrega {@code static/images/profile_picture.png} a partir do classpath.
+   * Retorna {@code 500 Internal Server Error} se o recurso não existir.
+   *
+   * @return resposta com a imagem PNG por defeito, ou 500 se não encontrada.
+   */
   private ResponseEntity<Resource> defaultProfileImageResponse() {
     Resource resource = new ClassPathResource(DEFAULT_PROFILE_IMAGE);
 
@@ -137,6 +192,14 @@ public class ProfileImageController {
 
   /**
    * Remove a imagem de perfil atual do utilizador.
+   *
+   * <p>Limpa o campo {@code profilePicturePath} na BD e elimina o ficheiro físico
+   * via {@link ProfileImageService#deleteOldImage}. Se o utilizador não tiver
+   * imagem definida, retorna {@code 204 No Content} sem fazer nada.
+   *
+   * @param userId ID do utilizador.
+   * @return {@code 204 No Content} em caso de sucesso ou se não havia imagem;
+   *         {@code 404 Not Found} se o utilizador não existir.
    */
   @DeleteMapping
   public ResponseEntity<?> deleteProfileImage(@PathVariable Long userId) {

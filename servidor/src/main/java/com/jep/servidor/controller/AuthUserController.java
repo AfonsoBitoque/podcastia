@@ -22,7 +22,22 @@ import java.util.Optional;
 import java.util.HashMap;
 
 /**
- * Controller for authenticated user operations
+ * Controller REST para operações do utilizador autenticado — perfil próprio e onboarding.
+ *
+ * <p>Requer que o pedido inclua um token JWT válido no cabeçalho {@code Authorization}.
+ * O utilizador autenticado é identificado através do email presente no
+ * {@link SecurityContextHolder} (populado pelo {@link com.jep.servidor.config.JwtAuthenticationFilter}).
+ *
+ * <p><b>Base path:</b> {@code /api/users}
+ *
+ * <p><b>Endpoints disponíveis:</b>
+ * <ul>
+ *   <li>{@code GET /me} — retorna os dados do utilizador autenticado.</li>
+ *   <li>{@code POST /onboarding} — guarda as preferências de temas e conclui o onboarding.</li>
+ * </ul>
+ *
+ * @see com.jep.servidor.dto.OnboardingDTO
+ * @see com.jep.servidor.model.PodcastTag
  */
 @RestController
 @RequestMapping("/api/users")
@@ -30,12 +45,29 @@ public class AuthUserController {
 
     private final UserRepository userRepository;
 
+    /**
+     * Cria o controller com injeção do repositório de utilizadores.
+     *
+     * @param userRepository repositório JPA para acesso aos dados de utilizadores.
+     */
     public AuthUserController(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
 
     /**
-     * Get current user information
+     * Retorna os dados do utilizador autenticado.
+     *
+     * <p>Extrai o email do {@link SecurityContextHolder}, localiza o utilizador
+     * na base de dados e constrói um mapa de resposta com os campos relevantes do perfil.
+     *
+     * <p><b>Campos retornados:</b> {@code id}, {@code username}, {@code tag},
+     * {@code email}, {@code bio}, {@code userType}, {@code status},
+     * {@code hasCompletedOnboarding}, {@code topics} (lista de nomes de
+     * {@link com.jep.servidor.model.PodcastTag}), {@code createdAt}, {@code lastActiveAt}.
+     *
+     * @return {@code 200 OK} com mapa de dados do utilizador;
+     *         {@code 401 Unauthorized} se não autenticado;
+     *         {@code 404 Not Found} se o utilizador não existir na BD.
      */
     @GetMapping("/me")
     public ResponseEntity<?> getCurrentUser() {
@@ -72,7 +104,32 @@ public class AuthUserController {
     }
 
     /**
-     * Save user onboarding preferences and mark onboarding as completed
+     * Completa o processo de onboarding do utilizador, guardando os temas selecionados
+     * e atribuindo pontos iniciais de recomendação.
+     *
+     * <p>Fluxo detalhado:
+     * <ol>
+     *   <li>Verifica autenticação via {@link SecurityContextHolder}.</li>
+     *   <li>Localiza o utilizador pelo email no repositório.</li>
+     *   <li>Valida que foram selecionados pelo menos 3 temas; caso contrário retorna 422.</li>
+     *   <li>Converte os identificadores de temas (String) para valores do enum
+     *       {@link PodcastTag}. Suporta aliases em inglês ({@code SPORTS}, {@code POLITICS},
+     *       {@code FINANCES}) e fallback para {@code GERAL}.</li>
+     *   <li>Atualiza os tópicos do utilizador (usando {@code ArrayList} mutável para
+     *       compatibilidade JPA — {@code stream().toList()} retorna lista imutável).</li>
+     *   <li>Define {@code hasCompletedOnboarding = true}.</li>
+     *   <li>Atribui 5 pontos de afinidade por cada tema selecionado
+     *       ({@code pontosDesporto}, {@code pontosPolitica}, {@code pontosFinancas},
+     *       {@code pontosGeral}), que alimentam o algoritmo de recomendação.</li>
+     *   <li>Persiste o utilizador.</li>
+     * </ol>
+     *
+     * @param onboardingDTO DTO validado com a lista de temas selecionados pelo utilizador.
+     *                      A validação {@code @Valid} garante o mínimo de 3 temas.
+     * @return {@code 200 OK} com mensagem de sucesso;
+     *         {@code 401 Unauthorized} se não autenticado;
+     *         {@code 404 Not Found} se o utilizador não existir;
+     *         {@code 422 Unprocessable Entity} se menos de 3 temas forem fornecidos.
      */
     @PostMapping("/onboarding")
     public ResponseEntity<?> completeOnboarding(

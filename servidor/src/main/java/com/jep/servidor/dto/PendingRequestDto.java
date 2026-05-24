@@ -1,5 +1,12 @@
 package com.jep.servidor.dto;
 
+/**
+ * DTO de um pedido de amizade pendente recebido pelo utilizador autenticado.
+ *
+ * <p>Devolvido pelo endpoint {@code GET /api/relations/friend-requests/pending}
+ * em {@link com.jep.servidor.controller.UserRelationController}.
+ * Contém informação sobre o utilizador remetente do pedido.
+ */
 public class PendingRequestDto {
     private Long id;
     private Long senderId;

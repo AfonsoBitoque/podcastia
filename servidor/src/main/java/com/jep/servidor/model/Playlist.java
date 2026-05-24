@@ -19,7 +19,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Entidade que representa uma playlist de podcasts criada por um utilizador.
+ * Entidade JPA de uma playlist de podcasts criada por um utilizador.
+ *
+ * <p>As playlists podem ser públicas ({@code isPublic = true}) ou privadas.
+ * As públicas são visíveis para os amigos do dono via
+ * {@link com.jep.servidor.repository.PlaylistRepository#findPublicPlaylistsFromFriends}.
+ *
+ * <p>Os itens estão ordenados por {@code position} ({@code @OrderBy("position ASC")})
+ * e geridos pelo {@link com.jep.servidor.service.PlaylistService}.
+ *
+ * <p><b>Tabela:</b> {@code playlists}
+ *
+ * @see PlaylistItem
+ * @see com.jep.servidor.service.PlaylistService
  */
 @Entity
 @Table(name = "playlists",

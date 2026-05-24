@@ -24,7 +24,28 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
 /**
- * Controlador REST para gerir utilizadores.
+ * Controller REST para gestão de utilizadores — CRUD, perfil público e alteração de password.
+ *
+ * <p>Este controller usa o base path {@code /users} (sem prefixo {@code /api}),
+ * e inclui operações de leitura públicas e de escrita que requerem autenticação JWT.
+ *
+ * <p><b>Base path:</b> {@code /users}
+ *
+ * <p><b>Endpoints disponíveis:</b>
+ * <ul>
+ *   <li>{@code GET /} — lista todos os utilizadores (público).</li>
+ *   <li>{@code GET /{id}/profile} — perfil público de um utilizador.</li>
+ *   <li>{@code POST /} — cria um novo utilizador (registo).</li>
+ *   <li>{@code PATCH /{id}} — atualiza metadados (username, bio, playbackSpeed).</li>
+ *   <li>{@code PUT /{id}/password} — altera a password após verificação da atual.</li>
+ * </ul>
+ *
+ * <p><b>Nota:</b> O campo {@code tag} é imutável após o registo. A alteração de email
+ * e password seguem fluxos separados.
+ *
+ * @see com.jep.servidor.dto.UserUpdateRequest
+ * @see com.jep.servidor.dto.ChangePasswordRequest
+ * @see com.jep.servidor.dto.UserProfileDto
  */
 @RestController
 @RequestMapping("/users")
@@ -34,10 +55,10 @@ public class UserController {
   private final PasswordEncoder passwordEncoder;
 
   /**
-   * Construtor para injeção de dependências.
+   * Cria o controller com as dependências necessárias.
    *
-   * @param userRepository  Repositório de utilizadores.
-   * @param passwordEncoder Codificador de palavras-passe.
+   * @param userRepository  repositório JPA de utilizadores.
+   * @param passwordEncoder codificador BCrypt para hashing e verificação de passwords.
    */
   public UserController(UserRepository userRepository, PasswordEncoder passwordEncoder) {
     this.userRepository = userRepository;
@@ -45,9 +66,12 @@ public class UserController {
   }
 
   /**
-   * Retorna todos os utilizadores.
+   * Lista todos os utilizadores registados na plataforma.
    *
-   * @return Lista de utilizadores.
+   * <p><b>Aviso:</b> Este endpoint não tem paginação e devolve todos os registos.
+   * Para grandes volumes de dados, deverá ser substituído por um endpoint paginado.
+   *
+   * @return lista de todos os utilizadores.
    */
   @GetMapping
   public List<User> all() {
@@ -55,7 +79,15 @@ public class UserController {
   }
 
   /**
-   * Retorna os dados públicos do perfil de um utilizador.
+   * Retorna o perfil público de um utilizador.
+   *
+   * <p>Exposta como um DTO {@link com.jep.servidor.dto.UserProfileDto} que inclui
+   * username, tag, bio, imagem de perfil, pontos de afinidade por categoria,
+   * timestamps e tópicos de interesse, mas omite email e password.
+   *
+   * @param id ID do utilizador.
+   * @return {@code 200 OK} com {@link com.jep.servidor.dto.UserProfileDto};
+   *         {@code 404 Not Found} se o utilizador não existir.
    */
   @GetMapping("/{id}/profile")
   public ResponseEntity<?> getProfile(@PathVariable Long id) {
@@ -82,10 +114,16 @@ public class UserController {
   }
 
   /**
-   * Cria um novo utilizador.
+   * Regista um novo utilizador na plataforma.
    *
-   * @param user Dados do utilizador a criar.
-   * @return Resposta com o utilizador criado ou erro.
+   * <p>Valida unicidade de email e do par (username, tag) antes de guardar.
+   * A password é codificada com BCrypt antes da persistência.
+   *
+   * @param user entidade {@link User} com os dados de registo ({@code email}, {@code username},
+   *             {@code tag}, {@code password}, etc.).
+   * @return {@code 201 Created} com o utilizador criado;
+   *         {@code 409 Conflict} com {@code "email-already-exists"} se o email já estiver em uso;
+   *         {@code 409 Conflict} com {@code "username+tag-already-exists"} se o par já existir.
    */
   @PostMapping
   public ResponseEntity<?> create(@Valid @RequestBody User user) {
@@ -104,12 +142,23 @@ public class UserController {
   }
 
   /**
-   * Endpoint de atualização pacífica (PATCH) de metadados do utilizador.
-   * A "tag" permanece sempre imutável, o DTO expõe apenas username e bio.
+   * Atualiza parcialmente os metadados editaveis de um utilizador.
    *
-   * @param id     ID do utilizador.
-   * @param update Payload de campos atualizáveis (pode ser validado em anexo).
-   * @return Utilizador modificado ou códigos de conflito 409 DB overlap.
+   * <p>Campos atualizáveis via {@link com.jep.servidor.dto.UserUpdateRequest}:
+   * <ul>
+   *   <li>{@code username} — verificado contra colisão com a tag preexistente do utilizador.</li>
+   *   <li>{@code bio} — texto de apresentação.</li>
+   *   <li>{@code playbackSpeed} — velocidade de reprodução preferida.</li>
+   * </ul>
+   *
+   * <p>A {@code tag} é sempre imutável. Alterações de email e password devem usar
+   * endpoints dedicados.
+   *
+   * @param id     ID do utilizador a atualizar.
+   * @param update payload com os campos a alterar.
+   * @return {@code 200 OK} com o utilizador atualizado;
+   *         {@code 404 Not Found} se não existir;
+   *         {@code 409 Conflict} com {@code "username+tag-already-exists"} em caso de colisão.
    */
   @PatchMapping("/{id}")
   public ResponseEntity<?> updateUserMetadata(@PathVariable Long id, 
@@ -149,11 +198,20 @@ public class UserController {
   }
 
   /**
-   * Altera a password de um utilizador.
+   * Altera a password de um utilizador, exigindo confirmação da password atual.
    *
-   * @param userId ID do utilizador.
-   * @param request Dados da alteração de password.
-   * @return Resposta de sucesso ou erro.
+   * <p>Fluxo de segurança:
+   * <ol>
+   *   <li>Verifica se o utilizador existe.</li>
+   *   <li>Valida a {@code currentPassword} contra o hash BCrypt armazenado.</li>
+   *   <li>Codifica e persiste a {@code newPassword}.</li>
+   * </ol>
+   *
+   * @param userId  ID do utilizador.
+   * @param request DTO com {@code currentPassword} e {@code newPassword}.
+   * @return {@code 200 OK} com mensagem de sucesso;
+   *         {@code 401 Unauthorized} se a password atual não coincidir;
+   *         {@code 404 Not Found} se o utilizador não existir.
    */
   @PutMapping("/{userId}/password")
   public ResponseEntity<?> changePassword(

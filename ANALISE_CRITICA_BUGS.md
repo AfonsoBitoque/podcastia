@@ -309,24 +309,27 @@ A chave `topicsOnboardingComplete` deveria ser removida para evitar inconsistên
 | Bug | Estado | Ficheiros Afetados |
 |-----|--------|-------------------|
 | Loop de redirecionamento | Parcialmente resolvido | App.jsx, OnboardingSurvey.jsx |
-| Endpoint /api/podcasts inexistente | Resolvido | PodcastGenerationController.java |
-| Recursos estáticos 403 | Resolvido | StaticResourceConfig.java (novo) |
-| ImmutableList exception | Resolvido | AuthUserController.java |
+| Endpoint /api/podcasts inexistente | ✅ Resolvido | PodcastGenerationController.java |
+| Recursos estáticos 403 | ✅ Resolvido | StaticResourceConfig.java (criado) |
+| ImmutableList exception | ✅ Resolvido | AuthUserController.java |
 
 ### Vulnerabilidades de Segurança
 | Issue | Severidade | Ação Recomendada |
 |-------|------------|------------------|
 | Logging de tokens | Alta | Remover console.log |
-| CORS permissivo | Média | Restringir origens |
+| CORS permissivo | ✅ Resolvido | Restrito a `localhost:5173/5174` em `SecurityConfig` |
 | Stack traces expostos | Média | Sanitizar mensagens de erro |
+| Chave JWT hardcoded em `JwtUtil` | Alta | Mover para variável de ambiente em produção |
 
 ### Dívida Técnica
 | Issue | Impacto |
 |-------|---------|
-| Mistura de responsabilidades | Dificulta manutenção |
-| Estado duplicado localStorage | Pode causar inconsistências |
-| Hardcoded URLs | Dificulta deploy em múltiplos ambientes |
-| Sem lazy loading | Bundle size excessivo |
+| Mistura de responsabilidades em `AuthUserController` | Dificulta manutenção |
+| Estado duplicado localStorage (`user` + `topicsOnboardingComplete`) | Pode causar inconsistências |
+| Hardcoded URLs no frontend | Dificulta deploy em múltiplos ambientes |
+| Sem lazy loading de componentes React | Bundle size inicial excessivo |
+| `JwtUtil` com chave hardcoded | Risco de segurança em produção |
+| `PodcastFavoriteController.removeFavorite` usa `findAll()` | Ineficiência de performance |
 
 ---
 
@@ -345,10 +348,10 @@ A chave `topicsOnboardingComplete` deveria ser removida para evitar inconsistên
 4. **Criar sistema de logging estruturado** (SLF4J + Logback)
 
 ### Longo Prazo (3+ meses)
-1. **Implementar testes de integração** (Playwright/Cypress)
-2. **Adicionar rate limiting** na API
-3. **Implementar caching** com Redis
-4. **Criar pipeline CI/CD** com testes automatizados
+1. **Expandir testes E2E** (Playwright já configurado no frontend-ci.yml)
+2. **Mover chave JWT** para variável de ambiente / secret manager
+3. **Implementar caching** com Redis (substituir cache em memória do `RecommendationService`)
+4. **Otimizar `removeFavorite`** — substituir `findAll()` por query direta
 
 ---
 
@@ -361,11 +364,13 @@ A chave `topicsOnboardingComplete` deveria ser removida para evitar inconsistên
 - **Hooks customizados:** 3 (useBackgroundAudio, useOnboardingGuard, etc.)
 
 ### Backend
-- **Total de classes Java:** ~80
-- **Controllers:** 8
-- **Services:** 10
-- **Modelos:** 12
-- **Cobertura de testes:** Desconhecida (não verificada)
+- **Total de classes Java:** ~91 (conforme ROADMAP_DOCUMENTACAO.md)
+- **Controllers:** 17
+- **Services:** 13 (interfaces + implementações + EmailService)
+- **Modelos:** 16 (entidades + enums)
+- **Repositórios:** 13
+- **Testes:** 12 ficheiros (unitários + integração)
+- **Cobertura de testes:** Parcial — camada de serviço e integração coberta; geração de podcasts e admin sem testes
 
 ---
 

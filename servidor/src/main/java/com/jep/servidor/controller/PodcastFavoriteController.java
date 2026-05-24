@@ -25,7 +25,29 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Controller para gerir favoritos de podcasts.
+ * Controller REST para gestão de favoritos de podcasts do utilizador autenticado.
+ *
+ * <p>Permite ao utilizador adicionar, remover, alternar e verificar o estado de favorito
+ * de podcasts. Os favoritos são persistidos na tabela {@code podcast_favorites} via
+ * {@link PodcastFavoriteRepository}.
+ *
+ * <p><b>Base path:</b> {@code /api/favorites} (requer autenticação JWT)
+ *
+ * <p><b>Endpoints disponíveis:</b>
+ * <ul>
+ *   <li>{@code GET /} — listar todos os podcasts favoritos.</li>
+ *   <li>{@code GET /{podcastId}/check} — verificar se um podcast é favorito.</li>
+ *   <li>{@code POST /{podcastId}} — adicionar podcast aos favoritos.</li>
+ *   <li>{@code DELETE /{podcastId}} — remover podcast dos favoritos.</li>
+ *   <li>{@code POST /{podcastId}/toggle} — alternar estado de favorito (add/remove).</li>
+ * </ul>
+ *
+ * <p><b>Nota de performance:</b> Os métodos {@link #removeFavorite} e {@link #toggleFavorite}
+ * usam {@code favoriteRepository.findAll()} seguido de filtragem em memória, o que é
+ * ineficiente para grandes volumes. Deveriam usar uma query direcionada por utilizador+podcast.
+ *
+ * @see PodcastFavoriteRepository
+ * @see com.jep.servidor.model.PodcastFavorite
  */
 @RestController
 @RequestMapping("/api/favorites")
@@ -35,6 +57,13 @@ public class PodcastFavoriteController {
   private final PodcastRepository podcastRepository;
   private final UserRepository userRepository;
 
+  /**
+   * Cria o controller com as dependências necessárias.
+   *
+   * @param favoriteRepository repositório JPA de favoritos.
+   * @param podcastRepository  repositório JPA de podcasts.
+   * @param userRepository     repositório JPA de utilizadores.
+   */
   public PodcastFavoriteController(PodcastFavoriteRepository favoriteRepository,
                                    PodcastRepository podcastRepository,
                                    UserRepository userRepository) {
@@ -43,6 +72,11 @@ public class PodcastFavoriteController {
     this.userRepository = userRepository;
   }
 
+  /**
+   * Resolve o utilizador autenticado a partir do contexto de segurança Spring.
+   *
+   * @return {@link Optional} com o utilizador, ou vazio se não autenticado.
+   */
   private Optional<User> getAuthenticatedUser() {
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     if (authentication == null || authentication.getName() == null) {
@@ -52,7 +86,13 @@ public class PodcastFavoriteController {
   }
 
   /**
-   * Retorna todos os podcasts favoritos do utilizador autenticado.
+   * Retorna a lista de podcasts marcados como favoritos pelo utilizador autenticado.
+   *
+   * <p>Obtém os IDs dos favoritos via {@link PodcastFavoriteRepository#findPodcastIdsByUser}
+   * e carrega os podcasts correspondentes com {@code findAllById}.
+   *
+   * @return {@code 200 OK} com lista de {@link Podcast} favoritos (pode ser vazia);
+   *         {@code 401 Unauthorized} se não autenticado.
    */
   @GetMapping
   public ResponseEntity<List<Podcast>> getFavorites() {
@@ -73,7 +113,11 @@ public class PodcastFavoriteController {
   }
 
   /**
-   * Verifica se um podcast está nos favoritos do utilizador.
+   * Verifica se um podcast específico está marcado como favorito pelo utilizador autenticado.
+   *
+   * @param podcastId ID do podcast a verificar.
+   * @return {@code 200 OK} com {@code {"isFavorite": true/false}};
+   *         {@code 401 Unauthorized} se não autenticado.
    */
   @GetMapping("/{podcastId}/check")
   public ResponseEntity<Map<String, Boolean>> isFavorite(@PathVariable Long podcastId) {
@@ -92,7 +136,16 @@ public class PodcastFavoriteController {
   }
 
   /**
-   * Adiciona um podcast aos favoritos.
+   * Adiciona um podcast à lista de favoritos do utilizador autenticado.
+   *
+   * <p>Verifica se o podcast já está nos favoritos antes de inserir,
+   * devolvendo {@code 409 Conflict} em caso de duplicado.
+   *
+   * @param podcastId ID do podcast a adicionar.
+   * @return {@code 201 Created} com mensagem de sucesso e o ID do podcast;
+   *         {@code 401 Unauthorized} se não autenticado;
+   *         {@code 404 Not Found} se o podcast não existir;
+   *         {@code 409 Conflict} se o podcast já estiver nos favoritos.
    */
   @PostMapping("/{podcastId}")
   public ResponseEntity<?> addFavorite(@PathVariable Long podcastId) {
@@ -127,7 +180,16 @@ public class PodcastFavoriteController {
   }
 
   /**
-   * Remove um podcast dos favoritos.
+   * Remove um podcast da lista de favoritos do utilizador autenticado.
+   *
+   * <p><b>Aviso de performance:</b> Esta implementação usa {@code favoriteRepository.findAll()}
+   * seguido de filtragem em memória por {@code userId} e {@code podcastId}. Para bases
+   * de dados com muitos registos, deverá ser substituida por uma query direcionada.
+   *
+   * @param podcastId ID do podcast a remover dos favoritos.
+   * @return {@code 200 OK} com mensagem de sucesso;
+   *         {@code 401 Unauthorized} se não autenticado;
+   *         {@code 404 Not Found} se o podcast ou o favorito não existir.
    */
   @DeleteMapping("/{podcastId}")
   public ResponseEntity<?> removeFavorite(@PathVariable Long podcastId) {
@@ -162,7 +224,19 @@ public class PodcastFavoriteController {
   }
 
   /**
-   * Alterna o estado de favorito (adiciona se não existir, remove se existir).
+   * Alterna o estado de favorito de um podcast (toggle).
+   *
+   * <p>Se o podcast já for favorito, remove-o; caso contrário, adiciona-o.
+   * Esta operação é idêmpotente — invocar duas vezes em sequência retorna ao estado original.
+   *
+   * <p><b>Aviso de performance:</b> A remoção usa {@code favoriteRepository.findAll()}
+   * — ver nota em {@link #removeFavorite}.
+   *
+   * @param podcastId ID do podcast a alternar.
+   * @return {@code 201 Created} com {@code {"isFavorite": true}} se adicionado;
+   *         {@code 200 OK} com {@code {"isFavorite": false}} se removido;
+   *         {@code 401 Unauthorized} se não autenticado;
+   *         {@code 404 Not Found} se o podcast não existir.
    */
   @PostMapping("/{podcastId}/toggle")
   public ResponseEntity<?> toggleFavorite(@PathVariable Long podcastId) {
