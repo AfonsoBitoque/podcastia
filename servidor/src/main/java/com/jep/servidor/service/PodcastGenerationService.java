@@ -92,7 +92,11 @@ public class PodcastGenerationService {
     }
 
     private String callGemini(String prompt) throws IOException, InterruptedException {
-        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" + geminiApiKey;
+        if (geminiApiKey == null || geminiApiKey.isBlank()) {
+            throw new IOException("Chave Gemini nao configurada. Define gemini.api.key em env.properties ou GEMINI_API_KEY no ambiente.");
+        }
+
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" + geminiApiKey.trim();
 
         JSONObject contentPart = new JSONObject().put("text", prompt);
         JSONObject content = new JSONObject().put("parts", new JSONArray().put(contentPart));
