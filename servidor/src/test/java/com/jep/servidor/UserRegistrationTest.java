@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jep.servidor.model.User;
+import com.jep.servidor.repository.UserRelationRepository;
 import com.jep.servidor.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,9 @@ class UserRegistrationTest {
   private UserRepository userRepository;
 
   @Autowired
+  private UserRelationRepository userRelationRepository;
+
+  @Autowired
   private PasswordEncoder passwordEncoder;
 
   @Autowired
@@ -38,6 +42,7 @@ class UserRegistrationTest {
 
   @BeforeEach
   void setUp() {
+    userRelationRepository.deleteAll();
     userRepository.deleteAll();
   }
 
