@@ -139,14 +139,15 @@ function AdminAnalytics() {
     return safeNumber.toString()
   }
 
-  const formatTime = (minutes) => {
-    const safeMinutes = toFiniteNumber(minutes)
-    if (safeMinutes >= 60) {
-      const hours = Math.floor(safeMinutes / 60)
-      const mins = safeMinutes % 60
+  const formatTime = (seconds) => {
+    const safeSeconds = toFiniteNumber(seconds)
+    const minutes = Math.floor(safeSeconds / 60)
+    if (minutes >= 60) {
+      const hours = Math.floor(minutes / 60)
+      const mins = minutes % 60
       return `${hours}h ${mins}m`
     }
-    return `${safeMinutes}m`
+    return `${minutes}m`
   }
 
   const formatPercentage = (num, total) => {
@@ -258,7 +259,8 @@ function AdminAnalytics() {
               {toFiniteNumber(analytics.totalPodcasts) > 0
                 ? Math.round(
                     toFiniteNumber(analytics.totalListeningTime) /
-                      toFiniteNumber(analytics.totalPodcasts),
+                      toFiniteNumber(analytics.totalPodcasts) /
+                      60,
                   )
                 : 0}
               m
