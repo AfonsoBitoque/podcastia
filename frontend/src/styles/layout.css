@@ -467,6 +467,11 @@
   font-weight: 900;
 }
 
+.site-avatar--image {
+  object-fit: cover;
+  background: transparent;
+}
+
 .site-profile-chevron {
   width: 8px;
   height: 8px;

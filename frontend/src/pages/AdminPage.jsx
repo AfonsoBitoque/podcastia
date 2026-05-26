@@ -135,7 +135,7 @@ function AdminPage() {
       </nav>
 
       <main className="admin-content">
-        {activeTab === 'dashboard' && <AdminDashboard />}
+        {activeTab === 'dashboard' && <AdminDashboard onTabChange={handleTabChange} />}
         {activeTab === 'podcasts' && <AdminPodcastManagement />}
         {activeTab === 'users' && <AdminUserManagement />}
         {activeTab === 'analytics' && <AdminAnalytics />}

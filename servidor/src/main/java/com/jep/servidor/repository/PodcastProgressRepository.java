@@ -41,42 +41,42 @@ public interface PodcastProgressRepository extends JpaRepository<PodcastProgress
     /**
      * Calcula o total global de tempo de audição em segundos (todos os utilizadores).
      *
-     * @return soma de todos os {@code progressSeconds}; 0 se não houver registos.
+     * @return soma de todos os {@code totalListenedSeconds}; 0 se não houver registos.
      */
-    @Query("SELECT COALESCE(SUM(pp.progressSeconds), 0) FROM PodcastProgress pp")
+    @Query("SELECT COALESCE(SUM(pp.totalListenedSeconds), 0) FROM PodcastProgress pp")
     long sumTotalListeningTime();
 
     /**
-     * Conta o número de reproduções de um podcast específico.
+     * Conta o número total de reproduções de um podcast específico.
      *
      * @param podcastId ID do podcast.
-     * @return número de registos de progresso associados ao podcast.
+     * @return soma de playCount para o podcast; 0 se não houver.
      */
-    @Query("SELECT COUNT(pp) FROM PodcastProgress pp WHERE pp.podcast.id = :podcastId")
+    @Query("SELECT COALESCE(SUM(pp.playCount), 0) FROM PodcastProgress pp WHERE pp.podcast.id = :podcastId")
     long countByPodcastId(Long podcastId);
 
     /**
      * Calcula o tempo total de audição de um podcast específico.
      *
      * @param podcastId ID do podcast.
-     * @return soma de {@code progressSeconds} para o podcast; 0 se não houver.
+     * @return soma de {@code totalListenedSeconds} para o podcast; 0 se não houver.
      */
-    @Query("SELECT COALESCE(SUM(pp.progressSeconds), 0) FROM PodcastProgress pp WHERE pp.podcast.id = :podcastId")
+    @Query("SELECT COALESCE(SUM(pp.totalListenedSeconds), 0) FROM PodcastProgress pp WHERE pp.podcast.id = :podcastId")
     long sumListeningTimeByPodcastId(Long podcastId);
 
     /**
-     * Devolve os podcasts com mais reproduções, com dados agregados para o ranking admin.
+     * Devolve os podcasts com mais tempo de audição, com dados agregados para o ranking admin.
      *
-     * <p>Cada elemento do array contém: {@code [podcastId, titulo, username, count, totalSeconds]}.
+     * <p>Cada elemento do array contém: {@code [podcastId, titulo, username, playCount, totalSeconds]}.
      *
-     * @return lista de arrays de objetos ordenada por contagem de reproduções desc.
+     * @return lista de arrays de objetos ordenada por tempo de audição desc.
      */
-    @Query("SELECT p.id, p.titulo, u.username, COUNT(pp), COALESCE(SUM(pp.progressSeconds), 0) " +
+    @Query("SELECT p.id, p.titulo, u.username, COALESCE(SUM(pp.playCount), 0), COALESCE(SUM(pp.totalListenedSeconds), 0) " +
            "FROM PodcastProgress pp " +
            "JOIN pp.podcast p " +
            "JOIN p.user u " +
            "GROUP BY p.id, p.titulo, u.username " +
-           "ORDER BY COUNT(pp) DESC")
+           "ORDER BY SUM(pp.totalListenedSeconds) DESC")
     List<Object[]> findTopPodcastsByPlays();
 
     /**
@@ -85,9 +85,9 @@ public interface PodcastProgressRepository extends JpaRepository<PodcastProgress
      *
      * @param start data/hora de início do intervalo (inclusivo).
      * @param end   data/hora de fim do intervalo (exclusivo).
-     * @return soma de {@code progressSeconds} no intervalo; 0 se não houver.
+     * @return soma de {@code totalListenedSeconds} no intervalo; 0 se não houver.
      */
-    @Query("SELECT COALESCE(SUM(pp.progressSeconds), 0) FROM PodcastProgress pp " +
+    @Query("SELECT COALESCE(SUM(pp.totalListenedSeconds), 0) FROM PodcastProgress pp " +
            "WHERE pp.lastListenedAt >= :start AND pp.lastListenedAt < :end")
     long sumListeningTimeBetween(
         @Param("start") LocalDateTime start,

@@ -1,9 +1,11 @@
 package com.jep.servidor.config;
 
 import com.jep.servidor.model.Podcast;
+import com.jep.servidor.model.PodcastProgress;
 import com.jep.servidor.model.PodcastTag;
 import com.jep.servidor.model.RssSource;
 import com.jep.servidor.model.User;
+import com.jep.servidor.repository.PodcastProgressRepository;
 import com.jep.servidor.repository.PodcastRepository;
 import com.jep.servidor.repository.RssSourceRepository;
 import com.jep.servidor.repository.UserRepository;
@@ -60,6 +62,7 @@ public class DataSeeder implements CommandLineRunner {
     private final PodcastRepository podcastRepository;
     private final PasswordEncoder passwordEncoder;
     private final RssSourceRepository rssSourceRepository;
+    private final PodcastProgressRepository podcastProgressRepository;
 
     /**
      * Cria uma instância de {@code DataSeeder} com injeção das dependências necessárias.
@@ -68,12 +71,14 @@ public class DataSeeder implements CommandLineRunner {
      * @param podcastRepository   repositório JPA para persistência de podcasts.
      * @param passwordEncoder     codificador BCrypt para hash de palavras-passe.
      * @param rssSourceRepository repositório JPA para persistência de fontes RSS.
+     * @param podcastProgressRepository repositório JPA para persistência de progresso de audição.
      */
-    public DataSeeder(UserRepository userRepository, PodcastRepository podcastRepository, PasswordEncoder passwordEncoder, RssSourceRepository rssSourceRepository) {
+    public DataSeeder(UserRepository userRepository, PodcastRepository podcastRepository, PasswordEncoder passwordEncoder, RssSourceRepository rssSourceRepository, PodcastProgressRepository podcastProgressRepository) {
         this.userRepository = userRepository;
         this.podcastRepository = podcastRepository;
         this.passwordEncoder = passwordEncoder;
         this.rssSourceRepository = rssSourceRepository;
+        this.podcastProgressRepository = podcastProgressRepository;
     }
 
     /**
@@ -107,26 +112,26 @@ public class DataSeeder implements CommandLineRunner {
                 return userRepository.save(user);
             });
 
-            // Podcasts com ficheiros de áudio reais (gerados e incluídos no repositório)
-            createPodcast(admin, "História de Portugal", 10, List.of(PodcastTag.GERAL),
+            // Podcasts com ficheiros de áudio (placeholders de ~2 minutos)
+            createPodcast(admin, "História de Portugal", 2, List.of(PodcastTag.GERAL),
                     "user1_história_de_portugal_20260524_214401.mp3");
-            createPodcast(admin, "Curiosidades sobre o Espaço Sideral", 8, List.of(PodcastTag.GERAL),
+            createPodcast(admin, "Curiosidades sobre o Espaço Sideral", 2, List.of(PodcastTag.GERAL),
                     "user1_curiosidades_sobre_o_espaço_sideral_20260524_214527.mp3");
-            createPodcast(admin, "A Importância do Sono para a Saúde", 9, List.of(PodcastTag.GERAL),
+            createPodcast(admin, "A Importância do Sono para a Saúde", 2, List.of(PodcastTag.GERAL),
                     "user1_a_importância_do_sono_para_a_saúde_20260524_214629.mp3");
-            createPodcast(admin, "Como Aprender Novas Línguas", 9, List.of(PodcastTag.GERAL),
+            createPodcast(admin, "Como Aprender Novas Línguas", 2, List.of(PodcastTag.GERAL),
                     "user1_como_aprender_novas_línguas_20260524_214727.mp3");
-            createPodcast(admin, "Tecnologias que Vão Mudar o Futuro", 9, List.of(PodcastTag.GERAL),
+            createPodcast(admin, "Tecnologias que Vão Mudar o Futuro", 2, List.of(PodcastTag.GERAL),
                     "user1_tecnologias_que_vão_mudar_o_futuro_20260524_214836.mp3");
-            createPodcast(admin, "Noções Básicas de Investimento", 10, List.of(PodcastTag.FINANCAS),
+            createPodcast(admin, "Noções Básicas de Investimento", 2, List.of(PodcastTag.FINANCAS),
                     "user1_história_de_portugal_20260524_215033.mp3");
-            createPodcast(admin, "História do Futebol em Portugal", 10, List.of(PodcastTag.DESPORTO),
+            createPodcast(admin, "História do Futebol em Portugal", 2, List.of(PodcastTag.DESPORTO),
                     "user1_história_do_futebol_em_portugal_20260524_215655.mp3");
-            createPodcast(admin, "Nutrição e Suplementação para Desportistas", 9, List.of(PodcastTag.DESPORTO),
+            createPodcast(admin, "Nutrição e Suplementação para Desportistas", 2, List.of(PodcastTag.DESPORTO),
                     "user1_nutrição_e_suplementação_para_desportist_20260524_215910.mp3");
-            createPodcast(admin, "Modalidades Olímpicas Pouco Conhecidas", 9, List.of(PodcastTag.DESPORTO),
+            createPodcast(admin, "Modalidades Olímpicas Pouco Conhecidas", 2, List.of(PodcastTag.DESPORTO),
                     "user1_modalidades_olímpicas_pouco_conhecidas_20260524_220019.mp3");
-            createPodcast(admin, "Sistema Político Português Explicado", 10, List.of(PodcastTag.POLITICA),
+            createPodcast(admin, "Sistema Político Português Explicado", 2, List.of(PodcastTag.POLITICA),
                     "user1_sistema_político_português_explicado_20260524_220234.mp3");
 
             // Utilizador demo 1
@@ -170,6 +175,56 @@ public class DataSeeder implements CommandLineRunner {
             createRssSource("Público - Desporto", "https://feeds.feedburner.com/PublicoDesporto");
             createRssSource("TechCrunch", "https://techcrunch.com/feed/");
             createRssSource("BBC News - World", "https://feeds.bbci.co.uk/news/world/rss.xml");
+        }
+
+        // Create listening progress data for analytics (only if none exists)
+        if (podcastProgressRepository.count() == 0) {
+            createSampleListeningData();
+        }
+    }
+
+    /**
+     * Cria dados de audição simulados para popular o dashboard de analytics.
+     * Gera registos de progresso para podcasts existentes com tempo real de audição.
+     */
+    private void createSampleListeningData() {
+        List<User> users = userRepository.findAll();
+        List<Podcast> podcasts = podcastRepository.findAll();
+
+        if (users.isEmpty() || podcasts.isEmpty()) {
+            return;
+        }
+
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.util.Random random = new java.util.Random();
+
+        // Create listening records for top podcasts (to appear in rankings)
+        for (int i = 0; i < podcasts.size() && i < 10; i++) {
+            Podcast podcast = podcasts.get(i);
+            // More plays for earlier podcasts (to create a ranking)
+            int playCount = Math.max(5, 25 - (i * 2) + random.nextInt(10));
+
+            for (int j = 0; j < playCount && j < users.size(); j++) {
+                User user = users.get(j % users.size());
+
+                PodcastProgress progress = new PodcastProgress();
+                progress.setUser(user);
+                progress.setPodcast(podcast);
+
+                int durationSeconds = podcast.getDuracao() * 60;
+                // Simulate realistic listening: 60-95% of podcast duration
+                double listenRatio = 0.6 + random.nextDouble() * 0.35;
+                int listenedSeconds = (int) (durationSeconds * listenRatio);
+                int currentPosition = (int) (durationSeconds * (0.5 + random.nextDouble() * 0.5));
+
+                progress.setTotalListenedSeconds(listenedSeconds);
+                progress.setProgressSeconds(currentPosition);
+                progress.setPlayCount(1); // Each simulated listen is one play
+                progress.setHasCompleted(listenedSeconds >= durationSeconds * 0.9); // Mark as completed if listened to 90%+
+                progress.setLastListenedAt(now.minusDays(random.nextInt(30)).minusMinutes(random.nextInt(60)));
+
+                podcastProgressRepository.save(progress);
+            }
         }
     }
 

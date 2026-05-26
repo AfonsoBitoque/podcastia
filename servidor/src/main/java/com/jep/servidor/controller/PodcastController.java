@@ -145,6 +145,35 @@ public class PodcastController {
     return ResponseEntity.ok().build();
   }
 
+  @PostMapping("/{id}/completed")
+  public ResponseEntity<Void> markPodcastCompleted(@PathVariable("id") Long id, @RequestParam(value = "seconds", required = false) Integer seconds) {
+    Optional<User> authUser = getAuthenticatedUser();
+    if (authUser.isEmpty()) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+    Optional<Podcast> podcast = podcastRepository.findById(id);
+    if (podcast.isEmpty()) return ResponseEntity.notFound().build();
+    
+    PodcastProgress progress = podcastProgressRepository.findByUserAndPodcast(authUser.get(), podcast.get())
+        .orElse(new PodcastProgress(authUser.get(), podcast.get(), 0));
+    
+    // Add remaining time to total listened seconds
+    int durationSeconds = podcast.get().getDuracao() * 60;
+    int currentPosition = seconds != null ? seconds : progress.getProgressSeconds();
+    int remainingSeconds = durationSeconds - currentPosition;
+    if (remainingSeconds > 0 && remainingSeconds <= 300) { // Only add up to 5 minutes to prevent jumps
+      progress.setTotalListenedSeconds(progress.getTotalListenedSeconds() + remainingSeconds);
+    }
+    
+    // Increment play count when podcast finishes
+    progress.incrementPlayCount();
+    progress.setProgressSeconds(durationSeconds); // Mark as fully listened
+    progress.setLastListenedAt(LocalDateTime.now());
+    podcastProgressRepository.save(progress);
+    
+    return ResponseEntity.ok().build();
+  }
+
   /**
    * Atualiza o progresso de reprodução de um podcast para o utilizador autenticado.
    *
@@ -166,10 +195,43 @@ public class PodcastController {
     if (podcast.isEmpty()) return ResponseEntity.notFound().build();
     
     PodcastProgress progress = podcastProgressRepository.findByUserAndPodcast(authUser.get(), podcast.get())
-        .orElse(new PodcastProgress(authUser.get(), podcast.get(), 0));
+        .orElse(null);
     
-    progress.setProgressSeconds(seconds);
-    progress.setLastListenedAt(LocalDateTime.now());
+    boolean isNewPlay = (progress == null);
+    int durationSeconds = podcast.get().getDuracao() * 60;
+    
+    if (isNewPlay) {
+      // First time listening - create new record
+      progress = new PodcastProgress(authUser.get(), podcast.get(), seconds);
+      // Mark as completed if starting near the end
+      if (seconds >= durationSeconds * 0.9) {
+        progress.setHasCompleted(true);
+      }
+    } else {
+      int previousSeconds = progress.getProgressSeconds();
+      
+      // Check if user has completed before and is now starting a new session
+      // (started from beginning within 10 seconds after having completed)
+      if (progress.isHasCompleted() && seconds <= 10) {
+        progress.incrementPlayCount();
+        progress.setHasCompleted(false); // Reset for next time
+      }
+      
+      // Check if user just completed the podcast (reached 90%+)
+      if (seconds >= durationSeconds * 0.9 && previousSeconds < durationSeconds * 0.9) {
+        progress.setHasCompleted(true);
+      }
+      
+      // Calculate listened time delta (only if moving forward, not seeking backward)
+      int delta = seconds - previousSeconds;
+      if (delta > 0 && delta <= 300) { // Only count deltas up to 5 minutes (prevent jumps)
+        progress.setTotalListenedSeconds(progress.getTotalListenedSeconds() + delta);
+      }
+      
+      progress.setProgressSeconds(seconds);
+      progress.setLastListenedAt(LocalDateTime.now());
+    }
+    
     podcastProgressRepository.save(progress);
     
     return ResponseEntity.ok().build();

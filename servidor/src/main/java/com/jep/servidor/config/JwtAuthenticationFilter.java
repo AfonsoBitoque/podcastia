@@ -78,7 +78,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         "/api/register/",
         "/users",
         "/api/search/",
-        "/api/podcasts/", // GET requests are public (configured in SecurityConfig)
+        //"/api/podcasts/", // GET requests are public (configured in SecurityConfig)
         "/images/",
         "/audio/",
         "/h2-console/",

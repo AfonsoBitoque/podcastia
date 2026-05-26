@@ -301,8 +301,11 @@ public class PodcastGenerationController {
         }
 
         if (!audioFile.exists()) {
-            System.err.println("Audio file not found: " + conteudoPath);
-            return ResponseEntity.notFound().build();
+            System.err.println("Audio file not found: " + conteudoPath + " — serving placeholder");
+            audioFile = new java.io.File("generated-podcasts/placeholder.mp3");
+            if (!audioFile.exists()) {
+                return ResponseEntity.notFound().build();
+            }
         }
 
         try {

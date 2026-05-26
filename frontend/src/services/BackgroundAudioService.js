@@ -539,10 +539,39 @@ class BackgroundAudioService {
     this.currentTime = this.audioElement.currentTime || 0
     this.emit('timeupdate', { currentTime: this.currentTime, duration: this.duration })
 
-    // Save state periodically
-    if (Math.floor(this.currentTime) % 10 === 0) {
+    // Save state periodically (every 10 seconds)
+    const currentSecond = Math.floor(this.currentTime)
+    if (currentSecond % 10 === 0) {
       this.saveState()
+      // Send progress to backend
+      this.sendProgressToBackend(currentSecond)
     }
+  }
+
+  sendProgressToBackend(seconds) {
+    if (!this.currentPodcast?.id && !this.currentPodcast?.podcastId) return
+    
+    const podcastId = this.currentPodcast.id || this.currentPodcast.podcastId
+    const token = getToken()
+    if (!token) return
+
+    // Debounce: don't send more than once every 5 seconds
+    const now = Date.now()
+    if (this._lastProgressSent && now - this._lastProgressSent < 5000) return
+    this._lastProgressSent = now
+
+    console.log(`[AudioService] Sending progress: ${seconds}s for podcast ${podcastId}`)
+    
+    fetch(`${API_BASE_URL}/podcasts/${podcastId}/progress?seconds=${Math.floor(seconds)}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    }).then(() => {
+      console.log(`[AudioService] Progress saved: ${seconds}s`)
+    }).catch(() => {
+      // Silently fail - progress tracking is non-critical
+    })
   }
 
   onPlay() {
@@ -559,6 +588,9 @@ class BackgroundAudioService {
     this.isPlaying = false
     this.emit('ended', { podcast: this.currentPodcast })
 
+    // Mark podcast as completed (increment play count)
+    this.markPodcastCompleted()
+
     // Auto-advance to next track if queue exists
     if (this.queue.length > 0) {
       this.skipNext()
@@ -573,6 +605,28 @@ class BackgroundAudioService {
 
     // Clear saved state
     this.clearState()
+  }
+
+  markPodcastCompleted() {
+    if (!this.currentPodcast?.id && !this.currentPodcast?.podcastId) return
+    
+    const podcastId = this.currentPodcast.id || this.currentPodcast.podcastId
+    const token = getToken()
+    if (!token) return
+
+    const currentSeconds = Math.floor(this.currentTime || 0)
+    console.log(`[AudioService] Marking podcast ${podcastId} as completed at ${currentSeconds}s`)
+
+    fetch(`${API_BASE_URL}/podcasts/${podcastId}/completed?seconds=${currentSeconds}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    }).then(() => {
+      console.log(`[AudioService] Podcast marked as completed`)
+    }).catch(() => {
+      // Silently fail
+    })
   }
 
   onError(error) {
