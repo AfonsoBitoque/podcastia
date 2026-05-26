@@ -1,8 +1,10 @@
 # Segredos e configuração local
 servidor/env.properties
 
-# Ficheiros de áudio gerados
-servidor/generated-podcasts/
+# Ficheiros de áudio gerados (exceto seed data)
+servidor/generated-podcasts/*
+!servidor/generated-podcasts/user1_*.mp3
+!servidor/generated-podcasts/placeholder.mp3
 servidor/profile-images/
 
 # Base de dados H2 local
