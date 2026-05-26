@@ -14,6 +14,14 @@ import org.springframework.stereotype.Repository;
 public interface DailyPlaylistRepository extends JpaRepository<DailyPlaylist, Long> {
 
   /**
+   * Elimina todas as playlists diárias de um utilizador.
+   * Usado ao eliminar um utilizador da plataforma.
+   *
+   * @param user o utilizador cujas playlists serão eliminadas.
+   */
+  void deleteByUser(User user);
+
+  /**
    * Encontra a playlist diária de um utilizador para uma data específica.
    *
    * @param user o utilizador

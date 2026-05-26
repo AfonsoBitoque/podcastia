@@ -16,6 +16,14 @@ import org.springframework.data.repository.query.Param;
 public interface PlaylistRepository extends JpaRepository<Playlist, Long> {
 
   /**
+   * Elimina todas as playlists de um utilizador.
+   * Usado ao eliminar um utilizador da plataforma.
+   *
+   * @param owner o utilizador dono das playlists.
+   */
+  void deleteByOwner(User owner);
+
+  /**
    * Devolve todas as playlists de um utilizador, ordenadas pela data de atualização.
    *
    * @param owner utilizador dono das playlists.

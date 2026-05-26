@@ -7,7 +7,12 @@ import com.jep.servidor.model.User;
 import com.jep.servidor.model.Podcast;
 import com.jep.servidor.model.AdminActionLog;
 import com.jep.servidor.repository.AdminActionLogRepository;
+import com.jep.servidor.repository.ChatMessageRepository;
+import com.jep.servidor.repository.DailyPlaylistRepository;
+import com.jep.servidor.repository.PlaylistRepository;
+import com.jep.servidor.repository.PodcastFavoriteRepository;
 import com.jep.servidor.repository.PodcastRepository;
+import com.jep.servidor.repository.UserRelationRepository;
 import com.jep.servidor.repository.UserRepository;
 import com.jep.servidor.repository.PodcastProgressRepository;
 
@@ -55,6 +60,11 @@ public class AdminService {
     private final PodcastRepository podcastRepository;
     private final UserRepository userRepository;
     private final PodcastProgressRepository podcastProgressRepository;
+    private final PodcastFavoriteRepository podcastFavoriteRepository;
+    private final UserRelationRepository userRelationRepository;
+    private final DailyPlaylistRepository dailyPlaylistRepository;
+    private final PlaylistRepository playlistRepository;
+    private final ChatMessageRepository chatMessageRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
 
@@ -62,12 +72,22 @@ public class AdminService {
                         PodcastRepository podcastRepository,
                         UserRepository userRepository,
                         PodcastProgressRepository podcastProgressRepository,
+                        PodcastFavoriteRepository podcastFavoriteRepository,
+                        UserRelationRepository userRelationRepository,
+                        DailyPlaylistRepository dailyPlaylistRepository,
+                        PlaylistRepository playlistRepository,
+                        ChatMessageRepository chatMessageRepository,
                         PasswordEncoder passwordEncoder,
                         EmailService emailService) {
         this.adminActionLogRepository = adminActionLogRepository;
         this.podcastRepository = podcastRepository;
         this.userRepository = userRepository;
         this.podcastProgressRepository = podcastProgressRepository;
+        this.podcastFavoriteRepository = podcastFavoriteRepository;
+        this.userRelationRepository = userRelationRepository;
+        this.dailyPlaylistRepository = dailyPlaylistRepository;
+        this.playlistRepository = playlistRepository;
+        this.chatMessageRepository = chatMessageRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
     }
@@ -391,13 +411,55 @@ public class AdminService {
         
         String expectedConfirmation = "DELETE_" + user.getUsername().toUpperCase().replaceAll("\\s+", "_");
         if (!expectedConfirmation.equals(confirmation)) {
-            logAdminAction(effectiveAdmin, "DELETE_USER_FAILED", "USER", userId, user.getUsername(), 
+            logAdminAction(effectiveAdmin, "DELETE_USER_FAILED", "USER", userId, user.getUsername(),
                           "Failed deletion - invalid confirmation", null, null, false, "Invalid confirmation text");
             return false;
         }
 
-        // Delete the user
+        // Delete all related data before deleting the user
         String username = user.getUsername();
+
+        // 0. Delete user's chat messages (reactions are cascade-deleted)
+        // First delete messages where user is recipient, then sender
+        // to avoid constraint issues
+        chatMessageRepository.deleteByRecipient(user);
+        chatMessageRepository.deleteBySender(user);
+
+        // 1. Delete user's playlists (items are cascade-deleted)
+        playlistRepository.deleteByOwner(user);
+
+        // 2. Delete user's daily playlists (items are cascade-deleted)
+        dailyPlaylistRepository.deleteByUser(user);
+
+        // 3. Delete user's relations (friendships, blocks, etc.)
+        userRelationRepository.deleteByUser(user);
+        userRelationRepository.deleteByFriend(user);
+
+        // 4. Delete user's podcast favorites
+        podcastFavoriteRepository.deleteByUser(user);
+
+        // 5. Delete user's podcast progress
+        podcastProgressRepository.deleteByUser(user);
+
+        // 6. Delete user's podcasts (with their MP3 files)
+        List<Podcast> userPodcasts = podcastRepository.findByUser(user);
+        for (Podcast podcast : userPodcasts) {
+            // Delete associated MP3 file if exists
+            if (podcast.getConteudoPath() != null) {
+                try {
+                    java.io.File audioFile = new java.io.File(podcast.getConteudoPath());
+                    if (audioFile.exists()) {
+                        audioFile.delete();
+                    }
+                } catch (Exception e) {
+                    // Log but continue - don't fail deletion if file removal fails
+                    System.err.println("Warning: Could not delete audio file for podcast " + podcast.getId() + ": " + e.getMessage());
+                }
+            }
+            podcastRepository.delete(podcast);
+        }
+
+        // 7. Finally, delete the user
         userRepository.delete(user);
         
         // Log the action

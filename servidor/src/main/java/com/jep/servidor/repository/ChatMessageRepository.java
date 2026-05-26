@@ -1,6 +1,7 @@
 package com.jep.servidor.repository;
 
 import com.jep.servidor.model.ChatMessage;
+import com.jep.servidor.model.User;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
@@ -15,6 +16,22 @@ import org.springframework.data.repository.query.Param;
  * e contagem de mensagens não lidas para o badge de notificação.
  */
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
+
+  /**
+   * Elimina todas as mensagens enviadas por um utilizador.
+   * Usado ao eliminar um utilizador da plataforma.
+   *
+   * @param sender o utilizador remetente.
+   */
+  void deleteBySender(User sender);
+
+  /**
+   * Elimina todas as mensagens recebidas por um utilizador.
+   * Usado ao eliminar um utilizador da plataforma.
+   *
+   * @param recipient o utilizador destinatário.
+   */
+  void deleteByRecipient(User recipient);
 
   /**
    * Devolve uma página do histórico de conversa entre dois utilizadores,

@@ -21,6 +21,14 @@ import org.springframework.data.repository.query.Param;
 public interface PodcastProgressRepository extends JpaRepository<PodcastProgress, Long> {
 
     /**
+     * Elimina todos os registos de progresso de um utilizador.
+     * Usado ao eliminar um utilizador da plataforma.
+     *
+     * @param user o utilizador cujo progresso será eliminado.
+     */
+    void deleteByUser(User user);
+
+    /**
      * Encontra o progresso de um utilizador num podcast específico.
      *
      * @param user    o utilizador.

@@ -20,6 +20,22 @@ import org.springframework.data.repository.query.Param;
 public interface UserRelationRepository extends JpaRepository<UserRelation, Long> {
 
   /**
+   * Elimina todas as relações onde o utilizador é o remetente.
+   * Usado ao eliminar um utilizador da plataforma.
+   *
+   * @param user o utilizador remetente.
+   */
+  void deleteByUser(User user);
+
+  /**
+   * Elimina todas as relações onde o utilizador é o destinatário.
+   * Usado ao eliminar um utilizador da plataforma.
+   *
+   * @param friend o utilizador destinatário.
+   */
+  void deleteByFriend(User friend);
+
+  /**
    * Devolve todas as relações em que o utilizador é o remetente.
    *
    * @param user o utilizador remetente.

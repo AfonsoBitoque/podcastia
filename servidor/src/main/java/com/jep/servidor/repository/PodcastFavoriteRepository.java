@@ -17,6 +17,14 @@ import org.springframework.data.repository.query.Param;
 public interface PodcastFavoriteRepository extends JpaRepository<PodcastFavorite, Long> {
 
   /**
+   * Elimina todos os favoritos de um utilizador.
+   * Usado ao eliminar um utilizador da plataforma.
+   *
+   * @param user o utilizador cujos favoritos serão eliminados.
+   */
+  void deleteByUser(User user);
+
+  /**
    * Devolve a lista de IDs de podcasts favoritados por um utilizador.
    *
    * <p>Retorna apenas os IDs (e não as entidades completas) para
