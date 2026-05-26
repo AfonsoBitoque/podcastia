@@ -84,85 +84,134 @@ public class AudioPathSync implements CommandLineRunner {
      * @param args argumentos de linha de comando (não utilizados).
      * @throws Exception se ocorrer um erro inesperado (capturado internamente com log).
      */
-    @Override
-    public void run(String... args) throws Exception {
-        try {
-            String baseDir = "generated-podcasts";
-            Path podcastsDir = Paths.get(baseDir);
+  @Override
+  public void run(String... args) throws Exception {
+    try {
+      String baseDir = "generated-podcasts";
+      Path podcastsDir = Paths.get(baseDir);
 
-            if (!Files.exists(podcastsDir)) {
-                System.out.println("[AudioPathSync] Diretório " + baseDir + " não encontrado");
-                return;
+      if (!Files.exists(podcastsDir)) {
+        System.out.println("[AudioPathSync] Diretório " + baseDir + " não encontrado");
+        return;
+      }
+
+      // Lista todos os ficheiros MP3 (incluindo links simbólicos)
+      File[] files = podcastsDir.toFile().listFiles((dir, name) -> name.endsWith(".mp3"));
+      if (files == null || files.length == 0) {
+        System.out.println("[AudioPathSync] Nenhum ficheiro MP3 encontrado");
+        return;
+      }
+
+      System.out.println("[AudioPathSync] Encontrados " + files.length + " ficheiros de áudio");
+
+      // Get placeholder size for comparison
+      long placeholderSize = getPlaceholderSize(files);
+      System.out.println("[AudioPathSync] Placeholder size: " + placeholderSize + " bytes");
+
+      List<Podcast> allPodcasts = podcastRepository.findAll();
+      int updatedCount = 0;
+
+      for (Podcast podcast : allPodcasts) {
+        String currentPath = podcast.getConteudoPath();
+        Long userId = podcast.getUser() != null ? podcast.getUser().getId() : null;
+
+        // Se já tem caminho válido, verifica se é placeholder para ajustar duração
+        if (currentPath != null && !currentPath.isEmpty()) {
+          // Tenta caminho absoluto primeiro
+          File testFile = new File(currentPath);
+          if (!testFile.exists() && !currentPath.startsWith("/")) {
+            // Tenta com baseDir prefix
+            testFile = new File(baseDir + "/" + new File(currentPath).getName());
+          }
+          if (testFile.exists()) {
+            long fileSize = testFile.length();
+            System.out.println("[AudioPathSync] Verificando: " + podcast.getTitulo() + " | ficheiro: " + testFile.getPath() + " | tamanho: " + fileSize + " | placeholder: " + placeholderSize + " | duração atual: " + podcast.getDuracao());
+            // Check if existing file is a placeholder by size
+            if (placeholderSize > 0 && Math.abs(fileSize - placeholderSize) < 10240) { // 10KB tolerance
+              if (podcast.getDuracao() != 2) {
+                podcast.setDuracao(2); // Placeholder is ~2 minutes (1:48)
+                podcastRepository.save(podcast);
+                System.out.println("[AudioPathSync] ✓ Duração ajustada para 2min: " + podcast.getTitulo());
+                updatedCount++;
+              } else {
+                System.out.println("[AudioPathSync] Duração já está 2min: " + podcast.getTitulo());
+              }
+            } else {
+              System.out.println("[AudioPathSync] Não é placeholder (tamanho diferente): " + podcast.getTitulo());
             }
-
-            // Lista todos os ficheiros MP3 (incluindo links simbólicos)
-            File[] files = podcastsDir.toFile().listFiles((dir, name) -> name.endsWith(".mp3"));
-            if (files == null || files.length == 0) {
-                System.out.println("[AudioPathSync] Nenhum ficheiro MP3 encontrado");
-                return;
-            }
-
-            System.out.println("[AudioPathSync] Encontrados " + files.length + " ficheiros de áudio");
-
-            List<Podcast> allPodcasts = podcastRepository.findAll();
-            int updatedCount = 0;
-
-            for (Podcast podcast : allPodcasts) {
-                String currentPath = podcast.getConteudoPath();
-                Long userId = podcast.getUser() != null ? podcast.getUser().getId() : null;
-
-                // Se já tem caminho válido, pula
-                if (currentPath != null && !currentPath.isEmpty()) {
-                    File testFile = new File(currentPath);
-                    if (testFile.exists()) {
-                        continue; // Caminho já está correto
-                    }
-                }
-
-                // Procura ficheiro correspondente
-                File match = findMatchingFile(files, userId, podcast.getTitulo());
-
-                if (match != null) {
-                    String newPath = baseDir + "/" + match.getName();
-                    podcast.setConteudoPath(newPath);
-                    podcast.setPublico(true); // Make public so it appears in community/trending
-                    podcastRepository.save(podcast);
-                    System.out.println("[AudioPathSync] Atualizado: " + podcast.getTitulo() + " -> " + match.getName());
-                    updatedCount++;
-                } else {
-                    // Use placeholder file if no match found
-                    String placeholderPath = baseDir + "/user1_placeholder_" + (podcast.getId() % 20 + 1) + ".mp3";
-                    File placeholderFile = new File(placeholderPath);
-                    if (placeholderFile.exists()) {
-                        podcast.setConteudoPath(placeholderPath);
-                        podcast.setPublico(true); // Make public so it appears in community/trending
-                        podcastRepository.save(podcast);
-                        System.out.println("[AudioPathSync] Usando placeholder: " + podcast.getTitulo() + " -> " + placeholderFile.getName());
-                        updatedCount++;
-                    } else {
-                        System.out.println("[AudioPathSync] Não encontrado ficheiro para: " + podcast.getTitulo() + " (user=" + userId + ")");
-                    }
-                }
-            }
-
-            System.out.println("[AudioPathSync] Sincronização completa. " + updatedCount + " podcasts atualizados.");
-
-            // Make all podcasts public so they appear in community/trending
-            int publicCount = 0;
-            for (Podcast podcast : allPodcasts) {
-                if (!podcast.isPublico()) {
-                    podcast.setPublico(true);
-                    podcastRepository.save(podcast);
-                    publicCount++;
-                }
-            }
-            if (publicCount > 0) {
-                System.out.println("[AudioPathSync] " + publicCount + " podcasts marcados como públicos.");
-            }
-        } catch (Exception e) {
-            System.err.println("[AudioPathSync] Erro: " + e.getMessage());
-            e.printStackTrace();
+            continue; // Caminho já está correto
+          } else {
+            System.out.println("[AudioPathSync] Ficheiro não encontrado: " + currentPath + " (tentado: " + testFile.getPath() + ")");
+          }
         }
+
+        // Procura ficheiro correspondente
+        File match = findMatchingFile(files, userId, podcast.getTitulo());
+
+        if (match != null) {
+          String newPath = baseDir + "/" + match.getName();
+          podcast.setConteudoPath(newPath);
+          // Check if matched file is a placeholder by size
+          if (placeholderSize > 0 && Math.abs(match.length() - placeholderSize) < 1024) {
+            podcast.setDuracao(2); // Placeholder is ~2 minutes (1:48)
+            System.out.println("[AudioPathSync] Atualizado (placeholder detectado): " + podcast.getTitulo() + " -> " + match.getName() + " (duração: 2min)");
+          } else {
+            System.out.println("[AudioPathSync] Atualizado: " + podcast.getTitulo() + " -> " + match.getName());
+          }
+          podcast.setPublico(true); // Make public so it appears in community/trending
+          podcastRepository.save(podcast);
+          updatedCount++;
+        } else {
+          // Use placeholder file if no match found
+          String placeholderPath = baseDir + "/user1_placeholder_" + (podcast.getId() % 20 + 1) + ".mp3";
+          File placeholderFile = new File(placeholderPath);
+          if (placeholderFile.exists()) {
+            podcast.setConteudoPath(placeholderPath);
+            podcast.setDuracao(2); // Placeholder is ~2 minutes (1:48)
+            podcast.setPublico(true); // Make public so it appears in community/trending
+            podcastRepository.save(podcast);
+            System.out.println("[AudioPathSync] Usando placeholder: " + podcast.getTitulo() + " -> " + placeholderFile.getName() + " (duração: 2min)");
+            updatedCount++;
+          } else {
+            System.out.println("[AudioPathSync] Não encontrado ficheiro para: " + podcast.getTitulo() + " (user=" + userId + ")");
+          }
+        }
+      }
+
+      System.out.println("[AudioPathSync] Sincronização completa. " + updatedCount + " podcasts atualizados.");
+
+      // Make all podcasts public so they appear in community/trending
+      int publicCount = 0;
+      for (Podcast podcast : allPodcasts) {
+        if (!podcast.isPublico()) {
+          podcast.setPublico(true);
+          podcastRepository.save(podcast);
+          publicCount++;
+        }
+      }
+      if (publicCount > 0) {
+        System.out.println("[AudioPathSync] " + publicCount + " podcasts marcados como públicos.");
+      }
+    } catch (Exception e) {
+      System.err.println("[AudioPathSync] Erro: " + e.getMessage());
+      e.printStackTrace();
+    }
+  }
+
+    /**
+     * Obtém o tamanho do ficheiro placeholder para comparação.
+     * Procura por placeholder.mp3 ou qualquer ficheiro com "placeholder" no nome.
+     *
+     * @param files array de ficheiros MP3
+     * @return tamanho do placeholder em bytes, ou 0 se não encontrado
+     */
+    private long getPlaceholderSize(File[] files) {
+        for (File file : files) {
+            if (file.getName().contains("placeholder")) {
+                return file.length();
+            }
+        }
+        return 0;
     }
 
     /**

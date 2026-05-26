@@ -39,6 +39,15 @@ public class PodcastProgress {
     private int progressSeconds;
 
     @Column(nullable = false)
+    private int totalListenedSeconds;
+
+    @Column(nullable = false)
+    private int playCount;
+
+    @Column(nullable = false)
+    private boolean hasCompleted;
+
+    @Column(nullable = false)
     private LocalDateTime lastListenedAt;
 
     public PodcastProgress() {
@@ -48,6 +57,9 @@ public class PodcastProgress {
         this.user = user;
         this.podcast = podcast;
         this.progressSeconds = progressSeconds;
+        this.totalListenedSeconds = 0;
+        this.playCount = 1;
+        this.hasCompleted = false;
         this.lastListenedAt = LocalDateTime.now();
     }
 
@@ -89,5 +101,33 @@ public class PodcastProgress {
 
     public void setLastListenedAt(LocalDateTime lastListenedAt) {
         this.lastListenedAt = lastListenedAt;
+    }
+
+    public int getTotalListenedSeconds() {
+        return totalListenedSeconds;
+    }
+
+    public void setTotalListenedSeconds(int totalListenedSeconds) {
+        this.totalListenedSeconds = totalListenedSeconds;
+    }
+
+    public int getPlayCount() {
+        return playCount;
+    }
+
+    public void setPlayCount(int playCount) {
+        this.playCount = playCount;
+    }
+
+    public void incrementPlayCount() {
+        this.playCount++;
+    }
+
+    public boolean isHasCompleted() {
+        return hasCompleted;
+    }
+
+    public void setHasCompleted(boolean hasCompleted) {
+        this.hasCompleted = hasCompleted;
     }
 }

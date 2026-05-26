@@ -387,7 +387,15 @@ function Header() {
                   className="site-profile-trigger"
                   aria-label={`Perfil de ${profileName}`}
                 >
-                  <span className="site-avatar">{profileName.slice(0, 1).toUpperCase()}</span>
+                  {user?.profilePicturePath ? (
+                    <img
+                      src={resolveProfilePicture(user.profilePicturePath, user.id)}
+                      alt=""
+                      className="site-avatar site-avatar--image"
+                    />
+                  ) : (
+                    <span className="site-avatar">{profileName.slice(0, 1).toUpperCase()}</span>
+                  )}
                   <span className="site-profile-name">{profileName}</span>
                   <span className="site-profile-chevron" aria-hidden="true" />
                 </NavLink>

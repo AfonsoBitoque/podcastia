@@ -4,7 +4,7 @@ import { API_BASE_URL } from '../../shared/config/env'
 import { getToken } from '../../shared/storage/authStorage'
 import { asArray, toFiniteNumber } from '../../shared/utils/collection'
 
-function AdminDashboard() {
+function AdminDashboard({ onTabChange }) {
   const [analytics, setAnalytics] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -47,14 +47,15 @@ function AdminDashboard() {
     return safeNumber.toString()
   }
 
-  const formatTime = (minutes) => {
-    const safeMinutes = toFiniteNumber(minutes)
-    if (safeMinutes >= 60) {
-      const hours = Math.floor(safeMinutes / 60)
-      const mins = safeMinutes % 60
+  const formatTime = (seconds) => {
+    const safeSeconds = toFiniteNumber(seconds)
+    const minutes = Math.floor(safeSeconds / 60)
+    if (minutes >= 60) {
+      const hours = Math.floor(minutes / 60)
+      const mins = minutes % 60
       return `${hours}h ${mins}m`
     }
-    return `${safeMinutes}m`
+    return `${minutes}m`
   }
 
   if (loading) {
@@ -141,9 +142,9 @@ function AdminDashboard() {
         {/* Top Podcasts */}
         <div className="admin-card">
           <h2>Top Podcasts</h2>
-          {asArray(analytics.topPodcasts).length > 0 ? (
+          {asArray(analytics?.topPodcasts).length > 0 ? (
             <div className="top-podcasts">
-              {asArray(analytics.topPodcasts).slice(0, 5).map((podcast, index) => (
+              {asArray(analytics?.topPodcasts).slice(0, 5).map((podcast, index) => (
                 <div key={podcast.podcastId || index} className="top-podcast-item">
                   <div className="podcast-rank">#{index + 1}</div>
                   <div className="podcast-info">
@@ -201,25 +202,16 @@ function AdminDashboard() {
         <div className="admin-card">
           <h2>Quick Actions</h2>
           <div className="quick-actions">
-            <button
-              className="btn-primary"
-              onClick={() => (window.location.href = '#/admin/podcasts')}
-            >
+            <button className="btn-primary" onClick={() => onTabChange && onTabChange('podcasts')}>
               Manage Podcasts
             </button>
-            <button
-              className="btn-primary"
-              onClick={() => (window.location.href = '#/admin/users')}
-            >
+            <button className="btn-primary" onClick={() => onTabChange && onTabChange('users')}>
               Manage Users
             </button>
-            <button
-              className="btn-primary"
-              onClick={() => (window.location.href = '#/admin/analytics')}
-            >
+            <button className="btn-primary" onClick={() => onTabChange && onTabChange('analytics')}>
               View Analytics
             </button>
-            <button className="btn-primary" onClick={() => (window.location.href = '#/admin/logs')}>
+            <button className="btn-primary" onClick={() => onTabChange && onTabChange('logs')}>
               View Logs
             </button>
           </div>
